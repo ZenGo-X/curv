@@ -74,6 +74,12 @@ impl PublicKeyCodec<Secp256k1, SecretKey> for PublicKey {
         sk
     }
 
+    fn bytes_compressed_to_big_int(&self) ->  BigInt{
+        let serial = self.serialize();
+        let result = BigInt::from(&serial[0..33]);
+        return result;
+    }
+
     fn to_point(&self) -> Point {
         PublicKey::from_key_slice(&self.serialize_uncompressed())
     }

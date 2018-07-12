@@ -35,6 +35,7 @@ pub trait PublicKeyCodec<EC, SK> {
     const KEY_SIZE: usize;
     const HEADER_MARKER: usize;
 
+    fn bytes_compressed_to_big_int(&self) ->  BigInt;
     fn randomize(&mut self, s : &EC) -> SK;
     fn to_point(&self) -> Point;
 

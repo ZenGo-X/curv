@@ -49,6 +49,10 @@ impl Modulo for Mpz {
             (a + (-b + modulus)).mod_floor(modulus)
         }
     }
+
+    fn mod_add(a: &Self, b: &Self, modulus: &Self) -> Self {
+        (a.mod_floor(modulus) + b.mod_floor(modulus)).mod_floor(modulus)
+    }
 }
 
 impl Samplable for Mpz {
