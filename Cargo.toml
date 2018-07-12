@@ -1,12 +1,11 @@
 [package]
-name = "cryptography_utils"
+name = "cryptography-utils"
 version = "0.1.0"
 authors = [
     "Gary <gary@kzencorp.com>"
 ]
 
 [lib]
-name = "cryptography_utils"
 crate-type = ["dylib"]
 
 [dependencies]
