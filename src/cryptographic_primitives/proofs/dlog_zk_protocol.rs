@@ -40,7 +40,7 @@ use elliptic::curves::traits::*;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct DLogProof {
     pub pk : PK,
     pub pk_t_rand_commitment : PK,
