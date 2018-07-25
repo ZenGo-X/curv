@@ -73,12 +73,31 @@ impl Samplable for Mpz {
         lower + Self::sample_below(&(upper - lower))
     }
 
+    fn strict_sample_range(lower: &Self, upper: &Self) -> Self {
+        assert!(upper > lower);
+        loop {
+            let n = lower + Self::sample_below(&(upper - lower));
+            if n > *lower && n < *upper {
+                return n;
+            }
+        }
+    }
+
     fn sample(bit_size: usize) -> Self {
         let mut rng = OsRng::new().unwrap();
         let bytes = (bit_size - 1) / 8 + 1;
         let mut buf: Vec<u8> = vec![0; bytes];
         rng.fill_bytes(&mut buf);
         Self::from(&*buf) >> (bytes * 8 - bit_size)
+    }
+
+    fn strict_sample(bit_size: usize) -> Self {
+        loop {
+            let n = Self::sample(bit_size);
+            if n.bit_length() == bit_size {
+                return n;
+            }
+        }
     }
 }
 
@@ -87,6 +106,7 @@ mod tests {
     use super::Samplable;
     use super::Mpz;
     use super::Modulo;
+    use std::cmp;
 
     #[test]
     #[should_panic]
@@ -122,17 +142,30 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
-    // GARY: THIS TEST IS FAILING, I SUSPECT THAT THE FUNCTION RETURN A RANDOM WITH A BIT LENGTH
-    // BELOW OR EQUAL TO THE INPUT. @MORTEN TO CONFIRM
-    fn sample_test() {
-        let len = 100000;
+    fn strict_sample_range_test() {
+        let len = 249;
 
         for _ in 1..100 {
-            let r = Mpz::sample(len);
-            assert_eq!(len, r.bit_length());
+            let a = Mpz::sample(len);
+            let b = Mpz::sample(len);
+            let lower_bound = cmp::min(a.clone(), b.clone());
+            let upper_bound = cmp::max(a.clone(), b.clone());;
+
+            let r = Mpz::strict_sample_range(&lower_bound, &upper_bound);
+            assert!(r < upper_bound && r >= lower_bound);
         }
     }
+
+    #[test]
+    fn strict_sample_test() {
+        let len = 249;
+
+        for _ in 1..100 {
+            let a = Mpz::strict_sample(len);
+            assert_eq!(a.bit_length(), len);
+        }
+    }
+
     //test mod_sub: a-b mod n where a-b >0
     #[test]
     fn test_mod_sub_modulo() {
@@ -142,6 +175,7 @@ mod tests {
         let res = Mpz::from(2);
         assert_eq!(res,Mpz::mod_sub(&a, &b,&modulo));
     }
+
     //test mod_sub: a-b mod n where a-b <0
     #[test]
     fn test_mod_sub_negative_modulo() {

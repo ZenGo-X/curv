@@ -28,6 +28,8 @@ pub trait Modulo {
 pub trait Samplable {
     fn sample_below(upper: &Self) -> Self;
     fn sample_range(lower: &Self, upper: &Self) -> Self;
+    fn strict_sample_range(lower: &Self, upper: &Self) -> Self;
     fn sample(bitsize: usize) -> Self;
+    fn strict_sample(bit_size: usize) -> Self;
 }
 
