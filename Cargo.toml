@@ -6,7 +6,7 @@ authors = [
 ]
 
 [lib]
-crate-type = ["dylib"]
+crate-type = ["lib"]
 
 [dependencies]
 rust-gmp = "0.5.0"
