@@ -30,7 +30,7 @@ use arithmetic::traits::Converter;
 
 use super::rand::thread_rng;
 use super::secp256k1::{ Secp256k1, SecretKey, PublicKey };
-use super::secp256k1::constants::{ GENERATOR_X, GENERATOR_Y, CURVE_ORDER };
+use super::secp256k1::constants::{ GENERATOR_X, GENERATOR_Y, CURVE_ORDER, SECRET_KEY_SIZE };
 use super::traits::{ PublicKeyCodec, SecretKeyCodec, CurveConstCodec };
 
 pub type EC = Secp256k1;
@@ -56,7 +56,10 @@ impl SecretKeyCodec<Secp256k1> for SecretKey {
     }
 
     fn from_big_int(s: &Secp256k1, n: &BigInt) -> SecretKey {
-        SecretKey::from_slice(s, &BigInt::to_vec(n)).unwrap()
+        let mut v = BigInt::to_vec(n);
+        v.resize(SECRET_KEY_SIZE, 0);
+
+        SecretKey::from_slice(s, &v).unwrap()
     }
 
     fn to_big_int(&self) -> BigInt {
