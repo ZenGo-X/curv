@@ -15,8 +15,8 @@
 */
 
 use super::gmp::mpz::Mpz;
-use super::traits::{ Converter, Modulo, Samplable };
 use super::rand::{OsRng, Rng};
+use super::traits::{Converter, Modulo, Samplable};
 
 use std::borrow::Borrow;
 
@@ -61,9 +61,9 @@ impl Samplable for Mpz {
 
         let bits = upper.bit_length();
         loop {
-            let n =  Self::sample(bits);
+            let n = Self::sample(bits);
             if n < *upper {
-                return n
+                return n;
             }
         }
     }
@@ -103,9 +103,9 @@ impl Samplable for Mpz {
 
 #[cfg(test)]
 mod tests {
-    use super::Samplable;
-    use super::Mpz;
     use super::Modulo;
+    use super::Mpz;
+    use super::Samplable;
     use std::cmp;
 
     #[test]
@@ -149,7 +149,7 @@ mod tests {
             let a = Mpz::sample(len);
             let b = Mpz::sample(len);
             let lower_bound = cmp::min(a.clone(), b.clone());
-            let upper_bound = cmp::max(a.clone(), b.clone());;
+            let upper_bound = cmp::max(a.clone(), b.clone());
 
             let r = Mpz::strict_sample_range(&lower_bound, &upper_bound);
             assert!(r < upper_bound && r >= lower_bound);
@@ -173,7 +173,7 @@ mod tests {
         let b = Mpz::from(5);
         let modulo = Mpz::from(3);
         let res = Mpz::from(2);
-        assert_eq!(res,Mpz::mod_sub(&a, &b,&modulo));
+        assert_eq!(res, Mpz::mod_sub(&a, &b, &modulo));
     }
 
     //test mod_sub: a-b mod n where a-b <0
@@ -183,7 +183,7 @@ mod tests {
         let b = Mpz::from(10);
         let modulo = Mpz::from(3);
         let res = Mpz::from(1);
-        assert_eq!(res,Mpz::mod_sub(&a, &b, &modulo));
+        assert_eq!(res, Mpz::mod_sub(&a, &b, &modulo));
     }
 
     #[test]
@@ -192,7 +192,7 @@ mod tests {
         let b = Mpz::from(5);
         let modulo = Mpz::from(3);
         let res = Mpz::from(2);
-        assert_eq!(res,Mpz::mod_mul(&a, &b, &modulo));
+        assert_eq!(res, Mpz::mod_mul(&a, &b, &modulo));
     }
 
     #[test]
@@ -201,6 +201,6 @@ mod tests {
         let b = Mpz::from(3);
         let modulo = Mpz::from(3);
         let res = Mpz::from(2);
-        assert_eq!(res,Mpz::mod_pow(&a, &b, &modulo));
+        assert_eq!(res, Mpz::mod_pow(&a, &b, &modulo));
     }
 }

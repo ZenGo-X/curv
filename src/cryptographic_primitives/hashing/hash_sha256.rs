@@ -1,7 +1,7 @@
-use ::BigInt;
+use BigInt;
 
-use super::traits::Hash;
 use super::ring::digest::{Context, SHA256};
+use super::traits::Hash;
 use std::borrow::Borrow;
 
 pub struct HSha256;
@@ -21,9 +21,9 @@ impl Hash for HSha256 {
 
 #[cfg(test)]
 mod tests {
-    use ::BigInt;
-    use super::Hash;
     use super::HSha256;
+    use super::Hash;
+    use BigInt;
 
     #[test]
     // Very basic test here, TODO: suggest better testing

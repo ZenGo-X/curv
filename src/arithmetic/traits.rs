@@ -32,4 +32,3 @@ pub trait Samplable {
     fn sample(bitsize: usize) -> Self;
     fn strict_sample(bit_size: usize) -> Self;
 }
-

@@ -14,8 +14,8 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-use ::Point;
-use ::BigInt;
+use BigInt;
+use Point;
 
 pub trait CurveConstCodec {
     fn get_base_point() -> Point;
@@ -35,11 +35,11 @@ pub trait PublicKeyCodec<EC, SK> {
     const KEY_SIZE: usize;
     const HEADER_MARKER: usize;
 
-    fn bytes_compressed_to_big_int(&self) ->  BigInt;
-    fn randomize(&mut self, s : &EC) -> SK;
+    fn bytes_compressed_to_big_int(&self) -> BigInt;
+    fn randomize(&mut self, s: &EC) -> SK;
     fn to_point(&self) -> Point;
 
     fn from_key_slice(key: &[u8]) -> Point;
-    fn to_key(s : &EC, p: &Point) -> Self;
+    fn to_key(s: &EC, p: &Point) -> Self;
     fn to_key_slice(p: &Point) -> Vec<u8>;
 }

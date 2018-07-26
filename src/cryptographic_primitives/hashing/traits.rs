@@ -14,7 +14,7 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-use ::BigInt;
+use BigInt;
 
 pub trait Hash {
     fn create_hash(big_ints: Vec<&BigInt>) -> BigInt;

@@ -14,8 +14,8 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-extern crate secp256k1;
 extern crate rand;
+extern crate secp256k1;
 
-pub mod traits;
 pub mod secp256_k1;
+pub mod traits;
