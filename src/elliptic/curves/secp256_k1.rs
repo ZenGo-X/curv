@@ -23,15 +23,15 @@
 // The Secret Key codec: BigInt <> SecretKey
 // The Public Key codec: Point <> SecretKey
 //
-use ::BigInt;
-use ::Point;
+use BigInt;
+use Point;
 
 use arithmetic::traits::Converter;
 
 use super::rand::thread_rng;
-use super::secp256k1::{ Secp256k1, SecretKey, PublicKey };
-use super::secp256k1::constants::{ GENERATOR_X, GENERATOR_Y, CURVE_ORDER, SECRET_KEY_SIZE };
-use super::traits::{ PublicKeyCodec, SecretKeyCodec, CurveConstCodec };
+use super::secp256k1::constants::{CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE};
+use super::secp256k1::{PublicKey, Secp256k1, SecretKey};
+use super::traits::{CurveConstCodec, PublicKeyCodec, SecretKeyCodec};
 
 pub type EC = Secp256k1;
 pub type SK = SecretKey;
@@ -63,7 +63,7 @@ impl SecretKeyCodec<Secp256k1> for SecretKey {
     }
 
     fn to_big_int(&self) -> BigInt {
-        BigInt::from(&self[0 .. self.len()])
+        BigInt::from(&self[0..self.len()])
     }
 }
 
@@ -71,13 +71,13 @@ impl PublicKeyCodec<Secp256k1, SecretKey> for PublicKey {
     const KEY_SIZE: usize = 65;
     const HEADER_MARKER: usize = 4;
 
-    fn randomize(&mut self, s : &Secp256k1) -> SecretKey {
+    fn randomize(&mut self, s: &Secp256k1) -> SecretKey {
         let sk = SecretKey::new_random(&s);
         assert!(self.mul_assign(&s, &sk).is_ok());
         sk
     }
 
-    fn bytes_compressed_to_big_int(&self) ->  BigInt{
+    fn bytes_compressed_to_big_int(&self) -> BigInt {
         let serial = self.serialize();
         let result = BigInt::from(&serial[0..33]);
         return result;
@@ -100,15 +100,18 @@ impl PublicKeyCodec<Secp256k1, SecretKey> for PublicKey {
         assert_eq!(header, PublicKey::HEADER_MARKER);
 
         // first 32 elements (without the header)
-        let x = &key[1 .. key.len() / 2 + 1];
+        let x = &key[1..key.len() / 2 + 1];
 
         // last 32 element
-        let y = &key[(key.len() - 1) / 2 + 1 .. key.len()];
+        let y = &key[(key.len() - 1) / 2 + 1..key.len()];
 
-        Point { x: BigInt::from(x), y: BigInt::from(y) }
+        Point {
+            x: BigInt::from(x),
+            y: BigInt::from(y),
+        }
     }
 
-    fn to_key(s: &Secp256k1, p : &Point) -> PublicKey {
+    fn to_key(s: &Secp256k1, p: &Point) -> PublicKey {
         PublicKey::from_slice(s, &PublicKey::to_key_slice(p)).unwrap()
     }
 
@@ -116,8 +119,8 @@ impl PublicKeyCodec<Secp256k1, SecretKey> for PublicKey {
     /// This function deserialized a Point into a Key in the uncompressed form.
     /// use PublicKey::from_key_slice to serialize
     ///
-    fn to_key_slice(p : &Point) -> Vec<u8> {
-        let mut v = vec![ PublicKey::HEADER_MARKER as u8 ];
+    fn to_key_slice(p: &Point) -> Vec<u8> {
+        let mut v = vec![PublicKey::HEADER_MARKER as u8];
         v.extend(BigInt::to_vec(&p.x));
         v.extend(BigInt::to_vec(&p.y));
         v
@@ -126,13 +129,13 @@ impl PublicKeyCodec<Secp256k1, SecretKey> for PublicKey {
 
 #[cfg(test)]
 mod tests {
-    use super::{ CurveConstCodec, SecretKeyCodec, PublicKeyCodec };
+    use super::{CurveConstCodec, PublicKeyCodec, SecretKeyCodec};
 
     use elliptic::curves::rand::thread_rng;
-    use elliptic::curves::secp256k1::{ PublicKey, SecretKey, Secp256k1};
-    use elliptic::curves::secp256k1::constants::{GENERATOR_X, GENERATOR_Y, CURVE_ORDER};
+    use elliptic::curves::secp256k1::constants::{CURVE_ORDER, GENERATOR_X, GENERATOR_Y};
+    use elliptic::curves::secp256k1::{PublicKey, Secp256k1, SecretKey};
 
-    use ::BigInt;
+    use BigInt;
 
     #[test]
     fn get_base_point_test() {
@@ -163,36 +166,28 @@ mod tests {
     #[test]
     #[should_panic]
     fn from_invalid_header_key_slice_test() {
-        let invalid_key : [u8; PublicKey::KEY_SIZE] = [
-            1,  // header
-
+        let invalid_key: [u8; PublicKey::KEY_SIZE] = [
+            1, // header
             // X
-            231, 191, 194, 227, 183, 188, 238, 170, 206, 138,
-            20, 92, 140, 107, 83, 73, 111, 170, 217, 69,
-            17, 64, 121, 65, 219, 97, 147, 181, 197, 239, 158, 56,
-
-            // Y
-            62, 15, 115, 56, 226, 122, 3, 180, 192, 166,
-            171, 137, 121, 23, 29, 225, 234, 220, 154, 2,
-            157, 44, 73, 220, 31, 15, 55, 4, 244, 189, 7, 210 ];
+            231, 191, 194, 227, 183, 188, 238, 170, 206, 138, 20, 92, 140, 107, 83, 73,
+            111, 170, 217, 69, 17, 64, 121, 65, 219, 97, 147, 181, 197, 239, 158, 56, // Y
+            62, 15, 115, 56, 226, 122, 3, 180, 192, 166, 171, 137, 121, 23, 29, 225, 234, 220, 154,
+            2, 157, 44, 73, 220, 31, 15, 55, 4, 244, 189, 7, 210,
+        ];
 
         PublicKey::from_key_slice(&invalid_key);
     }
 
     #[test]
     fn from_valid_uncompressed_key_slice_to_key_test() {
-        let valid_key : [u8; PublicKey::KEY_SIZE] = [
-            4,  // header
-
+        let valid_key: [u8; PublicKey::KEY_SIZE] = [
+            4, // header
             // X
-            231, 191, 194, 227, 183, 188, 238, 170, 206, 138,
-            20, 92, 140, 107, 83, 73, 111, 170, 217, 69,
-            17, 64, 121, 65, 219, 97, 147, 181, 197, 239, 158, 56,
-
-            // Y
-            62, 15, 115, 56, 226, 122, 3, 180, 192, 166,
-            171, 137, 121, 23, 29, 225, 234, 220, 154, 2,
-            157, 44, 73, 220, 31, 15, 55, 4, 244, 189, 7, 210 ];
+            231, 191, 194, 227, 183, 188, 238, 170, 206, 138, 20, 92, 140, 107, 83, 73,
+            111, 170, 217, 69, 17, 64, 121, 65, 219, 97, 147, 181, 197, 239, 158, 56, // Y
+            62, 15, 115, 56, 226, 122, 3, 180, 192, 166, 171, 137, 121, 23, 29, 225, 234, 220, 154,
+            2, 157, 44, 73, 220, 31, 15, 55, 4, 244, 189, 7, 210,
+        ];
 
         let p = PublicKey::from_key_slice(&valid_key);
         let k = PublicKey::to_key_slice(&p);
@@ -207,17 +202,12 @@ mod tests {
     fn from_public_key_to_point_to_slice_to_key() {
         let s = Secp256k1::new();
         let slice = &[
-            4,
-
-            // X
-            54, 57, 149, 239, 162, 148, 175, 246, 254, 239,
-            75, 154, 152, 10, 82, 234, 224, 85, 220, 40,
-            100, 57, 121, 30, 162, 94, 156, 135, 67, 74, 49, 179,
-
-            // Y
-            57, 236, 53, 162, 124, 149, 144, 168, 77, 74, 30,
-            72, 211, 229, 110, 111, 55, 96, 193, 86, 227,
-            183, 152, 195, 155, 51, 247, 123, 113, 60, 228, 188];
+            4, // X
+            54, 57, 149, 239, 162, 148, 175, 246, 254, 239, 75, 154, 152, 10, 82, 234, 224, 85,
+            220, 40, 100, 57, 121, 30, 162, 94, 156, 135, 67, 74, 49, 179, // Y
+            57, 236, 53, 162, 124, 149, 144, 168, 77, 74, 30, 72, 211, 229, 110, 111, 55, 96, 193,
+            86, 227, 183, 152, 195, 155, 51, 247, 123, 113, 60, 228, 188,
+        ];
 
         let uncompressed_key = PublicKey::from_slice(&s, slice).unwrap();
         let p = uncompressed_key.to_point();

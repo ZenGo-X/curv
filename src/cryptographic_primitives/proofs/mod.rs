@@ -14,8 +14,8 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-use std::fmt;
 use std::error::Error;
+use std::fmt;
 
 pub mod dlog_zk_protocol;
 

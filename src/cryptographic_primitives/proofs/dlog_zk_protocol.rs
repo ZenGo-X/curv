@@ -25,11 +25,11 @@
 //! In Advances in Cryptology - CRYPTO ’86, Santa Barbara, California, USA, 1986, Proceedings,
 //! pages 186–194, 1986.
 
-use ::BigInt;
+use BigInt;
 
-use ::EC;
-use ::PK;
-use ::SK;
+use EC;
+use PK;
+use SK;
 
 use super::ProofError;
 
@@ -42,9 +42,9 @@ use cryptographic_primitives::hashing::traits::Hash;
 
 #[derive(Clone, Debug)]
 pub struct DLogProof {
-    pub pk : PK,
-    pub pk_t_rand_commitment : PK,
-    pub challenge_response : BigInt
+    pub pk: PK,
+    pub pk_t_rand_commitment: PK,
+    pub challenge_response: BigInt,
 }
 
 pub trait ProveDLog {
@@ -58,36 +58,48 @@ impl ProveDLog for DLogProof {
         let mut pk_t_rand_commitment = PK::to_key(&ec_context, &EC::get_base_point());
         let sk_t_rand_commitment = pk_t_rand_commitment.randomize(&ec_context).to_big_int();
 
-        let challenge = HSha256::create_hash(
-            vec![&pk_t_rand_commitment.to_point().x, &EC::get_base_point().x, &pk.to_point().x]);
+        let challenge = HSha256::create_hash(vec![
+            &pk_t_rand_commitment.to_point().x,
+            &EC::get_base_point().x,
+            &pk.to_point().x,
+        ]);
 
         let challenge_response = BigInt::mod_sub(
-            &sk_t_rand_commitment, &BigInt::mod_mul(
-                &challenge, &sk.to_big_int(), &EC::get_q()),
-            &EC::get_q());
+            &sk_t_rand_commitment,
+            &BigInt::mod_mul(&challenge, &sk.to_big_int(), &EC::get_q()),
+            &EC::get_q(),
+        );
 
         DLogProof {
-            pk : *pk,
+            pk: *pk,
             pk_t_rand_commitment,
-            challenge_response
+            challenge_response,
         }
     }
 
     fn verify(ec_context: &EC, proof: &DLogProof) -> Result<(), ProofError> {
-        let challenge = HSha256::create_hash(
-            vec![
-                &proof.pk_t_rand_commitment.to_point().x,
-                &EC::get_base_point().x,
-                &proof.pk.to_point().x]);
+        let challenge = HSha256::create_hash(vec![
+            &proof.pk_t_rand_commitment.to_point().x,
+            &EC::get_base_point().x,
+            &proof.pk.to_point().x,
+        ]);
 
         let mut pk_challenge = proof.pk.clone();
-        assert!(pk_challenge.mul_assign(
-            ec_context, &SK::from_big_int(ec_context, &challenge)).is_ok());
-
+        assert!(
+            pk_challenge
+                .mul_assign(ec_context, &SK::from_big_int(ec_context, &challenge))
+                .is_ok()
+        );
 
         let mut pk_verifier = PK::to_key(ec_context, &EC::get_base_point());
-        assert!(pk_verifier.mul_assign(
-            ec_context, &SK::from_big_int(ec_context, &proof.challenge_response)).is_ok());
+        assert!(
+            pk_verifier
+                .mul_assign(
+                    ec_context,
+                    &SK::from_big_int(ec_context, &proof.challenge_response)
+                )
+                .is_ok()
+        );
 
         let pk_verifier = match pk_verifier.combine(ec_context, &pk_challenge) {
             Ok(pk_verifier) => pk_verifier,
