@@ -34,7 +34,7 @@ use SK;
 use super::ProofError;
 
 use arithmetic::traits::Modulo;
-
+use arithmetic::traits::Samplable;
 use elliptic::curves::traits::*;
 
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
@@ -56,7 +56,13 @@ pub trait ProveDLog {
 impl ProveDLog for DLogProof {
     fn prove(ec_context: &EC, pk: &PK, sk: &SK) -> DLogProof {
         let mut pk_t_rand_commitment = PK::to_key(&ec_context, &EC::get_base_point());
-        let sk_t_rand_commitment = pk_t_rand_commitment.randomize(&ec_context).to_big_int();
+        let sk_t_rand_commitment =
+            SK::from_big_int(ec_context, &BigInt::sample_below(&EC::get_q()));
+        assert!(
+            pk_t_rand_commitment
+                .mul_assign(ec_context, &sk_t_rand_commitment)
+                .is_ok()
+        );
 
         let challenge = HSha256::create_hash(vec![
             &pk_t_rand_commitment.to_point().x,
@@ -65,7 +71,7 @@ impl ProveDLog for DLogProof {
         ]);
 
         let challenge_response = BigInt::mod_sub(
-            &sk_t_rand_commitment,
+            &sk_t_rand_commitment.to_big_int(),
             &BigInt::mod_mul(&challenge, &sk.to_big_int(), &EC::get_q()),
             &EC::get_q(),
         );
