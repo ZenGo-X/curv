@@ -71,12 +71,6 @@ impl PublicKeyCodec<Secp256k1, SecretKey> for PublicKey {
     const KEY_SIZE: usize = 65;
     const HEADER_MARKER: usize = 4;
 
-    fn randomize(&mut self, s: &Secp256k1) -> SecretKey {
-        let sk = SecretKey::new_random(&s);
-        assert!(self.mul_assign(&s, &sk).is_ok());
-        sk
-    }
-
     fn bytes_compressed_to_big_int(&self) -> BigInt {
         let serial = self.serialize();
         let result = BigInt::from(&serial[0..33]);
@@ -165,12 +159,14 @@ mod tests {
 
     #[test]
     #[should_panic]
+    #[cfg_attr(rustfmt, rustfmt_skip)] // ignore fmt due to the slice comments
     fn from_invalid_header_key_slice_test() {
         let invalid_key: [u8; PublicKey::KEY_SIZE] = [
             1, // header
             // X
             231, 191, 194, 227, 183, 188, 238, 170, 206, 138, 20, 92, 140, 107, 83, 73,
-            111, 170, 217, 69, 17, 64, 121, 65, 219, 97, 147, 181, 197, 239, 158, 56, // Y
+            111, 170, 217, 69, 17, 64, 121, 65, 219, 97, 147, 181, 197, 239, 158, 56,
+            // Y
             62, 15, 115, 56, 226, 122, 3, 180, 192, 166, 171, 137, 121, 23, 29, 225, 234, 220, 154,
             2, 157, 44, 73, 220, 31, 15, 55, 4, 244, 189, 7, 210,
         ];
@@ -179,14 +175,16 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)] // ignore fmt due to the slice comments
     fn from_valid_uncompressed_key_slice_to_key_test() {
         let valid_key: [u8; PublicKey::KEY_SIZE] = [
             4, // header
             // X
-            231, 191, 194, 227, 183, 188, 238, 170, 206, 138, 20, 92, 140, 107, 83, 73,
-            111, 170, 217, 69, 17, 64, 121, 65, 219, 97, 147, 181, 197, 239, 158, 56, // Y
-            62, 15, 115, 56, 226, 122, 3, 180, 192, 166, 171, 137, 121, 23, 29, 225, 234, 220, 154,
-            2, 157, 44, 73, 220, 31, 15, 55, 4, 244, 189, 7, 210,
+            54, 57, 149, 239, 162, 148, 175, 246, 254, 239, 75, 154, 152, 10, 82, 234, 224, 85,
+            220, 40, 100, 57, 121, 30, 162, 94, 156, 135, 67, 74, 49, 179,
+            // Y
+            57, 236, 53, 162, 124, 149, 144, 168, 77, 74, 30, 72, 211, 229, 110, 111, 55, 96, 193,
+            86, 227, 183, 152, 195, 155, 51, 247, 123, 113, 60, 228, 188,
         ];
 
         let p = PublicKey::from_key_slice(&valid_key);
@@ -199,12 +197,15 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)] // ignore fmt due to the slice comments
     fn from_public_key_to_point_to_slice_to_key() {
         let s = Secp256k1::new();
         let slice = &[
-            4, // X
+            4, // header
+            // X
             54, 57, 149, 239, 162, 148, 175, 246, 254, 239, 75, 154, 152, 10, 82, 234, 224, 85,
-            220, 40, 100, 57, 121, 30, 162, 94, 156, 135, 67, 74, 49, 179, // Y
+            220, 40, 100, 57, 121, 30, 162, 94, 156, 135, 67, 74, 49, 179,
+            // Y
             57, 236, 53, 162, 124, 149, 144, 168, 77, 74, 30, 72, 211, 229, 110, 111, 55, 96, 193,
             86, 227, 183, 152, 195, 155, 51, 247, 123, 113, 60, 228, 188,
         ];

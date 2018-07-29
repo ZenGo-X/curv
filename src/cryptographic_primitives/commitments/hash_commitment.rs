@@ -82,8 +82,6 @@ mod tests {
         let ctr_commit_len = ctr_commit_len as f32;
         let ctr_blind_len = ctr_blind_len as f32;
         let sample_size = sample_size as f32;
-        println!("commit len = {:?}", ctr_commit_len / sample_size);
-        println!("blind len = {:?}", ctr_blind_len / sample_size);
         assert!(ctr_commit_len / sample_size > 0.4);
         assert!(ctr_blind_len / sample_size > 0.4);
     }
