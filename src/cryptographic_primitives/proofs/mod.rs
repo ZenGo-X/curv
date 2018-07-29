@@ -19,7 +19,8 @@ use std::fmt;
 
 pub mod dlog_zk_protocol;
 
-#[derive(Debug)]
+
+#[derive(Debug, Clone, Copy)]
 pub struct ProofError;
 
 impl fmt::Display for ProofError {
