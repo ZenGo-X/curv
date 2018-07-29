@@ -57,7 +57,12 @@ impl SecretKeyCodec<Secp256k1> for SecretKey {
 
     fn from_big_int(s: &Secp256k1, n: &BigInt) -> SecretKey {
         let mut v = BigInt::to_vec(n);
-        v.resize(SECRET_KEY_SIZE, 0);
+
+        if v.len() < SECRET_KEY_SIZE {
+            let mut template = vec![0; SECRET_KEY_SIZE - v.len()];
+            template.extend_from_slice(&v);
+            v = template;
+        }
 
         SecretKey::from_slice(s, &v).unwrap()
     }
