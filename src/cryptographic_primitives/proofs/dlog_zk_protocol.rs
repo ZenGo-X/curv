@@ -58,11 +58,10 @@ impl ProveDLog for DLogProof {
         let mut pk_t_rand_commitment = PK::to_key(&ec_context, &EC::get_base_point());
         let sk_t_rand_commitment =
             SK::from_big_int(ec_context, &BigInt::sample_below(&EC::get_q()));
-        assert!(
-            pk_t_rand_commitment
-                .mul_assign(ec_context, &sk_t_rand_commitment)
-                .is_ok()
-        );
+
+        pk_t_rand_commitment
+            .mul_assign(ec_context, &sk_t_rand_commitment)
+            .expect("Assignment expected");
 
         let challenge = HSha256::create_hash(vec![
             &pk_t_rand_commitment.to_point().x,
@@ -91,21 +90,17 @@ impl ProveDLog for DLogProof {
         ]);
 
         let mut pk_challenge = proof.pk.clone();
-        assert!(
-            pk_challenge
-                .mul_assign(ec_context, &SK::from_big_int(ec_context, &challenge))
-                .is_ok()
-        );
+        pk_challenge
+            .mul_assign(ec_context, &SK::from_big_int(ec_context, &challenge))
+            .expect("Assignment expected");
 
         let mut pk_verifier = PK::to_key(ec_context, &EC::get_base_point());
-        assert!(
-            pk_verifier
-                .mul_assign(
-                    ec_context,
-                    &SK::from_big_int(ec_context, &proof.challenge_response)
-                )
-                .is_ok()
-        );
+        pk_verifier
+            .mul_assign(
+                ec_context,
+                &SK::from_big_int(ec_context, &proof.challenge_response),
+            )
+            .expect("Assignment expected");
 
         let pk_verifier = match pk_verifier.combine(ec_context, &pk_challenge) {
             Ok(pk_verifier) => pk_verifier,

@@ -71,12 +71,6 @@ impl PublicKeyCodec<Secp256k1, SecretKey> for PublicKey {
     const KEY_SIZE: usize = 65;
     const HEADER_MARKER: usize = 4;
 
-    fn randomize(&mut self, s: &Secp256k1) -> SecretKey {
-        let sk = SecretKey::new_random(&s);
-        assert!(self.mul_assign(&s, &sk).is_ok());
-        sk
-    }
-
     fn bytes_compressed_to_big_int(&self) -> BigInt {
         let serial = self.serialize();
         let result = BigInt::from(&serial[0..33]);
