@@ -30,11 +30,11 @@ pub struct RawPoint {
     pub y: String,
 }
 
-impl Point {
-    pub fn to_raw(&self) -> RawPoint {
+impl From<Point> for RawPoint {
+    fn from(point: Point) -> Self {
         RawPoint {
-            x: self.x.to_hex(),
-            y: self.y.to_hex(),
+            x: point.x.to_hex(),
+            y: point.y.to_hex(),
         }
     }
 }
@@ -43,6 +43,8 @@ impl Point {
 mod tests {
     use super::BigInt;
     use super::Point;
+    use super::RawPoint;
+
     use serde_json;
 
     #[test]
@@ -71,7 +73,7 @@ mod tests {
             y: BigInt::zero(),
         };
 
-        let s = serde_json::to_string(&p1.to_raw()).expect("Failed in serialization");
+        let s = serde_json::to_string(&RawPoint::from(p1)).expect("Failed in serialization");
         assert_eq!(s, "{\"x\":\"1\",\"y\":\"0\"}");
     }
 }

@@ -31,6 +31,10 @@ impl Converter for Mpz {
     fn to_hex(&self) -> String {
         self.to_str_radix(super::HEX_RADIX)
     }
+
+    fn from_hex(value: &String) -> Mpz {
+        BigInt::from_str_radix(value, super::HEX_RADIX).expect("Error in serialization")
+    }
 }
 
 // TODO: write unit test
@@ -214,5 +218,11 @@ mod tests {
     fn test_to_hex() {
         let a = Mpz::from(11);
         assert_eq!(a.to_str_radix(16), a.to_hex());
+    }
+
+    #[test]
+    fn test_from_hex() {
+        let a = Mpz::from(11);
+        assert_eq!(Mpz::from_hex(&a.to_hex()), a);
     }
 }

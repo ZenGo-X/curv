@@ -57,12 +57,20 @@ pub struct RawDLogProof {
     pub challenge_response: String, // Hex
 }
 
+impl From<DLogProof> for RawDLogProof {
+    fn from(d_log_proof: DLogProof) -> Self {
+        RawDLogProof {
+            pk: RawPoint::from(d_log_proof.pk.to_point()),
+            pk_t_rand_commitment: RawPoint::from(d_log_proof.pk_t_rand_commitment.to_point()),
+            challenge_response: d_log_proof.challenge_response.to_hex(),
+        }
+    }
+}
+
 pub trait ProveDLog {
     fn prove(ec_context: &EC, pk: &PK, sk: &SK) -> DLogProof;
 
     fn verify(ec_context: &EC, proof: &DLogProof) -> Result<(), ProofError>;
-
-    fn to_raw(&self) -> RawDLogProof;
 }
 
 impl ProveDLog for DLogProof {
@@ -124,20 +132,11 @@ impl ProveDLog for DLogProof {
             Err(ProofError)
         }
     }
-
-    fn to_raw(&self) -> RawDLogProof {
-        RawDLogProof {
-            pk: self.pk.to_point().to_raw(),
-            pk_t_rand_commitment: self.pk_t_rand_commitment.to_point().to_raw(),
-            challenge_response: self.challenge_response.to_hex(),
-        }
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::DLogProof;
-    use super::ProveDLog;
+    use super::{DLogProof, RawDLogProof};
     use serde_json;
     use BigInt;
     use EC;
@@ -161,7 +160,8 @@ mod tests {
             challenge_response: BigInt::from(11),
         };
 
-        let s = serde_json::to_string(&d_log_proof.to_raw()).expect("Failed in serialization");
+        let s = serde_json::to_string(&RawDLogProof::from(d_log_proof))
+            .expect("Failed in serialization");
         assert_eq!(
             s,
             "{\"pk\":{\
