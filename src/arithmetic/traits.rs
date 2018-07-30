@@ -16,6 +16,7 @@
 
 pub trait Converter {
     fn to_vec(n: &Self) -> Vec<u8>;
+    fn to_hex(&self) -> String;
 }
 
 pub trait Modulo {

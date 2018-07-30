@@ -14,6 +14,7 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
+use arithmetic::traits::Converter;
 use BigInt;
 
 /// A simple Point defined by x and y
@@ -23,10 +24,26 @@ pub struct Point {
     pub y: BigInt,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct RawPoint {
+    pub x: String,
+    pub y: String,
+}
+
+impl Point {
+    pub fn to_raw(&self) -> RawPoint {
+        RawPoint {
+            x: self.x.to_hex(),
+            y: self.y.to_hex(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::BigInt;
     use super::Point;
+    use serde_json;
 
     #[test]
     fn equality_test() {
@@ -45,5 +62,16 @@ mod tests {
             y: BigInt::one(),
         };
         assert_ne!(p1, p3);
+    }
+
+    #[test]
+    fn test_serialization() {
+        let p1 = Point {
+            x: BigInt::one(),
+            y: BigInt::zero(),
+        };
+
+        let s = serde_json::to_string(&p1.to_raw()).expect("Failed in serialization");
+        assert_eq!(s, "{\"x\":\"1\",\"y\":\"0\"}");
     }
 }

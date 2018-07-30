@@ -27,6 +27,10 @@ impl Converter for Mpz {
         let bytes: Vec<u8> = value.borrow().into();
         bytes
     }
+
+    fn to_hex(&self) -> String {
+        self.to_str_radix(super::HEX_RADIX)
+    }
 }
 
 // TODO: write unit test
@@ -103,9 +107,11 @@ impl Samplable for Mpz {
 
 #[cfg(test)]
 mod tests {
+    use super::Converter;
     use super::Modulo;
     use super::Mpz;
     use super::Samplable;
+
     use std::cmp;
 
     #[test]
@@ -202,5 +208,11 @@ mod tests {
         let modulo = Mpz::from(3);
         let res = Mpz::from(2);
         assert_eq!(res, Mpz::mod_pow(&a, &b, &modulo));
+    }
+
+    #[test]
+    fn test_to_hex() {
+        let a = Mpz::from(11);
+        assert_eq!(a.to_str_radix(16), a.to_hex());
     }
 }

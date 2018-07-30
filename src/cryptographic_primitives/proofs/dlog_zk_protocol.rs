@@ -27,14 +27,17 @@
 
 use BigInt;
 
+use RawPoint;
 use EC;
 use PK;
 use SK;
 
 use super::ProofError;
 
+use arithmetic::traits::Converter;
 use arithmetic::traits::Modulo;
 use arithmetic::traits::Samplable;
+
 use elliptic::curves::traits::*;
 
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
@@ -47,10 +50,19 @@ pub struct DLogProof {
     pub challenge_response: BigInt,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct RawDLogProof {
+    pub pk: RawPoint,
+    pub pk_t_rand_commitment: RawPoint,
+    pub challenge_response: String, // Hex
+}
+
 pub trait ProveDLog {
     fn prove(ec_context: &EC, pk: &PK, sk: &SK) -> DLogProof;
 
     fn verify(ec_context: &EC, proof: &DLogProof) -> Result<(), ProofError>;
+
+    fn to_raw(&self) -> RawDLogProof;
 }
 
 impl ProveDLog for DLogProof {
@@ -99,8 +111,7 @@ impl ProveDLog for DLogProof {
             .mul_assign(
                 ec_context,
                 &SK::from_big_int(ec_context, &proof.challenge_response),
-            )
-            .expect("Assignment expected");
+            ).expect("Assignment expected");
 
         let pk_verifier = match pk_verifier.combine(ec_context, &pk_challenge) {
             Ok(pk_verifier) => pk_verifier,
@@ -112,5 +123,54 @@ impl ProveDLog for DLogProof {
         } else {
             Err(ProofError)
         }
+    }
+
+    fn to_raw(&self) -> RawDLogProof {
+        RawDLogProof {
+            pk: self.pk.to_point().to_raw(),
+            pk_t_rand_commitment: self.pk_t_rand_commitment.to_point().to_raw(),
+            challenge_response: self.challenge_response.to_hex(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DLogProof;
+    use super::ProveDLog;
+    use serde_json;
+    use BigInt;
+    use EC;
+    use PK;
+
+    #[test]
+    fn test_serialization() {
+        let valid_key: [u8; 65] = [
+            4, // header
+            // X
+            54, 57, 149, 239, 162, 148, 175, 246, 254, 239, 75, 154, 152, 10, 82, 234, 224, 85, 220,
+            40, 100, 57, 121, 30, 162, 94, 156, 135, 67, 74, 49, 179, // Y
+            57, 236, 53, 162, 124, 149, 144, 168, 77, 74, 30, 72, 211, 229, 110, 111, 55, 96, 193,
+            86, 227, 183, 152, 195, 155, 51, 247, 123, 113, 60, 228, 188,
+        ];
+
+        let s = EC::new();
+        let d_log_proof = DLogProof {
+            pk: PK::from_slice(&s, &valid_key).unwrap(),
+            pk_t_rand_commitment: PK::from_slice(&s, &valid_key).unwrap(),
+            challenge_response: BigInt::from(11),
+        };
+
+        let s = serde_json::to_string(&d_log_proof.to_raw()).expect("Failed in serialization");
+        assert_eq!(
+            s,
+            "{\"pk\":{\
+             \"x\":\"363995efa294aff6feef4b9a980a52eae055dc286439791ea25e9c87434a31b3\",\
+             \"y\":\"39ec35a27c9590a84d4a1e48d3e56e6f3760c156e3b798c39b33f77b713ce4bc\"},\
+             \"pk_t_rand_commitment\":{\
+             \"x\":\"363995efa294aff6feef4b9a980a52eae055dc286439791ea25e9c87434a31b3\",\
+             \"y\":\"39ec35a27c9590a84d4a1e48d3e56e6f3760c156e3b798c39b33f77b713ce4bc\"},\
+             \"challenge_response\":\"b\"}"
+        );
     }
 }
