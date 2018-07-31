@@ -27,6 +27,7 @@
 
 use BigInt;
 
+use Point;
 use RawPoint;
 use EC;
 use PK;
@@ -63,6 +64,19 @@ impl From<DLogProof> for RawDLogProof {
             pk: RawPoint::from(d_log_proof.pk.to_point()),
             pk_t_rand_commitment: RawPoint::from(d_log_proof.pk_t_rand_commitment.to_point()),
             challenge_response: d_log_proof.challenge_response.to_hex(),
+        }
+    }
+}
+
+impl From<RawDLogProof> for DLogProof {
+    fn from(raw_d_log_proof: RawDLogProof) -> Self {
+        DLogProof {
+            pk: PK::to_key(&EC::new(), &Point::from(raw_d_log_proof.pk)),
+            pk_t_rand_commitment: PK::to_key(
+                &EC::new(),
+                &Point::from(raw_d_log_proof.pk_t_rand_commitment),
+            ),
+            challenge_response: BigInt::from_hex(&raw_d_log_proof.challenge_response),
         }
     }
 }

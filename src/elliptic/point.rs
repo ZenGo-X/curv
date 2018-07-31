@@ -39,6 +39,15 @@ impl From<Point> for RawPoint {
     }
 }
 
+impl From<RawPoint> for Point {
+    fn from(raw_point: RawPoint) -> Self {
+        Point {
+            x: BigInt::from_hex(&raw_point.y),
+            y: BigInt::from_hex(&raw_point.x),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::BigInt;
