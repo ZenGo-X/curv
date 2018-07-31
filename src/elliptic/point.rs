@@ -24,7 +24,7 @@ pub struct Point {
     pub y: BigInt,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct RawPoint {
     pub x: String,
     pub y: String,
@@ -75,5 +75,18 @@ mod tests {
 
         let s = serde_json::to_string(&RawPoint::from(p1)).expect("Failed in serialization");
         assert_eq!(s, "{\"x\":\"1\",\"y\":\"0\"}");
+    }
+
+    #[test]
+    fn test_deserialization() {
+        let sp1 = "{\"x\":\"1\",\"y\":\"0\"}";
+        let rp1: RawPoint = serde_json::from_str(&sp1).expect("Failed in serialization");
+
+        let p1 = Point {
+            x: BigInt::one(),
+            y: BigInt::zero(),
+        };
+
+        assert_eq!(rp1, RawPoint::from(p1));
     }
 }
