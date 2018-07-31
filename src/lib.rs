@@ -13,9 +13,13 @@
 
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
+#[macro_use]
+extern crate serde_derive;
+extern crate serde;
+extern crate serde_json;
 
 pub mod elliptic;
-pub use elliptic::point::Point;
+pub use elliptic::point::{Point, RawPoint};
 
 // TODO: When we will have more than one type of elliptic curve, add as features
 pub use elliptic::curves::secp256_k1::EC;

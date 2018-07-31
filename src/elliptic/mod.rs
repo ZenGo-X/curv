@@ -13,7 +13,6 @@
 
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
-
 extern crate gmp;
 
 pub mod curves;

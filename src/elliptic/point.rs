@@ -14,6 +14,7 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
+use arithmetic::traits::Converter;
 use BigInt;
 
 /// A simple Point defined by x and y
@@ -23,10 +24,28 @@ pub struct Point {
     pub y: BigInt,
 }
 
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
+pub struct RawPoint {
+    pub x: String,
+    pub y: String,
+}
+
+impl From<Point> for RawPoint {
+    fn from(point: Point) -> Self {
+        RawPoint {
+            x: point.x.to_hex(),
+            y: point.y.to_hex(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::BigInt;
     use super::Point;
+    use super::RawPoint;
+
+    use serde_json;
 
     #[test]
     fn equality_test() {
@@ -45,5 +64,29 @@ mod tests {
             y: BigInt::one(),
         };
         assert_ne!(p1, p3);
+    }
+
+    #[test]
+    fn test_serialization() {
+        let p1 = Point {
+            x: BigInt::one(),
+            y: BigInt::zero(),
+        };
+
+        let s = serde_json::to_string(&RawPoint::from(p1)).expect("Failed in serialization");
+        assert_eq!(s, "{\"x\":\"1\",\"y\":\"0\"}");
+    }
+
+    #[test]
+    fn test_deserialization() {
+        let sp1 = "{\"x\":\"1\",\"y\":\"0\"}";
+        let rp1: RawPoint = serde_json::from_str(&sp1).expect("Failed in serialization");
+
+        let p1 = Point {
+            x: BigInt::one(),
+            y: BigInt::zero(),
+        };
+
+        assert_eq!(rp1, RawPoint::from(p1));
     }
 }
