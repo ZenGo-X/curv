@@ -31,3 +31,62 @@ mod serializing_bigint {
     }
 
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use arithmetic::big_gmp::BigInt;
+
+    extern crate serde_json;
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct DummyContainer {
+        #[serde(with = "serializing_bigint")]
+        a: BigInt,
+
+        #[serde(with = "serializing_bigint")]
+        b: BigInt,
+    }
+
+    static A: &str = "123456789";
+    static B: &str = "987654321";
+
+    #[test]
+    fn test_serialize_deserialize() {
+        let a: BigInt = str::parse(A).unwrap();
+        let b: BigInt = str::parse(B).unwrap();
+        let c = DummyContainer { a, b };
+
+        let serialized = serde_json::to_string(&c).unwrap();
+        assert_eq!(serialized, "{\"a\":\"123456789\",\"b\":\"987654321\"}");
+
+        let d: DummyContainer = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(d, c)
+    }
+
+    #[test]
+    fn test_failing_empty() {
+        let illformatted = "";
+
+        let result: Result<DummyContainer, _> = serde_json::from_str(&illformatted);
+        assert!(result.is_err())
+    }
+
+    #[test]
+    fn test_failing_missing_field() {
+        let illformatted = "{\"a\":\"123456789\"}";
+
+        let result: Result<DummyContainer, _> = serde_json::from_str(&illformatted);
+        assert!(result.is_err())
+    }
+
+    #[test]
+    fn test_failing_non_numeric() {
+        let illformatted = "{\"a\":\"i23456789\",\"b\":\"987654321\"}";
+
+        let result: Result<DummyContainer, _> = serde_json::from_str(&illformatted);
+        assert!(result.is_err())
+    }
+
+}
