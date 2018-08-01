@@ -49,13 +49,10 @@ mod tests {
         b: BigInt,
     }
 
-    static A: &str = "123456789";
-    static B: &str = "987654321";
-
     #[test]
     fn test_serialize_deserialize() {
-        let a: BigInt = str::parse(A).unwrap();
-        let b: BigInt = str::parse(B).unwrap();
+        let a: BigInt = str::parse("123456789").unwrap();
+        let b: BigInt = str::parse("987654321").unwrap();
         let c = DummyContainer { a, b };
 
         let serialized = serde_json::to_string(&c).unwrap();
