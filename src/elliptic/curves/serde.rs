@@ -36,11 +36,11 @@ pub mod serde_secret_key {
 
 pub mod serde_public_key {
     use elliptic::curves::traits::*;
-    use serde::de::{Error, Visitor};
+    use serde::de::{MapAccess, Visitor};
     use serde::ser::SerializeStruct;
     use serde::{Deserializer, Serializer};
-    use serde_json;
     use std::fmt;
+    use BigInt;
     use Point;
     use PK;
 
@@ -51,7 +51,7 @@ pub mod serde_public_key {
 
         let mut state = serializer.serialize_struct("Point", 2)?;
         state.serialize_field("x", &point.x.to_str_radix(10))?;
-        state.serialize_field("y", &point.x.to_str_radix(10))?;
+        state.serialize_field("y", &point.y.to_str_radix(10))?;
         state.end()
     }
 
@@ -67,14 +67,24 @@ pub mod serde_public_key {
                 formatter.write_str("PublicKey")
             }
 
-            fn visit_str<E: Error>(self, s: &str) -> Result<PK, E> {
-                let point = serde_json::from_str::<Point>(s).expect("Failed point");
-                let v: PK = PK::to_key(&point);
-                Ok(v)
+            fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<PK, E::Error> {
+                let mut x = BigInt::from(0);
+                let mut y = BigInt::from(0);
+
+                while let Some(key) = map.next_key::<&'de str>()? {
+                    let v = map.next_value::<&'de str>()?;
+                    match key.as_ref() {
+                        "x" => x = BigInt::from_str_radix(v, 10).unwrap(),
+                        "y" => y = BigInt::from_str_radix(v, 10).unwrap(),
+                        _ => panic!("Serialization failed!"),
+                    }
+                }
+
+                Ok(PK::to_key(&Point { x, y }))
             }
         }
 
-        deserializer.deserialize_str(PublicKeyVisitor)
+        deserializer.deserialize_map(PublicKeyVisitor)
     }
 }
 
@@ -139,14 +149,14 @@ mod tests {
         let s = serde_json::to_string(&dummy).expect("Failed in serialization");
         assert_eq!(s, "{\"pk\":{\
             \"x\":\"24526638926943435805455894225888021349399091104478482819438411584402369425843\",\
-            \"y\":\"24526638926943435805455894225888021349399091104478482819438411584402369425843\"}}");
+            \"y\":\"26199178449721874484533420663300980876115907004255139407282543079611927684284\"}}");
     }
 
     #[test]
     fn deserialize_pk() {
         let s = "{\"pk\":{\
             \"x\":\"24526638926943435805455894225888021349399091104478482819438411584402369425843\",\
-            \"y\":\"24526638926943435805455894225888021349399091104478482819438411584402369425843\"}}";
+            \"y\":\"26199178449721874484533420663300980876115907004255139407282543079611927684284\"}}";
 
         let dummy: DummyStructPK = serde_json::from_str(s).expect("Failed in serialization");
 
