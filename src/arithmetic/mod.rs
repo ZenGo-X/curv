@@ -20,4 +20,5 @@ extern crate rand;
 const HEX_RADIX: u8 = 16;
 
 pub mod big_gmp;
+pub mod serialize;
 pub mod traits;
