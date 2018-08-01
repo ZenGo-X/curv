@@ -1,9 +1,9 @@
 mod serializing_bigint {
 
     use std::fmt;
-    
-    use serde::*;
+
     use serde::de::*;
+    use serde::*;
 
     use arithmetic::big_gmp::BigInt;
 
@@ -12,7 +12,6 @@ mod serializing_bigint {
     }
 
     pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<BigInt, D::Error> {
-
         struct BigIntVisitor;
 
         impl<'de> Visitor<'de> for BigIntVisitor {
