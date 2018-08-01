@@ -25,7 +25,8 @@ pub mod serde_secret_key {
             }
 
             fn visit_str<E: Error>(self, s: &str) -> Result<SK, E> {
-                let v: SK = SK::from_big_int(&BigInt::from_str_radix(s, 10).unwrap());
+                let v: SK =
+                    SK::from_big_int(&BigInt::from_str_radix(s, 10).map_err(Error::custom)?);
                 Ok(v)
             }
         }
@@ -36,7 +37,7 @@ pub mod serde_secret_key {
 
 pub mod serde_public_key {
     use elliptic::curves::traits::*;
-    use serde::de::{MapAccess, Visitor};
+    use serde::de::{Error, MapAccess, Visitor};
     use serde::ser::SerializeStruct;
     use serde::{Deserializer, Serializer};
     use std::fmt;
@@ -74,8 +75,8 @@ pub mod serde_public_key {
                 while let Some(key) = map.next_key::<&'de str>()? {
                     let v = map.next_value::<&'de str>()?;
                     match key.as_ref() {
-                        "x" => x = BigInt::from_str_radix(v, 10).unwrap(),
-                        "y" => y = BigInt::from_str_radix(v, 10).unwrap(),
+                        "x" => x = BigInt::from_str_radix(v, 10).map_err(Error::custom)?,
+                        "y" => y = BigInt::from_str_radix(v, 10).map_err(Error::custom)?,
                         _ => panic!("Serialization failed!"),
                     }
                 }
