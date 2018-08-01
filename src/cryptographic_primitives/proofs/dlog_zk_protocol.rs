@@ -27,55 +27,32 @@
 
 use BigInt;
 
-use Point;
-use RawPoint;
 use EC;
 use PK;
 use SK;
 
 use super::ProofError;
 
-use arithmetic::traits::Converter;
+use arithmetic::serde::serde_bigint;
 use arithmetic::traits::Modulo;
 use arithmetic::traits::Samplable;
 
+use elliptic::curves::serde::serde_public_key;
 use elliptic::curves::traits::*;
 
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct DLogProof {
+    #[serde(with = "serde_public_key")]
     pub pk: PK,
+
+    #[serde(with = "serde_public_key")]
     pub pk_t_rand_commitment: PK,
+
+    #[serde(with = "serde_bigint")]
     pub challenge_response: BigInt,
-}
-
-#[derive(PartialEq, Debug, Serialize, Deserialize)]
-pub struct RawDLogProof {
-    pub pk: RawPoint,
-    pub pk_t_rand_commitment: RawPoint,
-    pub challenge_response: String, // Hex
-}
-
-impl From<DLogProof> for RawDLogProof {
-    fn from(d_log_proof: DLogProof) -> Self {
-        RawDLogProof {
-            pk: RawPoint::from(d_log_proof.pk.to_point()),
-            pk_t_rand_commitment: RawPoint::from(d_log_proof.pk_t_rand_commitment.to_point()),
-            challenge_response: d_log_proof.challenge_response.to_hex(),
-        }
-    }
-}
-
-impl From<RawDLogProof> for DLogProof {
-    fn from(raw_d_log_proof: RawDLogProof) -> Self {
-        DLogProof {
-            pk: PK::to_key(&Point::from(raw_d_log_proof.pk)),
-            pk_t_rand_commitment: PK::to_key(&Point::from(raw_d_log_proof.pk_t_rand_commitment)),
-            challenge_response: BigInt::from_hex(&raw_d_log_proof.challenge_response),
-        }
-    }
 }
 
 pub trait ProveDLog {
@@ -144,7 +121,7 @@ impl ProveDLog for DLogProof {
 
 #[cfg(test)]
 mod tests {
-    use super::{DLogProof, RawDLogProof};
+    use super::DLogProof;
     use serde_json;
     use BigInt;
     use EC;
@@ -168,21 +145,19 @@ mod tests {
             challenge_response: BigInt::from(11),
         };
 
-        let s = serde_json::to_string(&RawDLogProof::from(d_log_proof))
-            .expect("Failed in serialization");
+        let s = serde_json::to_string(&d_log_proof).expect("Failed in serialization");
         assert_eq!(
             s,
             "{\"pk\":{\
-             \"x\":\"363995efa294aff6feef4b9a980a52eae055dc286439791ea25e9c87434a31b3\",\
-             \"y\":\"39ec35a27c9590a84d4a1e48d3e56e6f3760c156e3b798c39b33f77b713ce4bc\"},\
+             \"x\":\"24526638926943435805455894225888021349399091104478482819438411584402369425843\",\
+             \"y\":\"24526638926943435805455894225888021349399091104478482819438411584402369425843\"},\
              \"pk_t_rand_commitment\":{\
-             \"x\":\"363995efa294aff6feef4b9a980a52eae055dc286439791ea25e9c87434a31b3\",\
-             \"y\":\"39ec35a27c9590a84d4a1e48d3e56e6f3760c156e3b798c39b33f77b713ce4bc\"},\
-             \"challenge_response\":\"b\"}"
+             \"x\":\"24526638926943435805455894225888021349399091104478482819438411584402369425843\",\
+             \"y\":\"24526638926943435805455894225888021349399091104478482819438411584402369425843\"},\
+             \"challenge_response\":\"11\"}"
         );
     }
 
-    #[test]
     fn test_deserialization() {
         let valid_key: [u8; 65] = [
             4, // header
@@ -201,15 +176,15 @@ mod tests {
         };
 
         let sd = "{\"pk\":{\
-                  \"x\":\"363995efa294aff6feef4b9a980a52eae055dc286439791ea25e9c87434a31b3\",\
-                  \"y\":\"39ec35a27c9590a84d4a1e48d3e56e6f3760c156e3b798c39b33f77b713ce4bc\"},\
+                  \"x\":\"24526638926943435805455894225888021349399091104478482819438411584402369425843\",\
+                  \"y\":\"24526638926943435805455894225888021349399091104478482819438411584402369425843\"},\
                   \"pk_t_rand_commitment\":{\
-                  \"x\":\"363995efa294aff6feef4b9a980a52eae055dc286439791ea25e9c87434a31b3\",\
-                  \"y\":\"39ec35a27c9590a84d4a1e48d3e56e6f3760c156e3b798c39b33f77b713ce4bc\"},\
-                  \"challenge_response\":\"b\"}";
+                  \"x\":\"24526638926943435805455894225888021349399091104478482819438411584402369425843\",\
+                  \"y\":\"24526638926943435805455894225888021349399091104478482819438411584402369425843\"},\
+                  \"challenge_response\":\"11\"}";
 
-        let rsd: RawDLogProof = serde_json::from_str(&sd).expect("Failed in serialization");
+        let rsd: DLogProof = serde_json::from_str(&sd).expect("Failed in serialization");
 
-        assert_eq!(rsd, RawDLogProof::from(d_log_proof));
+        assert_eq!(rsd, d_log_proof);
     }
 }

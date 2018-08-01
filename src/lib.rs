@@ -19,7 +19,7 @@ extern crate serde;
 extern crate serde_json;
 
 pub mod elliptic;
-pub use elliptic::point::{Point, RawPoint};
+pub use elliptic::point::Point;
 
 // TODO: When we will have more than one type of elliptic curve, add as features
 pub use elliptic::curves::secp256_k1::EC;

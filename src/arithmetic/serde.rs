@@ -1,4 +1,4 @@
-mod serializing_bigint {
+pub mod serde_bigint {
 
     use std::fmt;
 
@@ -42,10 +42,10 @@ mod tests {
 
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     struct DummyContainer {
-        #[serde(with = "serializing_bigint")]
+        #[serde(with = "serde_bigint")]
         a: BigInt,
 
-        #[serde(with = "serializing_bigint")]
+        #[serde(with = "serde_bigint")]
         b: BigInt,
     }
 
