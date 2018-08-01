@@ -71,11 +71,8 @@ impl From<DLogProof> for RawDLogProof {
 impl From<RawDLogProof> for DLogProof {
     fn from(raw_d_log_proof: RawDLogProof) -> Self {
         DLogProof {
-            pk: PK::to_key(&EC::new(), &Point::from(raw_d_log_proof.pk)),
-            pk_t_rand_commitment: PK::to_key(
-                &EC::new(),
-                &Point::from(raw_d_log_proof.pk_t_rand_commitment),
-            ),
+            pk: PK::to_key(&Point::from(raw_d_log_proof.pk)),
+            pk_t_rand_commitment: PK::to_key(&Point::from(raw_d_log_proof.pk_t_rand_commitment)),
             challenge_response: BigInt::from_hex(&raw_d_log_proof.challenge_response),
         }
     }
@@ -89,9 +86,8 @@ pub trait ProveDLog {
 
 impl ProveDLog for DLogProof {
     fn prove(ec_context: &EC, pk: &PK, sk: &SK) -> DLogProof {
-        let mut pk_t_rand_commitment = PK::to_key(&ec_context, &EC::get_base_point());
-        let sk_t_rand_commitment =
-            SK::from_big_int(ec_context, &BigInt::sample_below(&EC::get_q()));
+        let mut pk_t_rand_commitment = PK::to_key(&PK::get_base_point());
+        let sk_t_rand_commitment = SK::from_big_int(&BigInt::sample_below(&SK::get_q()));
 
         pk_t_rand_commitment
             .mul_assign(ec_context, &sk_t_rand_commitment)
@@ -99,14 +95,14 @@ impl ProveDLog for DLogProof {
 
         let challenge = HSha256::create_hash(vec![
             &pk_t_rand_commitment.to_point().x,
-            &EC::get_base_point().x,
+            &PK::get_base_point().x,
             &pk.to_point().x,
         ]);
 
         let challenge_response = BigInt::mod_sub(
             &sk_t_rand_commitment.to_big_int(),
-            &BigInt::mod_mul(&challenge, &sk.to_big_int(), &EC::get_q()),
-            &EC::get_q(),
+            &BigInt::mod_mul(&challenge, &sk.to_big_int(), &SK::get_q()),
+            &SK::get_q(),
         );
 
         DLogProof {
@@ -119,23 +115,21 @@ impl ProveDLog for DLogProof {
     fn verify(ec_context: &EC, proof: &DLogProof) -> Result<(), ProofError> {
         let challenge = HSha256::create_hash(vec![
             &proof.pk_t_rand_commitment.to_point().x,
-            &EC::get_base_point().x,
+            &PK::get_base_point().x,
             &proof.pk.to_point().x,
         ]);
 
         let mut pk_challenge = proof.pk.clone();
         pk_challenge
-            .mul_assign(ec_context, &SK::from_big_int(ec_context, &challenge))
+            .mul_assign(ec_context, &SK::from_big_int(&challenge))
             .expect("Assignment expected");
 
-        let mut pk_verifier = PK::to_key(ec_context, &EC::get_base_point());
+        let mut pk_verifier = PK::to_key(&PK::get_base_point());
         pk_verifier
-            .mul_assign(
-                ec_context,
-                &SK::from_big_int(ec_context, &proof.challenge_response),
-            ).expect("Assignment expected");
+            .mul_assign(ec_context, &SK::from_big_int(&proof.challenge_response))
+            .expect("Assignment expected");
 
-        let pk_verifier = match pk_verifier.combine(ec_context, &pk_challenge) {
+        let pk_verifier = match pk_verifier.combine(&ec_context, &pk_challenge) {
             Ok(pk_verifier) => pk_verifier,
             _error => return Err(ProofError),
         };

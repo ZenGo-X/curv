@@ -17,28 +17,25 @@
 use BigInt;
 use Point;
 
-pub trait CurveConstCodec {
-    fn get_base_point() -> Point;
+/// Secret Key Codec: BigInt <> SecretKey
+pub trait SecretKeyCodec {
+    fn new_random() -> Self;
+    fn from_big_int(n: &BigInt) -> Self;
+
+    fn to_big_int(&self) -> BigInt;
     fn get_q() -> BigInt;
 }
 
-/// Secret Key Codec: BigInt <> SecretKey
-pub trait SecretKeyCodec<EC> {
-    fn new_random(s: &EC) -> Self;
-    fn from_big_int(s: &EC, n: &BigInt) -> Self;
-
-    fn to_big_int(&self) -> BigInt;
-}
-
 /// Public Key Codec: Point <> PublicKey
-pub trait PublicKeyCodec<EC, SK> {
+pub trait PublicKeyCodec {
     const KEY_SIZE: usize;
     const HEADER_MARKER: usize;
 
+    fn get_base_point() -> Point;
     fn bytes_compressed_to_big_int(&self) -> BigInt;
     fn to_point(&self) -> Point;
 
     fn from_key_slice(key: &[u8]) -> Point;
-    fn to_key(s: &EC, p: &Point) -> Self;
+    fn to_key(p: &Point) -> Self;
     fn to_key_slice(p: &Point) -> Vec<u8>;
 }
