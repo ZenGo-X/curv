@@ -18,4 +18,5 @@ extern crate rand;
 extern crate secp256k1;
 
 pub mod secp256_k1;
+pub mod serde;
 pub mod traits;
