@@ -10,7 +10,7 @@ crate-type = ["lib"]
 
 [dependencies]
 rust-gmp = "0.5.0"
-rand = "0.4"
+rand = "0.5"
 ring = "0.13"
 serde = "1.0"
 serde_derive = "1.0"
@@ -22,4 +22,4 @@ features = ["rand"]
 
 
 [dependencies.curve25519-dalek]
-version = "^0.18.0"
+version = "0.19.0"

@@ -27,7 +27,8 @@ use BigInt;
 
 use arithmetic::traits::Converter;
 
-use super::rand::thread_rng;
+use super::rand::{thread_rng, Rng};
+
 use super::secp256k1::constants::{CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE};
 use super::secp256k1::{PublicKey, Secp256k1, SecretKey};
 use super::traits::{ECPoint, ECScalar};
@@ -52,9 +53,13 @@ pub type FE = Secp256k1Scalar;
 
 impl ECScalar<SK> for Secp256k1Scalar{
     fn new_random() -> Secp256k1Scalar {
+        let mut arr = [0u8; 32];
+        thread_rng().fill(&mut arr[..]);
         Secp256k1Scalar {
             purpose : "random",
-            fe: SK::new( & EC::without_caps(), &mut thread_rng())
+            //fe: SK::new( & EC::without_caps(), &mut csprng)
+            fe: SK::from_slice(&EC::without_caps(), &arr[0..arr.len()]).unwrap()
+           // fe: SK::new( & EC::without_caps(), &mut thread_rng())
          }
     }
 
@@ -95,8 +100,8 @@ impl ECPoint<PK,SK> for Secp256k1Point{
             purpose: "base_fe",
             ge: PK::from_slice(&Secp256k1::without_caps(), &v).unwrap()
         }
-
     }
+
     fn get_element(&self) -> PK{
         self.ge
     }
@@ -118,6 +123,8 @@ impl ECPoint<PK,SK> for Secp256k1Point{
         let result = BigInt::from(&serial[0..33]);
         return result;
     }
+
+
     fn from_key_slice(key: &[u8]) -> Secp256k1Point{
         assert_eq!(key.len(), 32);
         let header = key[0] as usize;
@@ -135,8 +142,8 @@ impl ECPoint<PK,SK> for Secp256k1Point{
             purpose: "from_key_slice",
             ge: PK::from_slice(&EC::without_caps(), &key).unwrap()
         }
-
     }
+
     fn pk_to_key_slice(&self) -> Vec<u8>{
         let mut v = vec![4 as u8];
 
@@ -152,15 +159,12 @@ impl ECPoint<PK,SK> for Secp256k1Point{
     //        purpose: "mul_assign",
      //       ge: pubkey
     //    }
-
     }
     fn add_point(&self, other: &PK) -> Secp256k1Point{
         Secp256k1Point{
             purpose: "combine",
             ge: self.ge.combine(&EC::new(), other).unwrap()
         }
-
-
     }
 
 }

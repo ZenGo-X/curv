@@ -21,13 +21,20 @@ extern crate serde_json;
 pub mod elliptic;
 
 // TODO: When we will have more than one type of elliptic curve, add as features
-pub use elliptic::curves::secp256_k1::EC;
-pub use elliptic::curves::secp256_k1::PK;
-pub use elliptic::curves::secp256_k1::SK;
-pub use elliptic::curves::secp256_k1::GE;
-pub use elliptic::curves::secp256_k1::FE;
-pub mod arithmetic;
+//pub use elliptic::curves::secp256_k1::EC;
+//pub use elliptic::curves::secp256_k1::PK;
+//pub use elliptic::curves::secp256_k1::SK;
+//pub use elliptic::curves::secp256_k1::GE;
+//pub use elliptic::curves::secp256_k1::FE;
+
+pub use elliptic::curves::curve25519::PK;
+pub use elliptic::curves::curve25519::SK;
+pub use elliptic::curves::curve25519::GE;
+pub use elliptic::curves::curve25519::FE;
+
+
 // TODO: When we will have more than one type of big num library, add as features
+pub mod arithmetic;
 pub use arithmetic::big_gmp::BigInt;
 
 pub mod cryptographic_primitives;
