@@ -27,12 +27,11 @@
 
 use BigInt;
 
-use Point;
-use RawPoint;
-use EC;
+
 use PK;
 use SK;
-
+use GE;
+use FE;
 use super::ProofError;
 
 use arithmetic::traits::Converter;
@@ -44,13 +43,14 @@ use elliptic::curves::traits::*;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
 
-#[derive(Clone, PartialEq, Debug)]
+//#[derive(Clone, PartialEq, Debug)]
 pub struct DLogProof {
-    pub pk: PK,
-    pub pk_t_rand_commitment: PK,
+    pub pk: GE,
+    pub pk_t_rand_commitment: GE,
     pub challenge_response: BigInt,
 }
 
+/*
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct RawDLogProof {
     pub pk: RawPoint,
@@ -77,71 +77,71 @@ impl From<RawDLogProof> for DLogProof {
         }
     }
 }
-
+*/
 pub trait ProveDLog {
-    fn prove(ec_context: &EC, pk: &PK, sk: &SK) -> DLogProof;
+    fn prove(sk: &FE) -> DLogProof;
 
-    fn verify(ec_context: &EC, proof: &DLogProof) -> Result<(), ProofError>;
+    fn verify(proof: &DLogProof) -> Result<(), ProofError>;
 }
 
 impl ProveDLog for DLogProof {
-    fn prove(ec_context: &EC, pk: &PK, sk: &SK) -> DLogProof {
-        let mut pk_t_rand_commitment = PK::to_key(&PK::get_base_point());
-        let sk_t_rand_commitment = SK::from_big_int(&BigInt::sample_below(&SK::get_q()));
-
-        pk_t_rand_commitment
-            .mul_assign(ec_context, &sk_t_rand_commitment)
-            .expect("Assignment expected");
-
+    fn prove(sk: &FE) -> DLogProof {
+        let ec_point: GE = ECPoint::new();
+        let generator_x = ec_point.get_x_coor_as_big_int();
+        let sk_t_rand_commitment : FE = ECScalar::new_random();
+        let curve_order = sk_t_rand_commitment.get_q();
+        let pk_t_rand_commitment = ec_point.scalar_mul(&sk_t_rand_commitment.get_element());
+        let ec_point: GE = ECPoint::new();
+        let pk = ec_point.scalar_mul(&sk.get_element());
         let challenge = HSha256::create_hash(vec![
-            &pk_t_rand_commitment.to_point().x,
-            &PK::get_base_point().x,
-            &pk.to_point().x,
+            &pk_t_rand_commitment.get_x_coor_as_big_int(),
+            &generator_x,
+            &pk.get_x_coor_as_big_int(),
         ]);
 
         let challenge_response = BigInt::mod_sub(
             &sk_t_rand_commitment.to_big_int(),
-            &BigInt::mod_mul(&challenge, &sk.to_big_int(), &SK::get_q()),
-            &SK::get_q(),
+            &BigInt::mod_mul(&challenge, &sk.to_big_int(), &curve_order),
+            &curve_order,
         );
 
         DLogProof {
-            pk: *pk,
+            pk: pk,
             pk_t_rand_commitment,
             challenge_response,
         }
     }
 
-    fn verify(ec_context: &EC, proof: &DLogProof) -> Result<(), ProofError> {
+    fn verify( proof: &DLogProof) -> Result<(), ProofError> {
+        let ec_point: GE = ECPoint::new();
         let challenge = HSha256::create_hash(vec![
-            &proof.pk_t_rand_commitment.to_point().x,
-            &PK::get_base_point().x,
-            &proof.pk.to_point().x,
+            &proof.pk_t_rand_commitment.get_x_coor_as_big_int(),
+            &ec_point.get_x_coor_as_big_int(),
+            &proof.pk.get_x_coor_as_big_int(),
         ]);
 
-        let mut pk_challenge = proof.pk.clone();
-        pk_challenge
-            .mul_assign(ec_context, &SK::from_big_int(&challenge))
-            .expect("Assignment expected");
+        let sk_challenge : FE = ECScalar::from_big_int(&challenge);
+        let pk = proof.pk.clone();
+        let pk_challenge = pk.scalar_mul(&sk_challenge.get_element());
 
-        let mut pk_verifier = PK::to_key(&PK::get_base_point());
-        pk_verifier
-            .mul_assign(ec_context, &SK::from_big_int(&proof.challenge_response))
-            .expect("Assignment expected");
+        let base_point: GE = ECPoint::new();
+        let sk_challenge_response : FE = ECScalar::from_big_int(&proof.challenge_response);
+        let mut pk_verifier = base_point.scalar_mul(&sk_challenge_response.get_element());
 
-        let pk_verifier = match pk_verifier.combine(&ec_context, &pk_challenge) {
-            Ok(pk_verifier) => pk_verifier,
-            _error => return Err(ProofError),
-        };
+        pk_verifier =  pk_verifier.add_point(&pk_challenge.get_element());
+        //let pk_verifier = match  ECPoint::add_point(&pk_verifier,&pk_challenge){
+     //       Ok(pk_verifier) => pk_verifier,
+     //       _error => return Err(ProofError),
+     //   };
 
-        if pk_verifier == proof.pk_t_rand_commitment {
+        if pk_verifier.get_element() == proof.pk_t_rand_commitment.get_element() {
             Ok(())
         } else {
             Err(ProofError)
         }
     }
 }
-
+/*
 #[cfg(test)]
 mod tests {
     use super::{DLogProof, RawDLogProof};
@@ -213,3 +213,4 @@ mod tests {
         assert_eq!(rsd, RawDLogProof::from(d_log_proof));
     }
 }
+*/

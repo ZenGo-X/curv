@@ -24,25 +24,45 @@
 // The Public Key codec: Point <> SecretKey
 //
 use BigInt;
-use Point;
 
 use arithmetic::traits::Converter;
 
 use super::rand::thread_rng;
 use super::secp256k1::constants::{CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE};
 use super::secp256k1::{PublicKey, Secp256k1, SecretKey};
-use super::traits::{PublicKeyCodec, SecretKeyCodec};
+use super::traits::{ECPoint, ECScalar};
 
 pub type EC = Secp256k1;
 pub type SK = SecretKey;
 pub type PK = PublicKey;
 
-impl SecretKeyCodec for SecretKey {
-    fn new_random() -> SecretKey {
-        SecretKey::new(&Secp256k1::without_caps(), &mut thread_rng())
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct Secp256k1Scalar{
+    purpose: &'static str,
+    fe: SK
+}
+#[derive(Clone, PartialEq, Debug)]
+pub struct Secp256k1Point{
+    purpose: &'static str,
+    ge: PK
+}
+pub type GE = Secp256k1Point;
+pub type FE = Secp256k1Scalar;
+
+impl ECScalar<SK> for Secp256k1Scalar{
+    fn new_random() -> Secp256k1Scalar {
+        Secp256k1Scalar {
+            purpose : "random",
+            fe: SK::new( & EC::without_caps(), &mut thread_rng())
+         }
     }
 
-    fn from_big_int(n: &BigInt) -> SecretKey {
+    fn get_element(&self) -> SK{
+        self.fe
+    }
+
+    fn from_big_int(n: &BigInt) -> Secp256k1Scalar {
         let mut v = BigInt::to_vec(n);
 
         if v.len() < SECRET_KEY_SIZE {
@@ -50,82 +70,105 @@ impl SecretKeyCodec for SecretKey {
             template.extend_from_slice(&v);
             v = template;
         }
-
-        SecretKey::from_slice(&Secp256k1::without_caps(), &v).unwrap()
+        Secp256k1Scalar {
+        purpose: "from_big_int",
+        fe: SK::from_slice( & EC::without_caps(), &v).unwrap()
+        }
     }
 
     fn to_big_int(&self) -> BigInt {
-        BigInt::from(&self[0..self.len()])
+        BigInt::from(&(self.fe[0..self.fe.len()]))
     }
 
-    fn get_q() -> BigInt {
+    fn get_q(&self) -> BigInt {
         BigInt::from(CURVE_ORDER.as_ref())
     }
 }
 
-impl PublicKeyCodec for PublicKey {
-    const KEY_SIZE: usize = 65;
-    const HEADER_MARKER: usize = 4;
 
-    fn get_base_point() -> Point {
-        Point {
-            x: BigInt::from(GENERATOR_X.as_ref()),
-            y: BigInt::from(GENERATOR_Y.as_ref()),
+impl ECPoint<PK,SK> for Secp256k1Point{
+    fn new() -> Secp256k1Point {
+        let mut v = vec![4 as u8];
+        v.extend(GENERATOR_X.as_ref());
+        v.extend(GENERATOR_Y.as_ref());
+        Secp256k1Point{
+            purpose: "base_fe",
+            ge: PK::from_slice(&Secp256k1::without_caps(), &v).unwrap()
         }
+
+    }
+    fn get_element(&self) -> PK{
+        self.ge
     }
 
-    fn bytes_compressed_to_big_int(&self) -> BigInt {
-        let serial = self.serialize();
+    fn get_x_coor_as_big_int(&self) -> BigInt{
+        let serialized_pk = PK::serialize_uncompressed(&self.ge);
+        let x = &serialized_pk[1..serialized_pk.len() / 2 + 1];
+        BigInt::from(x)
+    }
+
+    fn get_y_coor_as_big_int(&self) -> BigInt{
+        let serialized_pk = PK::serialize_uncompressed(&self.ge);
+        let y = &serialized_pk[(serialized_pk.len() - 1) / 2 + 1..serialized_pk.len()];
+        BigInt::from(y)
+    }
+
+    fn bytes_compressed_to_big_int(&self) -> BigInt{
+        let serial = self.ge.serialize();
         let result = BigInt::from(&serial[0..33]);
         return result;
     }
-
-    fn to_point(&self) -> Point {
-        PublicKey::from_key_slice(&self.serialize_uncompressed())
-    }
-
-    /// # Details
-    /// This function serialized into a Point a Key in the uncompressed form.
-    /// The expected size of the key is an array of 65 elements where:
-    /// the first element is the header (4, uncompressed) and X, Y of length 32
-    /// use PublicKey::to_key_slice to deserialize
-    ///
-    fn from_key_slice(key: &[u8]) -> Point {
-        assert_eq!(key.len(), PublicKey::KEY_SIZE);
+    fn from_key_slice(key: &[u8]) -> Secp256k1Point{
+        assert_eq!(key.len(), 32);
         let header = key[0] as usize;
-
-        assert_eq!(header, PublicKey::HEADER_MARKER);
+        assert_eq!(header, 4);
 
         // first 32 elements (without the header)
         let x = &key[1..key.len() / 2 + 1];
-
         // last 32 element
         let y = &key[(key.len() - 1) / 2 + 1..key.len()];
-
-        Point {
-            x: BigInt::from(x),
-            y: BigInt::from(y),
+        let y_coord_size = 32;
+        let y_zeros_vec = vec![0; y_coord_size];
+        assert_ne!(y, &y_zeros_vec[..]);
+        // TODO: add a test if point (x,y) is on curve.
+        Secp256k1Point{
+            purpose: "from_key_slice",
+            ge: PK::from_slice(&EC::without_caps(), &key).unwrap()
         }
-    }
 
-    fn to_key(p: &Point) -> PublicKey {
-        PublicKey::from_slice(&Secp256k1::without_caps(), &PublicKey::to_key_slice(p)).unwrap()
     }
+    fn pk_to_key_slice(&self) -> Vec<u8>{
+        let mut v = vec![4 as u8];
 
-    /// # Details
-    /// This function deserialized a Point into a Key in the uncompressed form.
-    /// use PublicKey::from_key_slice to serialize
-    ///
-    fn to_key_slice(p: &Point) -> Vec<u8> {
-        let mut v = vec![PublicKey::HEADER_MARKER as u8];
-        v.extend(BigInt::to_vec(&p.x));
-        v.extend(BigInt::to_vec(&p.y));
+        v.extend(BigInt::to_vec(&self.get_x_coor_as_big_int()));
+        v.extend(BigInt::to_vec(&self.get_y_coor_as_big_int()));
         v
     }
+
+    fn scalar_mul(mut self, fe: &SK) -> Secp256k1Point{
+        self.ge.mul_assign(&EC::new(), fe).expect("Assignment expected");
+        self
+     //   Secp256k1Point{
+    //        purpose: "mul_assign",
+     //       ge: pubkey
+    //    }
+
+    }
+    fn add_point(&self, other: &PK) -> Secp256k1Point{
+        Secp256k1Point{
+            purpose: "combine",
+            ge: self.ge.combine(&EC::new(), other).unwrap()
+        }
+
+
+    }
+
 }
+
 
 #[cfg(test)]
 mod tests {
+    /*
     use super::{PublicKeyCodec, SecretKeyCodec};
 
     use elliptic::curves::rand::thread_rng;
@@ -133,6 +176,54 @@ mod tests {
     use elliptic::curves::secp256k1::{PublicKey, Secp256k1, SecretKey};
 
     use BigInt;
+    use super::Point;
+    use super::RawPoint;
+
+    use serde_json;
+
+    #[test]
+    fn equality_test() {
+        let p1 = Point {
+            x: BigInt::one(),
+            y: BigInt::zero(),
+        };
+        let p2 = Point {
+            x: BigInt::one(),
+            y: BigInt::zero(),
+        };
+        assert_eq!(p1, p2);
+
+        let p3 = Point {
+            x: BigInt::zero(),
+            y: BigInt::one(),
+        };
+        assert_ne!(p1, p3);
+    }
+
+    #[test]
+    fn test_serialization() {
+        let p1 = Point {
+            x: BigInt::one(),
+            y: BigInt::zero(),
+        };
+
+        let s = serde_json::to_string(&RawPoint::from(p1)).expect("Failed in serialization");
+        assert_eq!(s, "{\"x\":\"1\",\"y\":\"0\"}");
+    }
+
+    #[test]
+    fn test_deserialization() {
+        let sp1 = "{\"x\":\"1\",\"y\":\"0\"}";
+        let rp1: RawPoint = serde_json::from_str(&sp1).expect("Failed in serialization");
+
+        let p1 = Point {
+            x: BigInt::one(),
+            y: BigInt::zero(),
+        };
+
+        assert_eq!(rp1, RawPoint::from(p1));
+    }
+
 
     #[test]
     fn get_base_point_test() {
@@ -225,4 +316,5 @@ mod tests {
         let expected_key = PublicKey::to_key(&p);
         assert_eq!(expected_key, uncompressed_key);
     }
+    */
 }

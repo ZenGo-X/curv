@@ -15,27 +15,27 @@
 */
 
 use BigInt;
-use Point;
 
-/// Secret Key Codec: BigInt <> SecretKey
-pub trait SecretKeyCodec {
+pub trait ECScalar<SK> {
     fn new_random() -> Self;
+    fn get_element(&self) -> SK;
     fn from_big_int(n: &BigInt) -> Self;
-
     fn to_big_int(&self) -> BigInt;
-    fn get_q() -> BigInt;
+    fn get_q(&self) -> BigInt;
 }
 
-/// Public Key Codec: Point <> PublicKey
-pub trait PublicKeyCodec {
-    const KEY_SIZE: usize;
-    const HEADER_MARKER: usize;
-
-    fn get_base_point() -> Point;
+// TODO: add a fn is_point
+pub trait ECPoint<PK, SK> {
+    fn new() -> Self;
+    fn get_element(&self) -> PK;
+    fn get_x_coor_as_big_int(&self) -> BigInt;
+    fn get_y_coor_as_big_int(&self) -> BigInt;
     fn bytes_compressed_to_big_int(&self) -> BigInt;
-    fn to_point(&self) -> Point;
+    fn from_key_slice(key: &[u8]) -> Self;
+    fn pk_to_key_slice(&self) -> Vec<u8>;
+    fn scalar_mul(self, fe: &SK) -> Self;
+    fn add_point(&self, other: &PK) -> Self;
 
-    fn from_key_slice(key: &[u8]) -> Point;
-    fn to_key(p: &Point) -> Self;
-    fn to_key_slice(p: &Point) -> Vec<u8>;
 }
+
+

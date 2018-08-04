@@ -19,13 +19,13 @@ extern crate serde;
 extern crate serde_json;
 
 pub mod elliptic;
-pub use elliptic::point::{Point, RawPoint};
 
 // TODO: When we will have more than one type of elliptic curve, add as features
 pub use elliptic::curves::secp256_k1::EC;
 pub use elliptic::curves::secp256_k1::PK;
 pub use elliptic::curves::secp256_k1::SK;
-
+pub use elliptic::curves::secp256_k1::GE;
+pub use elliptic::curves::secp256_k1::FE;
 pub mod arithmetic;
 // TODO: When we will have more than one type of big num library, add as features
 pub use arithmetic::big_gmp::BigInt;
