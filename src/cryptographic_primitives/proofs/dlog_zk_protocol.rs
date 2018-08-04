@@ -43,7 +43,7 @@ use elliptic::curves::traits::*;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
 
-//#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct DLogProof {
     pub pk: GE,
     pub pk_t_rand_commitment: GE,
@@ -106,7 +106,7 @@ impl ProveDLog for DLogProof {
         );
 
         DLogProof {
-            pk: pk,
+            pk,
             pk_t_rand_commitment,
             challenge_response,
         }
@@ -141,14 +141,39 @@ impl ProveDLog for DLogProof {
         }
     }
 }
-/*
+
 #[cfg(test)]
 mod tests {
-    use super::{DLogProof, RawDLogProof};
+    use cryptographic_primitives::proofs::dlog_zk_protocol::*;
     use serde_json;
     use BigInt;
-    use EC;
+    use SK;
     use PK;
+    use GE;
+    use FE;
+    use super::ProofError;
+
+    use arithmetic::traits::Converter;
+    use arithmetic::traits::Modulo;
+    use arithmetic::traits::Samplable;
+
+    use elliptic::curves::traits::*;
+
+    use cryptographic_primitives::hashing::hash_sha256::HSha256;
+    use cryptographic_primitives::hashing::traits::Hash;
+
+    #[test]
+    fn test_dlog_proof(){
+        let witness : FE = ECScalar::new_random();
+        let dlog_proof =  DLogProof::prove(&witness);
+        let verified = DLogProof::verify(&dlog_proof);
+        match verified{
+            Ok(t) => println!("OK"),
+            Err(e) => println!("error"),
+        }
+    }
+    /*
+
 
     #[test]
     fn test_serialization() {
@@ -212,5 +237,5 @@ mod tests {
 
         assert_eq!(rsd, RawDLogProof::from(d_log_proof));
     }
-}
 */
+}
