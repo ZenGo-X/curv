@@ -124,7 +124,7 @@ impl ECPoint<PK,SK> for Secp256k1Point{
         return result;
     }
 
-
+/*
     fn from_key_slice(key: &[u8]) -> Secp256k1Point{
         assert_eq!(key.len(), 32);
         let header = key[0] as usize;
@@ -143,7 +143,7 @@ impl ECPoint<PK,SK> for Secp256k1Point{
             ge: PK::from_slice(&EC::without_caps(), &key).unwrap()
         }
     }
-
+*/
     fn pk_to_key_slice(&self) -> Vec<u8>{
         let mut v = vec![4 as u8];
 

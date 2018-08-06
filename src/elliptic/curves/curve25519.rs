@@ -110,7 +110,7 @@ impl ECPoint<PK,SK> for Curve25519Point{
     fn bytes_compressed_to_big_int(&self) -> BigInt{
         BigInt::from(self.ge.to_bytes()[0..self.ge.to_bytes().len()].as_ref())
     }
-
+/*
     fn from_key_slice(key: &[u8]) -> Curve25519Point{
         assert_eq!(key.len(), COOR_BYTE_SIZE*4);
         let mut array : [u8;32] = [0; 32];
@@ -135,7 +135,7 @@ impl ECPoint<PK,SK> for Curve25519Point{
             ge: CompressedEdwardsY(array)
         }
     }
-
+*/
 
     fn pk_to_key_slice(&self) -> Vec<u8>{
         let result = self.ge.to_bytes();
