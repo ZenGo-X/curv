@@ -1,11 +1,34 @@
+/*
+    Cryptography utilities
 
+    Copyright 2018 by Kzen Networks
+
+    This file is part of Cryptography utilities library
+    (https://github.com/KZen-networks/cryptography-utils)
+
+    Cryptography utilities is free software: you can redistribute
+    it and/or modify it under the terms of the GNU General Public
+    License as published by the Free Software Foundation, either
+    version 3 of the License, or (at your option) any later version.
+
+    @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
+*/
+
+// Secp256k1 elliptic curve utility functions (se: https://en.bitcoin.it/wiki/Secp256k1).
+//
+// In Cryptography utilities, we need to manipulate low level elliptic curve members as Point
+// in order to perform operation on them. As the library secp256k1 expose only SecretKey and
+// PublicKey, we extend those with simple codecs.
+//
+// The Secret Key codec: BigInt <> SecretKey
+// The Public Key codec: Point <> SecretKey
+//
 
 use BigInt;
 
 use arithmetic::traits::Converter;
 
 use super::rand::thread_rng;
-
 use super::curve25519_dalek::constants::ED25519_BASEPOINT_POINT;
 use super::curve25519_dalek::constants::BASEPOINT_ORDER;
 use super::curve25519_dalek::scalar::Scalar;
@@ -17,7 +40,6 @@ use super::traits::{ECPoint, ECScalar};
 pub const SECRET_KEY_SIZE: usize = 32;
 pub const COOR_BYTE_SIZE: usize = 32;
 pub const NUM_OF_COORDINATES: usize = 4;
-
 
 
 pub type SK = Scalar;
