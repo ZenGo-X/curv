@@ -17,4 +17,5 @@
 extern crate ring;
 
 pub mod hash_sha256;
+pub mod hash_sha512;
 pub mod traits;
