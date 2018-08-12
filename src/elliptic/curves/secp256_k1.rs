@@ -79,7 +79,6 @@ impl ECScalar<SK> for Secp256k1Scalar{
             template.extend_from_slice(&v);
             v = template;
         }
-        println!("fe: {:?}", &v);
         Secp256k1Scalar {
         purpose: "from_big_int",
         fe: SK::from_slice( & EC::without_caps(), &v).unwrap()
