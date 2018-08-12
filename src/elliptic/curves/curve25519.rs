@@ -75,13 +75,28 @@ impl ECScalar<SK> for Curve25519Scalar{
 
     fn from_big_int(n: &BigInt) -> Curve25519Scalar {
         let mut v = BigInt::to_vec(n);
-        let mut bytes_array: [u8; SECRET_KEY_SIZE] = [0; SECRET_KEY_SIZE];
-        let bytes = &v[..bytes_array.len()];
-        bytes_array.copy_from_slice(&bytes);
-        Curve25519Scalar {
-            purpose: "from_big_int",
-            fe: SK::from_bytes_mod_order(bytes_array)
+        //TODO: add consistency check for sizes max 32/ max 64
+        let mut bytes_array_32: [u8;32];
+        let mut bytes_array_64: [u8;64];
+        if v.len()<=SECRET_KEY_SIZE {
+            bytes_array_32 = [0; SECRET_KEY_SIZE];
+            let bytes = &v[..];
+            bytes_array_32.copy_from_slice(&bytes);
+            Curve25519Scalar {
+                purpose: "from_big_int",
+                fe: SK::from_bytes_mod_order(bytes_array_32)
+            }
         }
+        else{
+            bytes_array_64 = [0; 2*SECRET_KEY_SIZE];
+            let bytes = &v[..];
+            bytes_array_64.copy_from_slice(&bytes);
+            Curve25519Scalar {
+                purpose: "from_big_int",
+                fe: SK::from_bytes_mod_order_wide(&bytes_array_64)
+            }
+        }
+
     }
 
     fn to_big_int(&self) -> BigInt {
