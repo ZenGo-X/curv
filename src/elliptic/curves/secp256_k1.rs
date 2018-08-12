@@ -71,10 +71,11 @@ impl ECScalar<SK> for Secp256k1Scalar{
     fn from_big_int(n: &BigInt) -> Secp256k1Scalar {
         let temp_fe : FE = ECScalar::new_random();
         let curve_order = temp_fe.get_q();
-        if n > &curve_order {
-            let n = BigInt::mod_add(n, &BigInt::from(0), &temp_fe.get_q());
+        let mut n_clone = n.clone();
+        if n_clone > curve_order {
+             n_clone = BigInt::mod_add(n, &BigInt::from(0), &curve_order);
         }
-        let mut v = BigInt::to_vec(&n);
+        let mut v = BigInt::to_vec(&n_clone);
 
         if v.len() < SECRET_KEY_SIZE {
             let mut template = vec![0; SECRET_KEY_SIZE - v.len()];
