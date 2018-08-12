@@ -16,4 +16,3 @@
 extern crate gmp;
 
 pub mod curves;
-

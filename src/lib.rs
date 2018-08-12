@@ -20,27 +20,26 @@ extern crate serde_json;
 
 pub mod elliptic;
 
-
-#[cfg(feature="curvesecp256k1")]
+#[cfg(feature = "curvesecp256k1")]
 mod secp256k1instance {
 
     pub use elliptic::curves::secp256_k1::EC;
+    pub use elliptic::curves::secp256_k1::FE;
+    pub use elliptic::curves::secp256_k1::GE;
     pub use elliptic::curves::secp256_k1::PK;
     pub use elliptic::curves::secp256_k1::SK;
-    pub use elliptic::curves::secp256_k1::GE;
-    pub use elliptic::curves::secp256_k1::FE;
 }
-#[cfg(feature="curvesecp256k1")]
+#[cfg(feature = "curvesecp256k1")]
 pub use self::secp256k1instance::*;
 
-#[cfg(feature="curve25519")]
+#[cfg(feature = "curve25519")]
 mod curve25519instance {
+    pub use elliptic::curves::curve25519::FE;
+    pub use elliptic::curves::curve25519::GE;
     pub use elliptic::curves::curve25519::PK;
     pub use elliptic::curves::curve25519::SK;
-    pub use elliptic::curves::curve25519::GE;
-    pub use elliptic::curves::curve25519::FE;
 }
-#[cfg(feature="curve25519")]
+#[cfg(feature = "curve25519")]
 pub use self::curve25519instance::*;
 
 // TODO: When we will have more than one type of big num library, add as features

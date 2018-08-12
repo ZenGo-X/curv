@@ -18,4 +18,3 @@ impl Hash for HSha512 {
         BigInt::from(digest.finish().as_ref())
     }
 }
-

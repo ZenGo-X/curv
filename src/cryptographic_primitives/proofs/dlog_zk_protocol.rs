@@ -30,11 +30,11 @@ use BigInt;
 //use secp256k1instance::{SK,PK,GE,FE};
 //#[cfg(feature="curve25519-dalek")]
 //use curve25519instance::{SK,PK,GE,FE};
+use super::ProofError;
+use FE;
+use GE;
 use PK;
 use SK;
-use GE;
-use FE;
-use super::ProofError;
 
 use arithmetic::traits::Converter;
 use arithmetic::traits::Modulo;
@@ -90,7 +90,7 @@ impl ProveDLog for DLogProof {
     fn prove(sk: &FE) -> DLogProof {
         let ec_point: GE = ECPoint::new();
         let generator_x = ec_point.get_x_coor_as_big_int();
-        let sk_t_rand_commitment : FE = ECScalar::new_random();
+        let sk_t_rand_commitment: FE = ECScalar::new_random();
         let curve_order = sk_t_rand_commitment.get_q();
         let pk_t_rand_commitment = ec_point.scalar_mul(&sk_t_rand_commitment.get_element());
         let ec_point: GE = ECPoint::new();
@@ -100,14 +100,14 @@ impl ProveDLog for DLogProof {
             &generator_x,
             &pk.get_x_coor_as_big_int(),
         ]);
-        let challenge_fe:FE = ECScalar::from_big_int(&challenge);
-        let challenge_mul_sk =challenge_fe.mul(&sk.get_element());
+        let challenge_fe: FE = ECScalar::from_big_int(&challenge);
+        let challenge_mul_sk = challenge_fe.mul(&sk.get_element());
         let challenge_response = sk_t_rand_commitment.sub(&challenge_mul_sk.get_element());
-       // let challenge_response = BigInt::mod_sub(
-       //     &sk_t_rand_commitment.to_big_int(),
-       //     &BigInt::mod_mul(&challenge, &sk.to_big_int(), &curve_order),
-       //     &curve_order,
-       // );
+        // let challenge_response = BigInt::mod_sub(
+        //     &sk_t_rand_commitment.to_big_int(),
+        //     &BigInt::mod_mul(&challenge, &sk.to_big_int(), &curve_order),
+        //     &curve_order,
+        // );
 
         DLogProof {
             pk,
@@ -116,7 +116,7 @@ impl ProveDLog for DLogProof {
         }
     }
 
-    fn verify( proof: &DLogProof) -> Result<(), ProofError> {
+    fn verify(proof: &DLogProof) -> Result<(), ProofError> {
         let ec_point: GE = ECPoint::new();
         let challenge = HSha256::create_hash(vec![
             &proof.pk_t_rand_commitment.get_x_coor_as_big_int(),
@@ -124,20 +124,20 @@ impl ProveDLog for DLogProof {
             &proof.pk.get_x_coor_as_big_int(),
         ]);
 
-        let sk_challenge : FE = ECScalar::from_big_int(&challenge);
+        let sk_challenge: FE = ECScalar::from_big_int(&challenge);
         let pk = proof.pk.clone();
         let pk_challenge = pk.scalar_mul(&sk_challenge.get_element());
 
         let base_point: GE = ECPoint::new();
         //let sk_challenge_response : FE = ECScalar::from_big_int(&proof.challenge_response);
-        let sk_challenge_response : FE = proof.challenge_response.clone();
+        let sk_challenge_response: FE = proof.challenge_response.clone();
         let mut pk_verifier = base_point.scalar_mul(&sk_challenge_response.get_element());
 
-        pk_verifier =  pk_verifier.add_point(&pk_challenge.get_element());
+        pk_verifier = pk_verifier.add_point(&pk_challenge.get_element());
         //let pk_verifier = match  ECPoint::add_point(&pk_verifier,&pk_challenge){
-     //       Ok(pk_verifier) => pk_verifier,
-     //       _error => return Err(ProofError),
-     //   };
+        //       Ok(pk_verifier) => pk_verifier,
+        //       _error => return Err(ProofError),
+        //   };
 
         if pk_verifier.get_element() == proof.pk_t_rand_commitment.get_element() {
             Ok(())
@@ -149,14 +149,14 @@ impl ProveDLog for DLogProof {
 
 #[cfg(test)]
 mod tests {
+    use super::ProofError;
     use cryptographic_primitives::proofs::dlog_zk_protocol::*;
     use serde_json;
     use BigInt;
-    use SK;
-    use PK;
-    use GE;
     use FE;
-    use super::ProofError;
+    use GE;
+    use PK;
+    use SK;
 
     use arithmetic::traits::Converter;
     use arithmetic::traits::Modulo;
@@ -168,11 +168,11 @@ mod tests {
     use cryptographic_primitives::hashing::traits::Hash;
 
     #[test]
-    fn test_dlog_proof(){
-        let witness : FE = ECScalar::new_random();
-        let dlog_proof =  DLogProof::prove(&witness);
+    fn test_dlog_proof() {
+        let witness: FE = ECScalar::new_random();
+        let dlog_proof = DLogProof::prove(&witness);
         let verified = DLogProof::verify(&dlog_proof);
-        match verified{
+        match verified {
             Ok(t) => println!("OK"),
             Err(e) => println!("error"),
         }
