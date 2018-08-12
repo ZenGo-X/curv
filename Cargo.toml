@@ -9,7 +9,6 @@ authors = [
 crate-type = ["lib"]
 
 [features]
-#default = ["curve25519"]
 curvesecp256k1 = []
 curve25519 = []
 

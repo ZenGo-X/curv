@@ -13,16 +13,8 @@
 
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
+//https://cr.yp.to/ecdh.html -> https://cr.yp.to/ecdh/curve25519-20060209.pdf
 
-// Secp256k1 elliptic curve utility functions (se: https://en.bitcoin.it/wiki/Secp256k1).
-//
-// In Cryptography utilities, we need to manipulate low level elliptic curve members as Point
-// in order to perform operation on them. As the library secp256k1 expose only SecretKey and
-// PublicKey, we extend those with simple codecs.
-//
-// The Secret Key codec: BigInt <> SecretKey
-// The Public Key codec: Point <> SecretKey
-//
 
 use BigInt;
 
@@ -35,7 +27,7 @@ use super::curve25519_dalek::edwards::CompressedEdwardsY;
 use super::curve25519_dalek::edwards::EdwardsPoint;
 use super::curve25519_dalek::scalar::Scalar;
 use super::rand::thread_rng;
-//use super::curve25519_dalek::field::FieldElement64;
+
 use super::traits::{ECPoint, ECScalar};
 pub const SECRET_KEY_SIZE: usize = 32;
 pub const COOR_BYTE_SIZE: usize = 32;
@@ -121,7 +113,7 @@ impl ECScalar<SK> for Curve25519Scalar {
 
     fn sub(&self, other: &SK) -> Curve25519Scalar {
         Curve25519Scalar {
-            purpose: "mul",
+            purpose: "sub",
             fe: &self.get_element() - other,
         }
     }
