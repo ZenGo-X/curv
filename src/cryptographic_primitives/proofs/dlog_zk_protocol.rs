@@ -156,10 +156,6 @@ mod tests {
     use PK;
     use GE;
     use FE;
-    //#[cfg(feature="curvesecp256k1")]
-    //use secp256k1instance::{SK,PK,GE,FE};
-    //#[cfg(feature="curve25519-dalek")]
-    //use curve25519instance::{SK,PK,GE,FE};
     use super::ProofError;
 
     use arithmetic::traits::Converter;
