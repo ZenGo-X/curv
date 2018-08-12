@@ -49,7 +49,7 @@ use cryptographic_primitives::hashing::traits::Hash;
 pub struct DLogProof {
     pub pk: GE,
     pub pk_t_rand_commitment: GE,
-    pub challenge_response: BigInt,
+    pub challenge_response: FE,
 }
 
 /*
@@ -100,12 +100,14 @@ impl ProveDLog for DLogProof {
             &generator_x,
             &pk.get_x_coor_as_big_int(),
         ]);
-
-        let challenge_response = BigInt::mod_sub(
-            &sk_t_rand_commitment.to_big_int(),
-            &BigInt::mod_mul(&challenge, &sk.to_big_int(), &curve_order),
-            &curve_order,
-        );
+        let challenge_fe:FE = ECScalar::from_big_int(&challenge);
+        let challenge_mul_sk =challenge_fe.mul(&sk.get_element());
+        let challenge_response = sk_t_rand_commitment.sub(&challenge_mul_sk.get_element());
+       // let challenge_response = BigInt::mod_sub(
+       //     &sk_t_rand_commitment.to_big_int(),
+       //     &BigInt::mod_mul(&challenge, &sk.to_big_int(), &curve_order),
+       //     &curve_order,
+       // );
 
         DLogProof {
             pk,
@@ -127,7 +129,8 @@ impl ProveDLog for DLogProof {
         let pk_challenge = pk.scalar_mul(&sk_challenge.get_element());
 
         let base_point: GE = ECPoint::new();
-        let sk_challenge_response : FE = ECScalar::from_big_int(&proof.challenge_response);
+        //let sk_challenge_response : FE = ECScalar::from_big_int(&proof.challenge_response);
+        let sk_challenge_response : FE = proof.challenge_response.clone();
         let mut pk_verifier = base_point.scalar_mul(&sk_challenge_response.get_element());
 
         pk_verifier =  pk_verifier.add_point(&pk_challenge.get_element());

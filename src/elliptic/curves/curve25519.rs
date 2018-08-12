@@ -71,7 +71,7 @@ impl ECScalar<SK> for Curve25519Scalar{
     fn get_element(&self) -> SK{
         self.fe
     }
-
+    fn set_element(&mut self, element: SK) {self.fe = element}
 
     fn from_big_int(n: &BigInt) -> Curve25519Scalar {
         let mut v = BigInt::to_vec(n);
@@ -106,6 +106,27 @@ impl ECScalar<SK> for Curve25519Scalar{
 
     fn get_q(&self) -> BigInt {
         BigInt::from(BASEPOINT_ORDER.to_bytes()[0..BASEPOINT_ORDER.to_bytes().len()].as_ref())
+    }
+
+    fn add(&self, other: &SK) -> Curve25519Scalar{
+        Curve25519Scalar {
+            purpose : "add",
+            fe: &self.get_element() + other
+        }
+    }
+
+    fn mul(&self, other: &SK) -> Curve25519Scalar{
+        Curve25519Scalar {
+            purpose : "mul",
+            fe: &self.get_element() * other
+        }
+    }
+
+    fn sub(&self, other: &SK) -> Curve25519Scalar{
+        Curve25519Scalar {
+            purpose : "mul",
+            fe: &self.get_element() - other
+        }
     }
 }
 

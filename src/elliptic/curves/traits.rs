@@ -19,9 +19,13 @@ use BigInt;
 pub trait ECScalar<SK> {
     fn new_random() -> Self;
     fn get_element(&self) -> SK;
+    fn set_element(&mut self, element: SK);
     fn from_big_int(n: &BigInt) -> Self;
     fn to_big_int(&self) -> BigInt;
     fn get_q(&self) -> BigInt;
+    fn add(&self, other: &SK) -> Self;
+    fn mul(&self, other: &SK) -> Self;
+    fn sub(&self, other: &SK) -> Self;
 }
 
 // TODO: add a fn is_point

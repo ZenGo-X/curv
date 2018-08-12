@@ -26,13 +26,12 @@
 
 use BigInt;
 
-use arithmetic::traits::Converter;
+use arithmetic::traits::{Converter,Modulo};
 
 use super::rand::{thread_rng, Rng};
 use super::secp256k1::constants::{CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE};
 use super::secp256k1::{PublicKey, Secp256k1, SecretKey};
 use super::traits::{ECPoint, ECScalar};
-
 pub type EC = Secp256k1;
 pub type SK = SecretKey;
 pub type PK = PublicKey;
@@ -67,6 +66,8 @@ impl ECScalar<SK> for Secp256k1Scalar{
         self.fe
     }
 
+    fn set_element(&mut self, element: SK) {self.fe = element}
+
     fn from_big_int(n: &BigInt) -> Secp256k1Scalar {
         let mut v = BigInt::to_vec(n);
 
@@ -87,6 +88,36 @@ impl ECScalar<SK> for Secp256k1Scalar{
 
     fn get_q(&self) -> BigInt {
         BigInt::from(CURVE_ORDER.as_ref())
+    }
+
+    fn add(&self, other: &SK) -> Secp256k1Scalar{
+        let mut other_scalar: FE = ECScalar::new_random();
+        other_scalar.set_element(other.clone());
+        let res: FE = ECScalar::from_big_int(&BigInt::mod_add(&self.to_big_int(), &other_scalar.to_big_int(), &self.get_q()));
+        Secp256k1Scalar {
+            purpose : "add",
+            fe: res.get_element()
+        }
+    }
+
+    fn mul(&self, other: &SK) -> Secp256k1Scalar{
+        let mut other_scalar: FE = ECScalar::new_random();
+        other_scalar.set_element(other.clone());
+        let res: FE = ECScalar::from_big_int(&BigInt::mod_mul(&self.to_big_int(), &other_scalar.to_big_int(), &self.get_q()));
+        Secp256k1Scalar {
+            purpose : "mul",
+            fe: res.get_element()
+        }
+    }
+
+    fn sub(&self, other: &SK) -> Secp256k1Scalar{
+        let mut other_scalar: FE = ECScalar::new_random();
+        other_scalar.set_element(other.clone());
+        let res: FE = ECScalar::from_big_int(&BigInt::mod_sub(&self.to_big_int(), &other_scalar.to_big_int(), &self.get_q()));
+        Secp256k1Scalar {
+            purpose : "mul",
+            fe: res.get_element()
+        }
     }
 }
 
