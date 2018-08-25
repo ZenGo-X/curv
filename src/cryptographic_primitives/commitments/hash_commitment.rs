@@ -22,7 +22,7 @@ use arithmetic::traits::Samplable;
 pub struct HashCommitment;
 
 //TODO:  using the function with BigInt's as input instead of string's makes it impossible to commit to empty message or use empty randomness
-impl Commitment for HashCommitment {
+impl Commitment<BigInt> for HashCommitment {
     fn create_commitment_with_user_defined_randomness(
         message: &BigInt,
         blinding_factor: &BigInt,
@@ -66,7 +66,7 @@ mod tests {
         let hex_len = SECURITY_BITS;
         let mut ctr_commit_len = 0;
         let mut ctr_blind_len = 0;
-        let sample_size = 100;
+        let sample_size = 1000;
         for _ in 1..sample_size {
             let message = BigInt::sample(SECURITY_BITS);
             let (commitment, blind_factor) = HashCommitment::create_commitment(&message);
@@ -82,8 +82,8 @@ mod tests {
         let ctr_commit_len = ctr_commit_len as f32;
         let ctr_blind_len = ctr_blind_len as f32;
         let sample_size = sample_size as f32;
-        assert!(ctr_commit_len / sample_size > 0.4);
-        assert!(ctr_blind_len / sample_size > 0.4);
+        assert!(ctr_commit_len / sample_size > 0.3);
+        assert!(ctr_blind_len / sample_size > 0.3);
     }
 
     #[test]

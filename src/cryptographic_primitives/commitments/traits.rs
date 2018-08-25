@@ -16,11 +16,11 @@
 
 use BigInt;
 
-pub trait Commitment {
+pub trait Commitment<T> {
     fn create_commitment_with_user_defined_randomness(
         message: &BigInt,
         blinding_factor: &BigInt,
-    ) -> BigInt;
+    ) -> T;
 
-    fn create_commitment(message: &BigInt) -> (BigInt, BigInt);
+    fn create_commitment(message: &BigInt) -> (T, BigInt);
 }

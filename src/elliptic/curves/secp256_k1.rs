@@ -27,7 +27,8 @@
 use BigInt;
 
 use arithmetic::traits::{Converter, Modulo};
-
+use cryptographic_primitives::hashing::hash_sha256::HSha256;
+use cryptographic_primitives::hashing::traits::Hash;
 use super::rand::{thread_rng, Rng};
 use super::secp256k1::constants::{CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE};
 use super::secp256k1::{PublicKey, Secp256k1, SecretKey};
@@ -48,6 +49,33 @@ pub struct Secp256k1Point {
 }
 pub type GE = Secp256k1Point;
 pub type FE = Secp256k1Scalar;
+
+impl Secp256k1Point{
+    pub fn random_point()->Secp256k1Point{
+        let mut arr = [0u8; 32];
+        thread_rng().fill(&mut arr[..]);
+        Secp256k1Point{
+            purpose: "blind_point",
+            ge: PK::from_slice(&EC::without_caps(),&arr[0..arr.len()]).unwrap()
+        }
+    }
+
+    pub fn base_point2()->Secp256k1Point{
+        let g: Secp256k1Point = ECPoint::new();
+        let hash = HSha256::create_hash(vec![&g.bytes_compressed_to_big_int()]);
+        let hash = HSha256::create_hash(vec![&hash]);
+        let hash = HSha256::create_hash(vec![&hash]);
+        let mut hash_vec = BigInt::to_vec(&hash);
+        let mut template:Vec<u8> = vec![2];
+        template.append(&mut hash_vec);
+
+        Secp256k1Point{
+            purpose: "blind_point",
+            ge: PK::from_slice(&EC::without_caps(),&template).unwrap()
+        }
+    }
+}
+
 
 impl ECScalar<SK> for Secp256k1Scalar {
     fn new_random() -> Secp256k1Scalar {
