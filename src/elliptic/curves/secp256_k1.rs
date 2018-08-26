@@ -59,7 +59,8 @@ impl Secp256k1Point{
             ge: PK::from_slice(&EC::without_caps(),&arr[0..arr.len()]).unwrap()
         }
     }
-
+ //TODO: implement for other curves
+ //TODO: make constant
     pub fn base_point2()->Secp256k1Point{
         let g: Secp256k1Point = ECPoint::new();
         let hash = HSha256::create_hash(vec![&g.bytes_compressed_to_big_int()]);
