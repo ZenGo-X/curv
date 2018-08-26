@@ -19,6 +19,7 @@ use super::ring::digest::{Context, SHA256};
 use super::traits::Commitment;
 use super::SECURITY_BITS;
 use arithmetic::traits::Samplable;
+//TODO: (open issue) use this struct to represent the commitment HashCommitment{comm: BigInt, r: BigInt, m: BigInt}
 pub struct HashCommitment;
 
 //TODO:  using the function with BigInt's as input instead of string's makes it impossible to commit to empty message or use empty randomness

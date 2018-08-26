@@ -21,6 +21,7 @@ use elliptic::curves::traits::*;
 use super::traits::Commitment;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
+//TODO: (open issue) use this struct to represent the commitment pedersenCommitment{comm: GE, r: FE, m: FE}
 pub struct pedersenCommitment;
 
 impl Commitment<Secp256k1Point> for pedersenCommitment {
