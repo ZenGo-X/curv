@@ -149,16 +149,19 @@ mod tests {
         let pk = PK::to_key(&p);
         let dummy = DummyStructPK { pk };
         let s = serde_json::to_string(&dummy).expect("Failed in serialization");
-        assert_eq!(s, "{\"pk\":{\
-            \"x\":\"363995efa294aff6feef4b9a980a52eae055dc286439791ea25e9c87434a31b3\",\
-            \"y\":\"39ec35a27c9590a84d4a1e48d3e56e6f3760c156e3b798c39b33f77b713ce4bc\"}}");
+        assert_eq!(
+            s,
+            "{\"pk\":{\
+             \"x\":\"363995efa294aff6feef4b9a980a52eae055dc286439791ea25e9c87434a31b3\",\
+             \"y\":\"39ec35a27c9590a84d4a1e48d3e56e6f3760c156e3b798c39b33f77b713ce4bc\"}}"
+        );
     }
 
     #[test]
     fn deserialize_pk() {
         let s = "{\"pk\":{\
-            \"x\":\"363995efa294aff6feef4b9a980a52eae055dc286439791ea25e9c87434a31b3\",\
-            \"y\":\"39ec35a27c9590a84d4a1e48d3e56e6f3760c156e3b798c39b33f77b713ce4bc\"}}";
+                 \"x\":\"363995efa294aff6feef4b9a980a52eae055dc286439791ea25e9c87434a31b3\",\
+                 \"y\":\"39ec35a27c9590a84d4a1e48d3e56e6f3760c156e3b798c39b33f77b713ce4bc\"}}";
 
         let dummy: DummyStructPK = serde_json::from_str(s).expect("Failed in serialization");
 

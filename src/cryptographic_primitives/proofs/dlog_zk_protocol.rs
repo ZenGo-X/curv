@@ -178,7 +178,6 @@ mod tests {
             challenge_response: BigInt::from(11),
         };
 
-
         let sd = "{\"pk\":{\
                   \"x\":\"363995efa294aff6feef4b9a980a52eae055dc286439791ea25e9c87434a31b3\",\
                   \"y\":\"39ec35a27c9590a84d4a1e48d3e56e6f3760c156e3b798c39b33f77b713ce4bc\"},\
