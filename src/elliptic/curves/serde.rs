@@ -1,4 +1,5 @@
 pub mod serde_secret_key {
+    use arithmetic::traits::Converter;
     use elliptic::curves::traits::*;
     use serde::de::{Error, Visitor};
     use serde::{Deserializer, Serializer};
@@ -9,7 +10,7 @@ pub mod serde_secret_key {
     #[allow(dead_code)]
     // This is not dead code, it used as part of the annotation #[serde(with = "serde_secret_key")]
     pub fn serialize<S: Serializer>(sk: &SK, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(&sk.to_big_int().to_str_radix(10))
+        serializer.serialize_str(&sk.to_big_int().to_hex())
     }
 
     #[allow(dead_code)]
@@ -25,8 +26,7 @@ pub mod serde_secret_key {
             }
 
             fn visit_str<E: Error>(self, s: &str) -> Result<SK, E> {
-                let v: SK =
-                    SK::from_big_int(&BigInt::from_str_radix(s, 10).map_err(Error::custom)?);
+                let v: SK = SK::from_big_int(&BigInt::from_hex(&String::from(s)));
                 Ok(v)
             }
         }
@@ -36,8 +36,9 @@ pub mod serde_secret_key {
 }
 
 pub mod serde_public_key {
+    use arithmetic::traits::Converter;
     use elliptic::curves::traits::*;
-    use serde::de::{Error, MapAccess, Visitor};
+    use serde::de::{MapAccess, Visitor};
     use serde::ser::SerializeStruct;
     use serde::{Deserializer, Serializer};
     use std::fmt;
@@ -51,8 +52,8 @@ pub mod serde_public_key {
         let point = pk.to_point();
 
         let mut state = serializer.serialize_struct("Point", 2)?;
-        state.serialize_field("x", &point.x.to_str_radix(10))?;
-        state.serialize_field("y", &point.y.to_str_radix(10))?;
+        state.serialize_field("x", &point.x.to_hex())?;
+        state.serialize_field("y", &point.y.to_hex())?;
         state.end()
     }
 
@@ -75,8 +76,8 @@ pub mod serde_public_key {
                 while let Some(key) = map.next_key::<&'de str>()? {
                     let v = map.next_value::<&'de str>()?;
                     match key.as_ref() {
-                        "x" => x = BigInt::from_str_radix(v, 10).map_err(Error::custom)?,
-                        "y" => y = BigInt::from_str_radix(v, 10).map_err(Error::custom)?,
+                        "x" => x = BigInt::from_hex(&String::from(v)),
+                        "y" => y = BigInt::from_hex(&String::from(v)),
                         _ => panic!("Serialization failed!"),
                     }
                 }
@@ -117,12 +118,12 @@ mod tests {
         let sk = SK::from_big_int(&BigInt::from(123456));
         let dummy = DummyStructSK { sk };
         let s = serde_json::to_string(&dummy).expect("Failed in serialization");
-        assert_eq!(s, "{\"sk\":\"123456\"}");
+        assert_eq!(s, "{\"sk\":\"1e240\"}");
     }
 
     #[test]
     fn deserialize_sk() {
-        let s = "{\"sk\":\"123456\"}";
+        let s = "{\"sk\":\"1e240\"}";
         let dummy: DummyStructSK = serde_json::from_str(s).expect("Failed in serialization");
 
         let sk = SK::from_big_int(&BigInt::from(123456));
@@ -149,15 +150,15 @@ mod tests {
         let dummy = DummyStructPK { pk };
         let s = serde_json::to_string(&dummy).expect("Failed in serialization");
         assert_eq!(s, "{\"pk\":{\
-            \"x\":\"24526638926943435805455894225888021349399091104478482819438411584402369425843\",\
-            \"y\":\"26199178449721874484533420663300980876115907004255139407282543079611927684284\"}}");
+            \"x\":\"363995efa294aff6feef4b9a980a52eae055dc286439791ea25e9c87434a31b3\",\
+            \"y\":\"39ec35a27c9590a84d4a1e48d3e56e6f3760c156e3b798c39b33f77b713ce4bc\"}}");
     }
 
     #[test]
     fn deserialize_pk() {
         let s = "{\"pk\":{\
-            \"x\":\"24526638926943435805455894225888021349399091104478482819438411584402369425843\",\
-            \"y\":\"26199178449721874484533420663300980876115907004255139407282543079611927684284\"}}";
+            \"x\":\"363995efa294aff6feef4b9a980a52eae055dc286439791ea25e9c87434a31b3\",\
+            \"y\":\"39ec35a27c9590a84d4a1e48d3e56e6f3760c156e3b798c39b33f77b713ce4bc\"}}";
 
         let dummy: DummyStructPK = serde_json::from_str(s).expect("Failed in serialization");
 

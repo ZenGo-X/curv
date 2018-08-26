@@ -6,9 +6,10 @@ pub mod serde_bigint {
     use serde::*;
 
     use arithmetic::big_gmp::BigInt;
+    use arithmetic::traits::Converter;
 
     pub fn serialize<S: Serializer>(x: &BigInt, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(&x.to_str_radix(10))
+        serializer.serialize_str(&x.to_hex())
     }
 
     pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<BigInt, D::Error> {
@@ -22,8 +23,7 @@ pub mod serde_bigint {
             }
 
             fn visit_str<E: de::Error>(self, s: &str) -> Result<BigInt, E> {
-                let v: BigInt = str::parse(s).map_err(Error::custom)?;
-                Ok(v)
+                Ok(BigInt::from_hex(&String::from(s)))
             }
         }
 
@@ -56,7 +56,7 @@ mod tests {
         let c = DummyContainer { a, b };
 
         let serialized = serde_json::to_string(&c).unwrap();
-        assert_eq!(serialized, "{\"a\":\"123456789\",\"b\":\"987654321\"}");
+        assert_eq!(serialized, "{\"a\":\"75bcd15\",\"b\":\"3ade68b1\"}");
 
         let d: DummyContainer = serde_json::from_str(&serialized).unwrap();
         assert_eq!(d, c)
@@ -72,18 +72,9 @@ mod tests {
 
     #[test]
     fn test_failing_missing_field() {
-        let illformatted = "{\"a\":\"123456789\"}";
+        let illformatted = "{\"a\":\"75bcd15\"}";
 
         let result: Result<DummyContainer, _> = serde_json::from_str(&illformatted);
         assert!(result.is_err())
     }
-
-    #[test]
-    fn test_failing_non_numeric() {
-        let illformatted = "{\"a\":\"i23456789\",\"b\":\"987654321\"}";
-
-        let result: Result<DummyContainer, _> = serde_json::from_str(&illformatted);
-        assert!(result.is_err())
-    }
-
 }

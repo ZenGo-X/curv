@@ -22,7 +22,7 @@ mod serializing_bigint {
             }
 
             fn visit_str<E: de::Error>(self, s: &str) -> Result<BigInt, E> {
-                let v: BigInt = str::parse(s).map_err(Error::custom)?;
+                let v: BigInt = BigInt::  str::parse(s).map_err(Error::custom)?;
                 Ok(v)
             }
         }
