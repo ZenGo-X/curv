@@ -46,7 +46,7 @@ pub struct PedersenProof {
     e : Secp256k1Scalar,
     A1: Secp256k1Point,
     A2: Secp256k1Point,
-    com: Secp256k1Point,
+    pub com: Secp256k1Point,
     z1: Secp256k1Scalar,
     z2 :Secp256k1Scalar,
 
@@ -134,11 +134,7 @@ mod tests {
         let m: Secp256k1Scalar = ECScalar::new_random();
         let r: Secp256k1Scalar = ECScalar::new_random();
         let pedersen_proof = PedersenProof::prove(&m, &r);
-        let verified = PedersenProof::verify(&pedersen_proof);
-        match verified {
-            Ok(t) => println!("OK"),
-            Err(e) => println!("error"),
-        }
+        PedersenProof::verify(&pedersen_proof).expect("error pedersen");
     }
 
 }

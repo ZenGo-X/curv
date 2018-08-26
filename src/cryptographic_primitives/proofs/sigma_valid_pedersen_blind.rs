@@ -17,13 +17,13 @@
 // TODO: abstract for use with elliptic curves other than secp256k1
 /// protocol for proving that Pedersen commitment c was constructed correctly which is the same as
 /// proof of knowledge of (r) such that c = mG + rH.
-/// witness: (m,r), statement: (c,m), The Relation R outputs 1 if c = mG + rH. The protocol:
+/// witness: (r), statement: (c,m), The Relation R outputs 1 if c = mG + rH. The protocol:
 /// 1: Prover chooses A = s*H for random s
 /// prover calculates challenge e = H(G,H,c,A,m)
 /// prover calculates z  = s + er,
 /// prover sends pi = {e, m,A,c, z}
 ///
-/// verifier checks that mG* + zH  = A + ec
+/// verifier checks that e*m*G* + zH  = A + ec
 use BigInt;
 use super::ProofError;
 use arithmetic::traits::Converter;
@@ -43,20 +43,20 @@ use elliptic::curves::secp256_k1::Secp256k1Point;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct PedersenBlindingProof {
-    e : Secp256k1Scalar,
-    m : Secp256k1Scalar,
-    A: Secp256k1Point,
-    com: Secp256k1Point,
-    z: Secp256k1Scalar,
+     e : Secp256k1Scalar,
+     pub m : Secp256k1Scalar,
+     A: Secp256k1Point,
+     pub com: Secp256k1Point,
+     z: Secp256k1Scalar,
 
 }
-pub trait ProvePederesen {
+pub trait ProvePederesenBlind {
     fn prove(m: &Secp256k1Scalar, r: &Secp256k1Scalar) -> PedersenBlindingProof;
 
     fn verify(proof: &PedersenBlindingProof) -> Result<(), ProofError>;
 }
 
-impl ProvePederesen for PedersenBlindingProof {
+impl ProvePederesenBlind for PedersenBlindingProof {
     fn prove(m: &Secp256k1Scalar, r: &Secp256k1Scalar) -> PedersenBlindingProof {
         let h = Secp256k1Point::base_point2();
         let s: Secp256k1Scalar = ECScalar::new_random();
@@ -90,7 +90,8 @@ impl ProvePederesen for PedersenBlindingProof {
         let e: Secp256k1Scalar = ECScalar::from_big_int(&challenge);
         let zH = h.scalar_mul(&proof.z.get_element());
         let mG = g.scalar_mul(&proof.m.get_element());
-        let lhs = zH.add_point(&mG.get_element());
+        let emG = mG.scalar_mul(&e.get_element());
+        let lhs = zH.add_point(&emG.get_element());
         let com_clone = proof.com.clone();
         let ecom = com_clone.scalar_mul(&e.get_element());
         let rhs = ecom.add_point(&proof.A.get_element());
@@ -123,15 +124,13 @@ mod tests {
     use elliptic::curves::secp256_k1::Secp256k1Point;
 
     #[test]
-    fn test_pedersen_proof() {
+    fn test_pedersen_blind_proof() {
         let m: Secp256k1Scalar = ECScalar::new_random();
         let r: Secp256k1Scalar = ECScalar::new_random();
         let pedersen_proof = PedersenBlindingProof::prove(&m, &r);
-        let verified = PedersenBlindingProof::verify(&pedersen_proof);
-        match verified {
-            Ok(t) => println!("OK"),
-            Err(e) => println!("error"),
-        }
+        let verified = PedersenBlindingProof::verify(&pedersen_proof).expect("error pedersen blind");
+
+
     }
 
 }

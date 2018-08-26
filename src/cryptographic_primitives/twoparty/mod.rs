@@ -14,5 +14,5 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-pub mod coin_flip;
+pub mod coin_flip_optimal_rounds;
 pub mod dh_key_exchange;
