@@ -161,6 +161,11 @@ impl Party2SecondMessage {
     }
 }
 
+pub fn compute_pubkey(local_share: &FE, other_share: &GE) -> GE{
+    let other:GE = other_share.clone();
+    other.scalar_mul(&local_share.get_element())
+
+}
 #[cfg(test)]
 mod tests {
     use BigInt;
@@ -189,7 +194,8 @@ mod tests {
             &party_one_second_message.pk_commitment_blind_factor,
             &party_one_second_message.d_log_proof,
         ).expect("failed to verify commitments and DLog proof");
-        assert_eq!(party_one_first_message.public_share.scalar_mul(&party_two_first_message.secret_share.get_element()),
-                    party_two_first_message.public_share.scalar_mul(&party_one_first_message.secret_share.get_element()));
+        assert_eq!(compute_pubkey(&party_two_first_message.secret_share,&party_one_first_message.public_share),
+                   compute_pubkey(&party_one_first_message.secret_share, &party_two_first_message.public_share));
+
     }
 }
