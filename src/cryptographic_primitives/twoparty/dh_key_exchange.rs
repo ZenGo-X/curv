@@ -161,9 +161,13 @@ impl Party2SecondMessage {
     }
 }
 
-pub fn compute_pubkey(local_share: &FE, other_share: &GE) -> GE{
-    let other:GE = other_share.clone();
-    other.scalar_mul(&local_share.get_element())
+pub fn compute_pubkey_party1(party_one_first_message: &Party1FirstMessage, party_two_first_message: &Party2FirstMessage) -> GE{
+    let pubkey = party_two_first_message.public_share.clone();
+    pubkey.scalar_mul(&party_one_first_message.secret_share.get_element())
+}
+pub fn compute_pubkey_party2(party_two_first_message: &Party2FirstMessage, party_one_first_message: &Party1FirstMessage) -> GE{
+    let pubkey = party_one_first_message.public_share.clone();
+    pubkey.scalar_mul(&party_two_first_message.secret_share.get_element())
 
 }
 #[cfg(test)]
@@ -194,8 +198,8 @@ mod tests {
             &party_one_second_message.pk_commitment_blind_factor,
             &party_one_second_message.d_log_proof,
         ).expect("failed to verify commitments and DLog proof");
-        assert_eq!(compute_pubkey(&party_two_first_message.secret_share,&party_one_first_message.public_share),
-                   compute_pubkey(&party_one_first_message.secret_share, &party_two_first_message.public_share));
+        assert_eq!(compute_pubkey_party2(&party_two_first_message, &party_one_first_message),
+                   compute_pubkey_party1(&party_one_first_message, &party_two_first_message));
 
     }
 }
