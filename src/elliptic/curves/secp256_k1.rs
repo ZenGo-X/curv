@@ -23,27 +23,97 @@
 // The Secret Key codec: BigInt <> SecretKey
 // The Public Key codec: Point <> SecretKey
 //
+
 use BigInt;
-use Point;
 
-use arithmetic::traits::Converter;
+use super::rand::{thread_rng, Rng};
+use super::secp256k1::constants::{
+    CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
+};
+use super::secp256k1::{None, PublicKey, Secp256k1, SecretKey};
+use super::traits::{ECPoint, ECScalar};
+use arithmetic::traits::{Converter, Modulo};
+use cryptographic_primitives::hashing::hash_sha256::HSha256;
+use cryptographic_primitives::hashing::traits::Hash;
+use serde::de;
+use serde::de::{MapAccess, Visitor};
+use serde::ser::SerializeStruct;
+use serde::ser::{Serialize, Serializer};
+use serde::{Deserialize, Deserializer};
+use std::fmt;
+use std::ops::{Add, Mul};
 
-use super::rand::thread_rng;
-use super::secp256k1::constants::{CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE};
-use super::secp256k1::{PublicKey, Secp256k1, SecretKey};
-use super::traits::{PublicKeyCodec, SecretKeyCodec};
-
-pub type EC = Secp256k1;
+pub type EC = Secp256k1<None>;
 pub type SK = SecretKey;
 pub type PK = PublicKey;
 
-impl SecretKeyCodec for SecretKey {
-    fn new_random() -> SecretKey {
-        SecretKey::new(&Secp256k1::without_caps(), &mut thread_rng())
+#[derive(Clone, PartialEq, Debug)]
+pub struct Secp256k1Scalar {
+    purpose: String, // it has to be a non constant string for serialization
+    fe: SK,
+}
+#[derive(Clone, PartialEq, Debug)]
+pub struct Secp256k1Point {
+    purpose: String, // it has to be a non constant string for serialization
+    ge: PK,
+}
+pub type GE = Secp256k1Point;
+pub type FE = Secp256k1Scalar;
+
+impl Secp256k1Point {
+    pub fn random_point() -> Secp256k1Point {
+        let random_scalar: Secp256k1Scalar = Secp256k1Scalar::new_random();
+        let base_point = Secp256k1Point::generator();
+        let pk = base_point.scalar_mul(&random_scalar.get_element());
+        let mut arr = [0u8; 32];
+        thread_rng().fill(&mut arr[..]);
+        Secp256k1Point {
+            purpose: "random_point".to_string(),
+            ge: pk.get_element(),
+        }
+    }
+    //TODO: implement for other curves
+    //TODO: make constant
+    pub fn base_point2() -> Secp256k1Point {
+        let g: Secp256k1Point = ECPoint::generator();
+        let hash = HSha256::create_hash(&vec![&g.bytes_compressed_to_big_int()]);
+        let hash = HSha256::create_hash(&vec![&hash]);
+        let hash = HSha256::create_hash(&vec![&hash]);
+        let mut hash_vec = BigInt::to_vec(&hash);
+        let mut template: Vec<u8> = vec![2];
+        template.append(&mut hash_vec);
+
+        Secp256k1Point {
+            purpose: "blind_point".to_string(),
+            ge: PK::from_slice(&EC::without_caps(), &template).unwrap(),
+        }
+    }
+}
+
+impl ECScalar<SK> for Secp256k1Scalar {
+    fn new_random() -> Secp256k1Scalar {
+        let mut arr = [0u8; 32];
+        thread_rng().fill(&mut arr[..]);
+        Secp256k1Scalar {
+            purpose: "random".to_string(),
+            //fe: SK::new( & EC::without_caps(), &mut csprng)
+            fe: SK::from_slice(&EC::without_caps(), &arr[0..arr.len()]).unwrap(), // fe: SK::new( & EC::without_caps(), &mut thread_rng())
+        }
     }
 
-    fn from_big_int(n: &BigInt) -> SecretKey {
-        let mut v = BigInt::to_vec(n);
+    fn get_element(&self) -> SK {
+        self.fe
+    }
+
+    fn set_element(&mut self, element: SK) {
+        self.fe = element
+    }
+
+    fn from(n: &BigInt) -> Secp256k1Scalar {
+        let temp_fe: FE = ECScalar::new_random();
+        let curve_order = temp_fe.q();
+        let n_reduced = BigInt::mod_add(n, &BigInt::from(0), &curve_order);
+        let mut v = BigInt::to_vec(&n_reduced);
 
         if v.len() < SECRET_KEY_SIZE {
             let mut template = vec![0; SECRET_KEY_SIZE - v.len()];
@@ -51,178 +121,322 @@ impl SecretKeyCodec for SecretKey {
             v = template;
         }
 
-        SecretKey::from_slice(&Secp256k1::without_caps(), &v).unwrap()
-    }
-
-    fn to_big_int(&self) -> BigInt {
-        BigInt::from(&self[0..self.len()])
-    }
-
-    fn get_q() -> BigInt {
-        BigInt::from(CURVE_ORDER.as_ref())
-    }
-}
-
-impl PublicKeyCodec for PublicKey {
-    const KEY_SIZE: usize = 65;
-    const HEADER_MARKER: usize = 4;
-
-    fn get_base_point() -> Point {
-        Point {
-            x: BigInt::from(GENERATOR_X.as_ref()),
-            y: BigInt::from(GENERATOR_Y.as_ref()),
+        Secp256k1Scalar {
+            purpose: "from_big_int".to_string(),
+            fe: SK::from_slice(&EC::without_caps(), &v).unwrap(),
         }
     }
 
+    fn to_big_int(&self) -> BigInt {
+        BigInt::from(&(self.fe[0..self.fe.len()]))
+    }
+
+    fn q(&self) -> BigInt {
+        BigInt::from(CURVE_ORDER.as_ref())
+    }
+
+    fn add(&self, other: &SK) -> Secp256k1Scalar {
+        let mut other_scalar: FE = ECScalar::new_random();
+        other_scalar.set_element(other.clone());
+        let res: FE = ECScalar::from(&BigInt::mod_add(
+            &self.to_big_int(),
+            &other_scalar.to_big_int(),
+            &self.q(),
+        ));
+        Secp256k1Scalar {
+            purpose: "add".to_string(),
+            fe: res.get_element(),
+        }
+    }
+
+    fn mul(&self, other: &SK) -> Secp256k1Scalar {
+        let mut other_scalar: FE = ECScalar::new_random();
+        other_scalar.set_element(other.clone());
+        let res: FE = ECScalar::from(&BigInt::mod_mul(
+            &self.to_big_int(),
+            &other_scalar.to_big_int(),
+            &self.q(),
+        ));
+        Secp256k1Scalar {
+            purpose: "mul".to_string(),
+            fe: res.get_element(),
+        }
+    }
+
+    fn sub(&self, other: &SK) -> Secp256k1Scalar {
+        let mut other_scalar: FE = ECScalar::new_random();
+        other_scalar.set_element(other.clone());
+        let res: FE = ECScalar::from(&BigInt::mod_sub(
+            &self.to_big_int(),
+            &other_scalar.to_big_int(),
+            &self.q(),
+        ));
+        Secp256k1Scalar {
+            purpose: "mul".to_string(),
+            fe: res.get_element(),
+        }
+    }
+}
+
+impl Serialize for Secp256k1Scalar {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.to_big_int().to_hex())
+    }
+}
+
+impl<'de> Deserialize<'de> for Secp256k1Scalar {
+    fn deserialize<D>(deserializer: D) -> Result<Secp256k1Scalar, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(Secp256k1ScalarVisitor)
+    }
+}
+
+struct Secp256k1ScalarVisitor;
+
+impl<'de> Visitor<'de> for Secp256k1ScalarVisitor {
+    type Value = Secp256k1Scalar;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("Secp256k1Scalar")
+    }
+
+    fn visit_str<E: de::Error>(self, s: &str) -> Result<Secp256k1Scalar, E> {
+        let v = BigInt::from_str_radix(s, 16).expect("Failed in serde");
+        Ok(ECScalar::from(&v))
+    }
+}
+
+impl ECPoint<PK, SK> for Secp256k1Point {
+    fn generator() -> Secp256k1Point {
+        let mut v = vec![4 as u8];
+        v.extend(GENERATOR_X.as_ref());
+        v.extend(GENERATOR_Y.as_ref());
+        Secp256k1Point {
+            purpose: "base_fe".to_string(),
+            ge: PK::from_slice(&Secp256k1::without_caps(), &v).unwrap(),
+        }
+    }
+
+    fn get_element(&self) -> PK {
+        self.ge
+    }
+
+    fn x_coor(&self) -> BigInt {
+        let serialized_pk = PK::serialize_uncompressed(&self.ge);
+        let x = &serialized_pk[1..serialized_pk.len() / 2 + 1];
+        BigInt::from(x)
+    }
+
+    fn y_coor(&self) -> BigInt {
+        let serialized_pk = PK::serialize_uncompressed(&self.ge);
+        let y = &serialized_pk[(serialized_pk.len() - 1) / 2 + 1..serialized_pk.len()];
+        BigInt::from(y)
+    }
+
     fn bytes_compressed_to_big_int(&self) -> BigInt {
-        let serial = self.serialize();
+        let serial = self.ge.serialize();
         let result = BigInt::from(&serial[0..33]);
         return result;
     }
 
-    fn to_point(&self) -> Point {
-        PublicKey::from_key_slice(&self.serialize_uncompressed())
+    fn pk_to_key_slice(&self) -> Vec<u8> {
+        let mut v = vec![4 as u8];
+
+        v.extend(BigInt::to_vec(&self.x_coor()));
+        v.extend(BigInt::to_vec(&self.x_coor()));
+        v
     }
 
-    /// # Details
-    /// This function serialized into a Point a Key in the uncompressed form.
-    /// The expected size of the key is an array of 65 elements where:
-    /// the first element is the header (4, uncompressed) and X, Y of length 32
-    /// use PublicKey::to_key_slice to deserialize
-    ///
-    fn from_key_slice(key: &[u8]) -> Point {
-        assert_eq!(key.len(), PublicKey::KEY_SIZE);
-        let header = key[0] as usize;
+    fn scalar_mul(mut self, fe: &SK) -> Secp256k1Point {
+        self.ge
+            .mul_assign(&Secp256k1::new(), fe) // we can't use Secp256k1 <None> (EC) in mul_assign
+            .expect("Assignment expected");
+        self
+    }
 
-        assert_eq!(header, PublicKey::HEADER_MARKER);
-
-        // first 32 elements (without the header)
-        let x = &key[1..key.len() / 2 + 1];
-
-        // last 32 element
-        let y = &key[(key.len() - 1) / 2 + 1..key.len()];
-
-        Point {
-            x: BigInt::from(x),
-            y: BigInt::from(y),
+    fn add_point(&self, other: &PK) -> Secp256k1Point {
+        Secp256k1Point {
+            purpose: "combine".to_string(),
+            ge: self.ge.combine(&EC::without_caps(), other).unwrap(),
         }
     }
 
-    fn to_key(p: &Point) -> PublicKey {
-        PublicKey::from_slice(&Secp256k1::without_caps(), &PublicKey::to_key_slice(p)).unwrap()
+    fn from_coor(x: &BigInt, y: &BigInt) -> Secp256k1Point {
+        let mut vec_x = BigInt::to_vec(x);
+        let mut vec_y = BigInt::to_vec(y);
+        let coor_size = (UNCOMPRESSED_PUBLIC_KEY_SIZE - 1) / 2;
+
+        if vec_x.len() < coor_size {
+            // pad
+            let mut x_buffer = vec![0; coor_size - vec_x.len()];
+            x_buffer.extend_from_slice(&vec_x);
+            vec_x = x_buffer
+        }
+
+        if vec_y.len() < coor_size {
+            // pad
+            let mut y_buffer = vec![0; coor_size - vec_y.len()];
+            y_buffer.extend_from_slice(&vec_y);
+            vec_y = y_buffer
+        }
+
+        assert_eq!(x, &BigInt::from(vec_x.as_ref()));
+        assert_eq!(y, &BigInt::from(vec_y.as_ref()));
+
+        let mut v = vec![4 as u8];
+        v.extend(vec_x);
+        v.extend(vec_y);
+
+        Secp256k1Point {
+            purpose: "base_fe".to_string(),
+            ge: PK::from_slice(&Secp256k1::without_caps(), &v).unwrap(),
+        }
+    }
+}
+
+impl Mul<Secp256k1Scalar> for Secp256k1Point {
+    type Output = Secp256k1Point;
+    fn mul(self, other: Secp256k1Scalar) -> Self::Output {
+        self.scalar_mul(&other.get_element())
+    }
+}
+
+impl<'o> Mul<&'o Secp256k1Scalar> for Secp256k1Point {
+    type Output = Secp256k1Point;
+    fn mul(self, other: &'o Secp256k1Scalar) -> Self::Output {
+        self.scalar_mul(&other.get_element())
+    }
+}
+
+impl Add<Secp256k1Point> for Secp256k1Point {
+    type Output = Secp256k1Point;
+    fn add(self, other: Secp256k1Point) -> Self::Output {
+        self.add_point(&other.get_element())
+    }
+}
+
+impl Serialize for Secp256k1Point {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Secp256k1Point", 2)?;
+        state.serialize_field("x", &self.x_coor().to_hex())?;
+        state.serialize_field("y", &self.y_coor().to_hex())?;
+        state.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for Secp256k1Point {
+    fn deserialize<D>(deserializer: D) -> Result<Secp256k1Point, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_map(Secp256k1PointVisitor)
+    }
+}
+
+struct Secp256k1PointVisitor;
+
+impl<'de> Visitor<'de> for Secp256k1PointVisitor {
+    type Value = Secp256k1Point;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("Secp256k1Point")
     }
 
-    /// # Details
-    /// This function deserialized a Point into a Key in the uncompressed form.
-    /// use PublicKey::from_key_slice to serialize
-    ///
-    fn to_key_slice(p: &Point) -> Vec<u8> {
-        let mut v = vec![PublicKey::HEADER_MARKER as u8];
-        v.extend(BigInt::to_vec(&p.x));
-        v.extend(BigInt::to_vec(&p.y));
-        v
+    fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<Secp256k1Point, E::Error> {
+        let mut x = String::new();
+        let mut y = String::new();
+
+        while let Some(key) = map.next_key::<&'de str>()? {
+            let v = map.next_value::<&'de str>()?;
+            match key.as_ref() {
+                "x" => x = String::from(v),
+                "y" => y = String::from(v),
+                _ => panic!("Serialization failed!"),
+            }
+        }
+
+        let bx = BigInt::from_hex(&x);
+        let by = BigInt::from_hex(&y);
+
+        Ok(Secp256k1Point::from_coor(&bx, &by))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{PublicKeyCodec, SecretKeyCodec};
-
-    use elliptic::curves::rand::thread_rng;
-    use elliptic::curves::secp256k1::constants::{CURVE_ORDER, GENERATOR_X, GENERATOR_Y};
-    use elliptic::curves::secp256k1::{PublicKey, Secp256k1, SecretKey};
-
-    use BigInt;
+    use super::BigInt;
+    use super::Secp256k1Point;
+    use super::Secp256k1Scalar;
+    use arithmetic::traits::Converter;
+    use elliptic::curves::traits::ECPoint;
+    use elliptic::curves::traits::ECScalar;
+    use serde_json;
 
     #[test]
-    fn get_base_point_test() {
-        let p = PublicKey::get_base_point();
-
-        assert_eq!(p.x, BigInt::from(GENERATOR_X.as_ref()));
-        assert_eq!(p.y, BigInt::from(GENERATOR_Y.as_ref()));
+    fn serialize_sk() {
+        let scalar: Secp256k1Scalar = ECScalar::from(&BigInt::from(123456));
+        let s = serde_json::to_string(&scalar).expect("Failed in serialization");
+        assert_eq!(s, "\"1e240\"");
     }
 
     #[test]
-    fn get_q_test() {
-        let q = SecretKey::get_q();
+    fn serialize_rand_pk_verify_pad() {
+        let vx = BigInt::from_hex(
+            &"ccaf75ab7960a01eb421c0e2705f6e84585bd0a094eb6af928c892a4a2912508".to_string(),
+        );
 
-        assert_eq!(q, BigInt::from(CURVE_ORDER.as_ref()));
+        let vy = BigInt::from_hex(
+            &"e788e294bd64eee6a73d2fc966897a31eb370b7e8e9393b0d8f4f820b48048df".to_string(),
+        );
+
+        Secp256k1Point::from_coor(&vx, &vy); // x and y of size 32
+
+        let x = BigInt::from_hex(
+            &"5f6853305467a385b56a5d87f382abb52d10835a365ec265ce510e04b3c3366f".to_string(),
+        );
+
+        let y = BigInt::from_hex(
+            &"b868891567ca1ee8c44706c0dc190dd7779fe6f9b92ced909ad870800451e3".to_string(),
+        );
+
+        Secp256k1Point::from_coor(&x, &y); // x and y not of size 32 each
+
+        let r = Secp256k1Point::random_point();
+        let r_expected = Secp256k1Point::from_coor(&r.x_coor(), &r.y_coor());
+
+        assert_eq!(r.x_coor(), r_expected.x_coor());
+        assert_eq!(r.y_coor(), r_expected.y_coor());
     }
 
     #[test]
-    fn from_secret_key_to_big_int() {
-        let sk = SecretKey::new(&Secp256k1::without_caps(), &mut thread_rng());
+    fn deserialize_sk() {
+        let s = "\"1e240\"";
+        let dummy: Secp256k1Scalar = serde_json::from_str(s).expect("Failed in serialization");
 
-        let sk_n = sk.to_big_int();
-        let sk_back = SecretKey::from_big_int(&sk_n);
+        let sk: Secp256k1Scalar = ECScalar::from(&BigInt::from(123456));
 
-        assert_eq!(sk, sk_back);
+        assert_eq!(dummy, sk);
     }
 
     #[test]
-    #[should_panic]
-    #[cfg_attr(rustfmt, rustfmt_skip)] // ignore fmt due to the slice comments
-    fn from_invalid_header_key_slice_test() {
-        let invalid_key: [u8; PublicKey::KEY_SIZE] = [
-            1, // header
-            // X
-            231, 191, 194, 227, 183, 188, 238, 170, 206, 138, 20, 92, 140, 107, 83, 73,
-            111, 170, 217, 69, 17, 64, 121, 65, 219, 97, 147, 181, 197, 239, 158, 56,
-            // Y
-            62, 15, 115, 56, 226, 122, 3, 180, 192, 166, 171, 137, 121, 23, 29, 225, 234, 220, 154,
-            2, 157, 44, 73, 220, 31, 15, 55, 4, 244, 189, 7, 210,
-        ];
+    fn serialize_pk() {
+        let pk = Secp256k1Point::generator();
+        let x = pk.x_coor();
+        let y = pk.y_coor();
+        let s = serde_json::to_string(&pk).expect("Failed in serialization");
 
-        PublicKey::from_key_slice(&invalid_key);
-    }
+        let expected = format!("{{\"x\":\"{}\",\"y\":\"{}\"}}", x.to_hex(), y.to_hex());
+        assert_eq!(s, expected);
 
-    #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)] // ignore fmt due to the slice comments
-    fn from_valid_uncompressed_key_slice_to_key_test() {
-        let valid_key: [u8; PublicKey::KEY_SIZE] = [
-            4, // header
-            // X
-            54, 57, 149, 239, 162, 148, 175, 246, 254, 239, 75, 154, 152, 10, 82, 234, 224, 85,
-            220, 40, 100, 57, 121, 30, 162, 94, 156, 135, 67, 74, 49, 179,
-            // Y
-            57, 236, 53, 162, 124, 149, 144, 168, 77, 74, 30, 72, 211, 229, 110, 111, 55, 96, 193,
-            86, 227, 183, 152, 195, 155, 51, 247, 123, 113, 60, 228, 188,
-        ];
-
-        let p = PublicKey::from_key_slice(&valid_key);
-        let k = PublicKey::to_key_slice(&p);
-        assert_eq!(valid_key.len(), k.len());
-
-        for (i, _elem) in k.iter().enumerate() {
-            assert_eq!(valid_key[i], k[i]);
-        }
-    }
-
-    #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)] // ignore fmt due to the slice comments
-    fn from_public_key_to_point_to_slice_to_key() {
-        let slice = &[
-            4, // header
-            // X
-            54, 57, 149, 239, 162, 148, 175, 246, 254, 239, 75, 154, 152, 10, 82, 234, 224, 85,
-            220, 40, 100, 57, 121, 30, 162, 94, 156, 135, 67, 74, 49, 179,
-            // Y
-            57, 236, 53, 162, 124, 149, 144, 168, 77, 74, 30, 72, 211, 229, 110, 111, 55, 96, 193,
-            86, 227, 183, 152, 195, 155, 51, 247, 123, 113, 60, 228, 188,
-        ];
-
-        let uncompressed_key = PublicKey::from_slice(
-            &Secp256k1::without_caps(), slice).unwrap();
-        let p = uncompressed_key.to_point();
-        let key_slice = PublicKey::to_key_slice(&p);
-
-        assert_eq!(slice.len(), key_slice.len());
-
-        for (i, _elem) in key_slice.iter().enumerate() {
-            assert_eq!(slice[i], key_slice[i]);
-        }
-
-        let expected_key = PublicKey::to_key(&p);
-        assert_eq!(expected_key, uncompressed_key);
+        let des_pk: Secp256k1Point = serde_json::from_str(&s).expect("Failed in serialization");
+        assert_eq!(des_pk.ge, pk.ge);
     }
 }

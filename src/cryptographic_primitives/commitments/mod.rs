@@ -14,9 +14,8 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-extern crate ring;
-
 const SECURITY_BITS: usize = 256;
 
 pub mod hash_commitment;
+pub mod pedersen_commitment;
 pub mod traits;

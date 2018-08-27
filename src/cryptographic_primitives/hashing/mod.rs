@@ -14,7 +14,7 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-extern crate ring;
-
 pub mod hash_sha256;
+pub mod hash_sha512;
+pub mod hmac_sha512;
 pub mod traits;

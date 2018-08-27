@@ -4,7 +4,7 @@
     Copyright 2018 by Kzen Networks
 
     This file is part of Cryptography utilities library
-        (https://github.com/KZen-networks/cryptography-utils)
+    (https://github.com/KZen-networks/cryptography-utils)
 
     Cryptography utilities is free software: you can redistribute
     it and/or modify it under the terms of the GNU General Public
@@ -14,25 +14,22 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-use std::error::Error;
-use std::fmt;
+use BigInt;
 
-pub mod dlog_zk_protocol;
-pub mod sigma_dlog;
-pub mod sigma_valid_pedersen;
-pub mod sigma_valid_pedersen_blind;
+use super::traits::Hash;
+use arithmetic::traits::Converter;
+use ring::digest::{Context, SHA512};
 
-#[derive(Debug, Clone, Copy)]
-pub struct ProofError;
+pub struct HSha512;
 
-impl fmt::Display for ProofError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ProofError")
-    }
-}
+impl Hash for HSha512 {
+    fn create_hash(big_ints: &[&BigInt]) -> BigInt {
+        let mut digest = Context::new(&SHA512);
 
-impl Error for ProofError {
-    fn description(&self) -> &str {
-        "Error while verifying"
+        for value in big_ints {
+            digest.update(&BigInt::to_vec(value));
+        }
+
+        BigInt::from(digest.finish().as_ref())
     }
 }

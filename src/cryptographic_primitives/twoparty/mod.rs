@@ -14,25 +14,5 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-use std::error::Error;
-use std::fmt;
-
-pub mod dlog_zk_protocol;
-pub mod sigma_dlog;
-pub mod sigma_valid_pedersen;
-pub mod sigma_valid_pedersen_blind;
-
-#[derive(Debug, Clone, Copy)]
-pub struct ProofError;
-
-impl fmt::Display for ProofError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ProofError")
-    }
-}
-
-impl Error for ProofError {
-    fn description(&self) -> &str {
-        "Error while verifying"
-    }
-}
+pub mod coin_flip_optimal_rounds;
+pub mod dh_key_exchange;

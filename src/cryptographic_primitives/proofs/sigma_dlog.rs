@@ -14,19 +14,6 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-// TODO: delete this file
-/// THIS IS A COPY OF sigma_protocol_dlog. IT IS NOT DELETED FOR BACKWARD COMPATIBILITY.
-
-/// This is implementation of Schnorr's identification protocol for elliptic curve groups or a
-/// sigma protocol for Proof of knowledge of the discrete log of an Elliptic-curve point:
-/// C.P. Schnorr. Efficient Identification and Signatures for Smart Cards. In
-/// CRYPTO 1989, Springer (LNCS 435), pages 239–252, 1990.
-/// https://pdfs.semanticscholar.org/8d69/c06d48b618a090dd19185aea7a13def894a5.pdf.
-///
-/// The protocol is using Fiat-Shamir Transform: Amos Fiat and Adi Shamir.
-/// How to prove yourself: Practical solutions to identification and signature problems.
-/// In Advances in Cryptology - CRYPTO ’86, Santa Barbara, California, USA, 1986, Proceedings,
-/// pages 186–194, 1986.
 //#[cfg(feature="curvesecp256k1")]
 //use secp256k1instance::{SK,PK,GE,FE};
 //#[cfg(feature="curve25519-dalek")]
@@ -40,7 +27,7 @@ use elliptic::curves::traits::*;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
 
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct DLogProof {
     pub pk: GE,
     pub pk_t_rand_commitment: GE,
@@ -58,7 +45,7 @@ impl ProveDLog for DLogProof {
         let base_point: GE = ECPoint::generator();
         let generator_x = base_point.x_coor();
         let sk_t_rand_commitment: FE = ECScalar::new_random();
-        let pk_t_rand_commitment = base_point * &sk_t_rand_commitment;
+        let pk_t_rand_commitment = base_point.scalar_mul(&sk_t_rand_commitment.get_element());
         let ec_point: GE = ECPoint::generator();
         let pk = ec_point.scalar_mul(&sk.get_element());
         let challenge = HSha256::create_hash(&vec![
@@ -90,9 +77,8 @@ impl ProveDLog for DLogProof {
         let pk_challenge = pk.scalar_mul(&sk_challenge.get_element());
 
         let base_point: GE = ECPoint::generator();
-        //let sk_challenge_response : FE = ECScalar::from_big_int(&proof.challenge_response);
-        let sk_challenge_response: FE = proof.challenge_response.clone();
-        let mut pk_verifier = base_point.scalar_mul(&sk_challenge_response.get_element());
+
+        let mut pk_verifier = base_point.scalar_mul(&proof.challenge_response.get_element());
 
         pk_verifier = pk_verifier.add_point(&pk_challenge.get_element());
 
@@ -109,10 +95,17 @@ mod tests {
     use cryptographic_primitives::proofs::dlog_zk_protocol::*;
     use FE;
 
+    use elliptic::curves::traits::*;
+
     #[test]
     fn test_dlog_proof() {
         let witness: FE = ECScalar::new_random();
         let dlog_proof = DLogProof::prove(&witness);
-        let _verified = DLogProof::verify(&dlog_proof).expect("error dlog proof");
+        let verified = DLogProof::verify(&dlog_proof);
+        match verified {
+            Ok(_t) => println!("OK"),
+            Err(_e) => println!("error"),
+        }
     }
+
 }
