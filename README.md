@@ -5,7 +5,7 @@ KZen Cryptography utilities
 
 This project is a Rust implementation of utilities used in other KZen project such as:
 * [multisig-schnorr](https://github.com/KZen-networks/multisig-schnorr)
-* [cryptography-utils](https://github.com/KZen-networks/cryptography-utils)
+* [aggregated-ed25519](https://github.com/KZen-networks/multi-party-ed25519)
 
 License
 -------
