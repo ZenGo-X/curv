@@ -22,12 +22,12 @@ pub mod elliptic;
 
 #[cfg(feature = "curvesecp256k1")]
 mod secp256k1instance {
-
     pub use elliptic::curves::secp256_k1::FE;
     pub use elliptic::curves::secp256_k1::GE;
     pub use elliptic::curves::secp256_k1::PK;
     pub use elliptic::curves::secp256_k1::SK;
 }
+
 #[cfg(feature = "curvesecp256k1")]
 pub use self::secp256k1instance::*;
 
@@ -38,6 +38,7 @@ mod curve25519instance {
     pub use elliptic::curves::curve25519::PK;
     pub use elliptic::curves::curve25519::SK;
 }
+
 #[cfg(feature = "curve25519")]
 pub use self::curve25519instance::*;
 

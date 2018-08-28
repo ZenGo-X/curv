@@ -15,16 +15,13 @@
 */
 //https://cr.yp.to/ecdh.html -> https://cr.yp.to/ecdh/curve25519-20060209.pdf
 
-
 use BigInt;
 
 use arithmetic::traits::Converter;
 
 use super::curve25519_dalek::constants;
 use super::curve25519_dalek::constants::BASEPOINT_ORDER;
-use super::curve25519_dalek::constants::ED25519_BASEPOINT_POINT;
 use super::curve25519_dalek::edwards::CompressedEdwardsY;
-use super::curve25519_dalek::edwards::EdwardsPoint;
 use super::curve25519_dalek::scalar::Scalar;
 use super::rand::thread_rng;
 
@@ -66,7 +63,7 @@ impl ECScalar<SK> for Curve25519Scalar {
     }
 
     fn from_big_int(n: &BigInt) -> Curve25519Scalar {
-        let mut v = BigInt::to_vec(n);
+        let v = BigInt::to_vec(n);
         //TODO: add consistency check for sizes max 32/ max 64
         let mut bytes_array_32: [u8; 32];
         let mut bytes_array_64: [u8; 64];
@@ -186,7 +183,7 @@ impl ECPoint<PK, SK> for Curve25519Point {
         result.to_vec()
     }
 
-    fn scalar_mul(mut self, fe: &SK) -> Curve25519Point {
+    fn scalar_mul(self, fe: &SK) -> Curve25519Point {
         let skpk = fe * (self.ge.decompress().unwrap());
         Curve25519Point {
             purpose: "scalar_point_mul",

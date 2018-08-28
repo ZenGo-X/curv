@@ -26,8 +26,6 @@
 /// How to prove yourself: Practical solutions to identification and signature problems.
 /// In Advances in Cryptology - CRYPTO ’86, Santa Barbara, California, USA, 1986, Proceedings,
 /// pages 186–194, 1986.
-
-use BigInt;
 //#[cfg(feature="curvesecp256k1")]
 //use secp256k1instance::{SK,PK,GE,FE};
 //#[cfg(feature="curve25519-dalek")]
@@ -35,11 +33,6 @@ use BigInt;
 use super::ProofError;
 use FE;
 use GE;
-
-
-use arithmetic::traits::Converter;
-use arithmetic::traits::Modulo;
-use arithmetic::traits::Samplable;
 
 use elliptic::curves::traits::*;
 
@@ -53,7 +46,6 @@ pub struct DLogProof {
     pub challenge_response: FE,
 }
 
-
 pub trait ProveDLog {
     fn prove(sk: &FE) -> DLogProof;
 
@@ -65,7 +57,6 @@ impl ProveDLog for DLogProof {
         let ec_point: GE = ECPoint::new();
         let generator_x = ec_point.get_x_coor_as_big_int();
         let sk_t_rand_commitment: FE = ECScalar::new_random();
-        let curve_order = sk_t_rand_commitment.get_q();
         let pk_t_rand_commitment = ec_point.scalar_mul(&sk_t_rand_commitment.get_element());
         let ec_point: GE = ECPoint::new();
         let pk = ec_point.scalar_mul(&sk.get_element());
@@ -77,7 +68,6 @@ impl ProveDLog for DLogProof {
         let challenge_fe: FE = ECScalar::from_big_int(&challenge);
         let challenge_mul_sk = challenge_fe.mul(&sk.get_element());
         let challenge_response = sk_t_rand_commitment.sub(&challenge_mul_sk.get_element());
-
 
         DLogProof {
             pk,
@@ -104,7 +94,6 @@ impl ProveDLog for DLogProof {
         let mut pk_verifier = base_point.scalar_mul(&sk_challenge_response.get_element());
 
         pk_verifier = pk_verifier.add_point(&pk_challenge.get_element());
-
 
         if pk_verifier.get_element() == proof.pk_t_rand_commitment.get_element() {
             Ok(())

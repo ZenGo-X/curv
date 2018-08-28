@@ -15,20 +15,17 @@
 */
 use BigInt;
 
-use super::ring::digest::{Context, SHA512};
-use super::ring::{hmac,digest};
+use super::ring::{digest, hmac};
 use super::traits::KeyedHash;
 use std::borrow::Borrow;
 
 pub struct HMacSha512;
 
 impl KeyedHash for HMacSha512 {
-    fn create_hmac(key: &BigInt, data: Vec<&BigInt>) -> BigInt{
-        let mut digest = Context::new(&SHA512);
+    fn create_hmac(key: &BigInt, data: Vec<&BigInt>) -> BigInt {
         let key_bytes: Vec<u8> = key.into();
         let s_key = hmac::SigningKey::new(&digest::SHA512, key_bytes.as_ref());
         let mut s_ctx = hmac::SigningContext::with_key(&s_key);
-
 
         for value in data {
             let bytes: Vec<u8> = value.borrow().into();
@@ -36,24 +33,21 @@ impl KeyedHash for HMacSha512 {
         }
 
         BigInt::from(s_ctx.sign().as_ref())
-
     }
 }
-
 
 #[cfg(test)]
 mod tests {
 
-    use cryptographic_primitives::hashing::traits::KeyedHash;
-    use arithmetic::traits::Samplable;
-    use BigInt;
     use super::HMacSha512;
+    use arithmetic::traits::Samplable;
+    use cryptographic_primitives::hashing::traits::KeyedHash;
+    use BigInt;
 
     #[test]
     fn create_hmac_test() {
         let key = BigInt::sample(512);
         let result = HMacSha512::create_hmac(&key, vec![&BigInt::from(10)]);
-        println!("HMAC: {:?}",result.to_str_radix(16));
-
+        println!("HMAC: {:?}", result.to_str_radix(16));
     }
 }

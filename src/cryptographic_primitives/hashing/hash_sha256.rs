@@ -14,8 +14,6 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-
-
 use BigInt;
 
 use super::ring::digest::{Context, SHA256};

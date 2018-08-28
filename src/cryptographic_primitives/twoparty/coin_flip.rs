@@ -14,5 +14,6 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-pub mod coin_flip_optimal_rounds;
-pub mod dh_key_exchange;
+// This is an implementation of Blum coin tossing of a string, based on the
+// the protocol and proof analysis  in "How To Simulate It – A Tutorial on the Simulation
+// Proof Technique∗" (https://eprint.iacr.org/2016/046.pdf)

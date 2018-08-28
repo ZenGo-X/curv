@@ -25,15 +25,15 @@
 // the shared secret is Q = xyG
 // reference can be found in protocol 3.1 step 1 - 3(b) in the paper https://eprint.iacr.org/2017/552.pdf
 
+use arithmetic::traits::Samplable;
+use cryptographic_primitives::commitments::hash_commitment::HashCommitment;
+use cryptographic_primitives::commitments::traits::Commitment;
+use cryptographic_primitives::proofs::dlog_zk_protocol::*;
+use cryptographic_primitives::proofs::ProofError;
+use elliptic::curves::traits::*;
 use BigInt;
 use FE;
 use GE;
-use arithmetic::traits::Samplable;
-use cryptographic_primitives::proofs::ProofError;
-use elliptic::curves::traits::*;
-use cryptographic_primitives::proofs::dlog_zk_protocol::*;
-use cryptographic_primitives::commitments::hash_commitment::HashCommitment;
-use cryptographic_primitives::commitments::traits::Commitment;
 
 const SECURITY_BITS: usize = 256;
 
@@ -67,8 +67,6 @@ pub struct Party2FirstMessage {
 #[derive(Debug)]
 pub struct Party2SecondMessage {}
 
-
-
 impl Party1FirstMessage {
     pub fn create_commitments() -> Party1FirstMessage {
         let base: GE = ECPoint::new();
@@ -95,9 +93,7 @@ impl Party1FirstMessage {
             zk_pok_blind_factor,
             d_log_proof,
         }
-
     }
-
 }
 
 impl Party1SecondMessage {
@@ -121,12 +117,11 @@ impl Party2FirstMessage {
         let sk: FE = ECScalar::new_random();
         let pk = base.scalar_mul(&sk.get_element());
         Party2FirstMessage {
-            d_log_proof:  DLogProof::prove( &sk),
-            public_share:  pk,
-            secret_share:  sk,
+            d_log_proof: DLogProof::prove(&sk),
+            public_share: pk,
+            secret_share: sk,
         }
     }
-
 }
 
 impl Party2SecondMessage {
@@ -141,60 +136,68 @@ impl Party2SecondMessage {
         let mut flag = true;
         match party_one_pk_commitment
             == &HashCommitment::create_commitment_with_user_defined_randomness(
-            &party_one_public_share.get_x_coor_as_big_int(),
-            &party_one_pk_commitment_blind_factor,
-        ) {
+                &party_one_public_share.get_x_coor_as_big_int(),
+                &party_one_pk_commitment_blind_factor,
+            ) {
             false => flag = false,
             true => flag = flag,
         };
         match party_one_zk_pok_commitment
             == &HashCommitment::create_commitment_with_user_defined_randomness(
-            &party_one_d_log_proof.pk_t_rand_commitment.get_x_coor_as_big_int(),
-            &party_one_zk_pok_blind_factor,
-        ) {
+                &party_one_d_log_proof
+                    .pk_t_rand_commitment
+                    .get_x_coor_as_big_int(),
+                &party_one_zk_pok_blind_factor,
+            ) {
             false => flag = false,
             true => flag = flag,
         };
         assert!(flag);
-        DLogProof::verify( &party_one_d_log_proof)?;
+        DLogProof::verify(&party_one_d_log_proof)?;
         Ok(Party2SecondMessage {})
     }
 }
 
-pub fn compute_pubkey_party1(party_one_first_message: &Party1FirstMessage, party_two_first_message: &Party2FirstMessage) -> GE{
+pub fn compute_pubkey_party1(
+    party_one_first_message: &Party1FirstMessage,
+    party_two_first_message: &Party2FirstMessage,
+) -> GE {
     let pubkey = party_two_first_message.public_share.clone();
     pubkey.scalar_mul(&party_one_first_message.secret_share.get_element())
 }
-pub fn compute_pubkey_party2(party_two_first_message: &Party2FirstMessage, party_one_first_message: &Party1FirstMessage) -> GE{
+pub fn compute_pubkey_party2(
+    party_two_first_message: &Party2FirstMessage,
+    party_one_first_message: &Party1FirstMessage,
+) -> GE {
     let pubkey = party_one_first_message.public_share.clone();
     pubkey.scalar_mul(&party_two_first_message.secret_share.get_element())
-
 }
-pub fn compute_pubkey(secret_share: &FE, public_share: &GE) -> GE{
+pub fn compute_pubkey(secret_share: &FE, public_share: &GE) -> GE {
     let pubkey = public_share.clone();
     pubkey.scalar_mul(&secret_share.get_element())
-
 }
 #[cfg(test)]
 mod tests {
+    use cryptographic_primitives::commitments::hash_commitment::HashCommitment;
+    use cryptographic_primitives::commitments::traits::Commitment;
+    use cryptographic_primitives::proofs::dlog_zk_protocol::*;
+    use cryptographic_primitives::proofs::ProofError;
+    use cryptographic_primitives::twoparty::dh_key_exchange::*;
+    use elliptic::curves::traits::*;
     use BigInt;
     use FE;
     use GE;
-    use cryptographic_primitives::twoparty::dh_key_exchange::*;
-    use cryptographic_primitives::proofs::ProofError;
-    use elliptic::curves::traits::*;
-    use cryptographic_primitives::proofs::dlog_zk_protocol::*;
-    use cryptographic_primitives::commitments::hash_commitment::HashCommitment;
-    use cryptographic_primitives::commitments::traits::Commitment;
 
     const SECURITY_BITS: usize = 256;
 
     #[test]
     fn test_full_key_gen() {
-        let party_one_first_message =
-            Party1FirstMessage::create_commitments();
+        let party_one_first_message = Party1FirstMessage::create_commitments();
         let party_two_first_message = Party2FirstMessage::create();
-        let party_one_second_message = Party1SecondMessage::verify_and_decommit(&party_one_first_message, &party_two_first_message.d_log_proof).expect("failed to verify and decommit");
+        let party_one_second_message = Party1SecondMessage::verify_and_decommit(
+            &party_one_first_message,
+            &party_two_first_message.d_log_proof,
+        ).expect("failed to verify and decommit");
         let party_two_second_message = Party2SecondMessage::verify_commitments_and_dlog_proof(
             &party_one_first_message.pk_commitment,
             &party_one_first_message.zk_pok_commitment,
@@ -203,8 +206,9 @@ mod tests {
             &party_one_second_message.pk_commitment_blind_factor,
             &party_one_second_message.d_log_proof,
         ).expect("failed to verify commitments and DLog proof");
-        assert_eq!(compute_pubkey_party2(&party_two_first_message, &party_one_first_message),
-                   compute_pubkey_party1(&party_one_first_message, &party_two_first_message));
-
+        assert_eq!(
+            compute_pubkey_party2(&party_two_first_message, &party_one_first_message),
+            compute_pubkey_party1(&party_one_first_message, &party_two_first_message)
+        );
     }
 }
