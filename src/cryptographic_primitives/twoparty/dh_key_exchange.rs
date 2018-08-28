@@ -170,6 +170,11 @@ pub fn compute_pubkey_party2(party_two_first_message: &Party2FirstMessage, party
     pubkey.scalar_mul(&party_two_first_message.secret_share.get_element())
 
 }
+pub fn compute_pubkey(secret_share: &FE, public_share: &GE) -> GE{
+    let pubkey = public_share.clone();
+    pubkey.scalar_mul(&secret_share.get_element())
+
+}
 #[cfg(test)]
 mod tests {
     use BigInt;
