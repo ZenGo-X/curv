@@ -105,23 +105,8 @@ impl ProveDLog for DLogProof {
 
 #[cfg(test)]
 mod tests {
-    use super::ProofError;
     use cryptographic_primitives::proofs::dlog_zk_protocol::*;
-    use serde_json;
-    use BigInt;
     use FE;
-    use GE;
-    use PK;
-    use SK;
-
-    use arithmetic::traits::Converter;
-    use arithmetic::traits::Modulo;
-    use arithmetic::traits::Samplable;
-
-    use elliptic::curves::traits::*;
-
-    use cryptographic_primitives::hashing::hash_sha256::HSha256;
-    use cryptographic_primitives::hashing::traits::Hash;
 
     #[test]
     fn test_dlog_proof() {

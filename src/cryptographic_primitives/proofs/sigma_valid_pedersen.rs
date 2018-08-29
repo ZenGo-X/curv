@@ -114,22 +114,9 @@ impl ProvePederesen for PedersenProof {
 
 #[cfg(test)]
 mod tests {
-    use super::ProofError;
-    use arithmetic::traits::Converter;
-    use arithmetic::traits::Modulo;
-    use arithmetic::traits::Samplable;
-    use BigInt;
-
-    use elliptic::curves::traits::*;
-
-    use cryptographic_primitives::hashing::hash_sha256::HSha256;
-    use cryptographic_primitives::hashing::traits::Hash;
-
-    use cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
     use cryptographic_primitives::proofs::sigma_valid_pedersen::*;
-
-    use elliptic::curves::secp256_k1::Secp256k1Point;
     use elliptic::curves::secp256_k1::Secp256k1Scalar;
+    use elliptic::curves::traits::*;
 
     #[test]
     fn test_pedersen_proof() {

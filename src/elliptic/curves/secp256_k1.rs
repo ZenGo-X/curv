@@ -246,15 +246,6 @@ impl ECPoint<PK, SK> for Secp256k1Point {
 
 #[cfg(test)]
 mod tests {
-    use BigInt;
-
-    use arithmetic::traits::{Converter, Modulo};
-
-    use super::ECPoint;
-    use super::ECScalar;
-    use super::FE;
-    use serde_json;
-
     /*
     #[test]
     fn test_from_big_int(){

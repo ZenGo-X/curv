@@ -178,17 +178,7 @@ pub fn compute_pubkey(secret_share: &FE, public_share: &GE) -> GE {
 }
 #[cfg(test)]
 mod tests {
-    use cryptographic_primitives::commitments::hash_commitment::HashCommitment;
-    use cryptographic_primitives::commitments::traits::Commitment;
-    use cryptographic_primitives::proofs::dlog_zk_protocol::*;
-    use cryptographic_primitives::proofs::ProofError;
     use cryptographic_primitives::twoparty::dh_key_exchange::*;
-    use elliptic::curves::traits::*;
-    use BigInt;
-    use FE;
-    use GE;
-
-    const SECURITY_BITS: usize = 256;
 
     #[test]
     fn test_full_key_gen() {

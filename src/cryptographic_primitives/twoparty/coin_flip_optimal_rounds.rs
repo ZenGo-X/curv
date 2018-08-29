@@ -93,26 +93,8 @@ pub fn finalize(
 
 #[cfg(test)]
 mod tests {
-    use BigInt;
-
-    use arithmetic::traits::Converter;
-    use arithmetic::traits::Modulo;
-    use arithmetic::traits::Samplable;
-
-    use elliptic::curves::traits::*;
-
-    use cryptographic_primitives::hashing::hash_sha256::HSha256;
-    use cryptographic_primitives::hashing::traits::Hash;
-
-    use cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
-    use cryptographic_primitives::commitments::traits::Commitment;
-    use cryptographic_primitives::proofs::sigma_valid_pedersen::*;
-    use cryptographic_primitives::proofs::sigma_valid_pedersen_blind::*;
-    use cryptographic_primitives::proofs::ProofError;
     use cryptographic_primitives::twoparty::coin_flip_optimal_rounds::*;
 
-    use elliptic::curves::secp256_k1::Secp256k1Point;
-    use elliptic::curves::secp256_k1::Secp256k1Scalar;
     #[test]
     pub fn test_coin_toss() {
         let (party1_first_message, m1, r1) = Party1FirstMessage::commit();
