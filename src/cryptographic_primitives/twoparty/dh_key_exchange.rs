@@ -198,7 +198,7 @@ mod tests {
             &party_one_first_message,
             &party_two_first_message.d_log_proof,
         ).expect("failed to verify and decommit");
-        let party_two_second_message = Party2SecondMessage::verify_commitments_and_dlog_proof(
+        let _party_two_second_message = Party2SecondMessage::verify_commitments_and_dlog_proof(
             &party_one_first_message.pk_commitment,
             &party_one_first_message.zk_pok_commitment,
             &party_one_second_message.zk_pok_blind_factor,

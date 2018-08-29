@@ -127,7 +127,7 @@ mod tests {
     fn test_dlog_proof() {
         let witness: FE = ECScalar::new_random();
         let dlog_proof = DLogProof::prove(&witness);
-        let verified = DLogProof::verify(&dlog_proof).expect("error dlog proof");;
+        let _verified = DLogProof::verify(&dlog_proof).expect("error dlog proof");;
     }
 
 }

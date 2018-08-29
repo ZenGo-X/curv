@@ -28,7 +28,7 @@ use BigInt;
 
 use super::rand::{thread_rng, Rng};
 use super::secp256k1::constants::{CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE};
-use super::secp256k1::{PublicKey, Secp256k1, SecretKey, None};
+use super::secp256k1::{None, PublicKey, Secp256k1, SecretKey};
 use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::{Converter, Modulo};
 use cryptographic_primitives::hashing::hash_sha256::HSha256;

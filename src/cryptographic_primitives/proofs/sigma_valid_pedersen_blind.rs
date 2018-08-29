@@ -132,7 +132,7 @@ mod tests {
         let m: Secp256k1Scalar = ECScalar::new_random();
         let r: Secp256k1Scalar = ECScalar::new_random();
         let pedersen_proof = PedersenBlindingProof::prove(&m, &r);
-        let verified =
+        let _verified =
             PedersenBlindingProof::verify(&pedersen_proof).expect("error pedersen blind");
     }
 
