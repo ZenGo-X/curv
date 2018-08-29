@@ -26,7 +26,7 @@ features = ["serde_support"]
 git = "https://github.com/KZen-networks/rust-gmp"
 
 [dependencies.secp256k1]
-secp256k1 = "0.11.1"
+version = "0.11.1"
 features = ["rand", "serde"]
 
 [dependencies.curve25519-dalek]

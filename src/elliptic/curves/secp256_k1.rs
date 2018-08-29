@@ -38,14 +38,14 @@ pub type EC = Secp256k1<None>;
 pub type SK = SecretKey;
 pub type PK = PublicKey;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Secp256k1Scalar {
-    purpose: &'static str,
+    purpose: String, // it has to be a non constant string for serialization
     fe: SK,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Secp256k1Point {
-    purpose: &'static str,
+    purpose: String, // it has to be a non constant string for serialization
     ge: PK,
 }
 pub type GE = Secp256k1Point;
@@ -56,7 +56,7 @@ impl Secp256k1Point {
         let mut arr = [0u8; 32];
         thread_rng().fill(&mut arr[..]);
         Secp256k1Point {
-            purpose: "blind_point",
+            purpose: "blind_point".to_string(),
             ge: PK::from_slice(&EC::without_caps(), &arr[0..arr.len()]).unwrap(),
         }
     }
@@ -72,7 +72,7 @@ impl Secp256k1Point {
         template.append(&mut hash_vec);
 
         Secp256k1Point {
-            purpose: "blind_point",
+            purpose: "blind_point".to_string(),
             ge: PK::from_slice(&EC::without_caps(), &template).unwrap(),
         }
     }
@@ -83,7 +83,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
         let mut arr = [0u8; 32];
         thread_rng().fill(&mut arr[..]);
         Secp256k1Scalar {
-            purpose: "random",
+            purpose: "random".to_string(),
             //fe: SK::new( & EC::without_caps(), &mut csprng)
             fe: SK::from_slice(&EC::without_caps(), &arr[0..arr.len()]).unwrap(), // fe: SK::new( & EC::without_caps(), &mut thread_rng())
         }
@@ -109,7 +109,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
             v = template;
         }
         Secp256k1Scalar {
-            purpose: "from_big_int",
+            purpose: "from_big_int".to_string(),
             fe: SK::from_slice(&EC::without_caps(), &v).unwrap(),
         }
     }
@@ -131,7 +131,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
             &self.get_q(),
         ));
         Secp256k1Scalar {
-            purpose: "add",
+            purpose: "add".to_string(),
             fe: res.get_element(),
         }
     }
@@ -145,7 +145,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
             &self.get_q(),
         ));
         Secp256k1Scalar {
-            purpose: "mul",
+            purpose: "mul".to_string(),
             fe: res.get_element(),
         }
     }
@@ -159,7 +159,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
             &self.get_q(),
         ));
         Secp256k1Scalar {
-            purpose: "mul",
+            purpose: "mul".to_string(),
             fe: res.get_element(),
         }
     }
@@ -171,7 +171,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         v.extend(GENERATOR_X.as_ref());
         v.extend(GENERATOR_Y.as_ref());
         Secp256k1Point {
-            purpose: "base_fe",
+            purpose: "base_fe".to_string(),
             ge: PK::from_slice(&Secp256k1::without_caps(), &v).unwrap(),
         }
     }
@@ -238,7 +238,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
     }
     fn add_point(&self, other: &PK) -> Secp256k1Point {
         Secp256k1Point {
-            purpose: "combine",
+            purpose: "combine".to_string(),
             ge: self.ge.combine(&EC::without_caps(), other).unwrap(),
         }
     }
@@ -253,6 +253,8 @@ mod tests {
     use super::ECPoint;
     use super::ECScalar;
     use super::FE;
+    use serde_json;
+
     /*
     #[test]
     fn test_from_big_int(){
@@ -260,6 +262,5 @@ mod tests {
         let co = temp.get_q();
         let temp2: FE = ECScalar::from_big_int(&co);
 
-    }
-*/
+    }*/
 }
