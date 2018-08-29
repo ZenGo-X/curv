@@ -28,12 +28,13 @@ use BigInt;
 
 use super::rand::{thread_rng, Rng};
 use super::secp256k1::constants::{CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE};
-use super::secp256k1::{PublicKey, Secp256k1, SecretKey};
+use super::secp256k1::{PublicKey, Secp256k1, SecretKey, None};
 use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::{Converter, Modulo};
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
-pub type EC = Secp256k1;
+
+pub type EC = Secp256k1<None>;
 pub type SK = SecretKey;
 pub type PK = PublicKey;
 
@@ -227,7 +228,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
 
     fn scalar_mul(mut self, fe: &SK) -> Secp256k1Point {
         self.ge
-            .mul_assign(&EC::new(), fe)
+            .mul_assign(&Secp256k1::new(), fe) // we can't use Secp256k1 <None> (EC) in mul_assign
             .expect("Assignment expected");
         self
         //   Secp256k1Point{
@@ -238,7 +239,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
     fn add_point(&self, other: &PK) -> Secp256k1Point {
         Secp256k1Point {
             purpose: "combine",
-            ge: self.ge.combine(&EC::new(), other).unwrap(),
+            ge: self.ge.combine(&EC::without_caps(), other).unwrap(),
         }
     }
 }
