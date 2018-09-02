@@ -33,17 +33,23 @@ use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::{Converter, Modulo};
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
+use serde::de;
+use serde::de::{MapAccess, Visitor};
+use serde::ser::SerializeStruct;
+use serde::ser::{Serialize, Serializer};
+use serde::{Deserialize, Deserializer};
+use std::fmt;
 
 pub type EC = Secp256k1<None>;
 pub type SK = SecretKey;
 pub type PK = PublicKey;
 
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Secp256k1Scalar {
     purpose: String, // it has to be a non constant string for serialization
     fe: SK,
 }
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Secp256k1Point {
     purpose: String, // it has to be a non constant string for serialization
     ge: PK,
@@ -165,6 +171,39 @@ impl ECScalar<SK> for Secp256k1Scalar {
     }
 }
 
+impl Serialize for Secp256k1Scalar {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.to_big_int().to_hex())
+    }
+}
+
+impl<'de> Deserialize<'de> for Secp256k1Scalar {
+    fn deserialize<D>(deserializer: D) -> Result<Secp256k1Scalar, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(Secp256k1ScalarVisitor)
+    }
+}
+
+struct Secp256k1ScalarVisitor;
+
+impl<'de> Visitor<'de> for Secp256k1ScalarVisitor {
+    type Value = Secp256k1Scalar;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("Secp256k1Scalar")
+    }
+
+    fn visit_str<E: de::Error>(self, s: &str) -> Result<Secp256k1Scalar, E> {
+        let v = BigInt::from_str_radix(s, 16).expect("Failed in serde");
+        Ok(Secp256k1Scalar::from_big_int(&v))
+    }
+}
+
 impl ECPoint<PK, SK> for Secp256k1Point {
     fn new() -> Secp256k1Point {
         let mut v = vec![4 as u8];
@@ -198,26 +237,6 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         return result;
     }
 
-    /*
-    fn from_key_slice(key: &[u8]) -> Secp256k1Point{
-        assert_eq!(key.len(), 32);
-        let header = key[0] as usize;
-        assert_eq!(header, 4);
-
-        // first 32 elements (without the header)
-        let x = &key[1..key.len() / 2 + 1];
-        // last 32 element
-        let y = &key[(key.len() - 1) / 2 + 1..key.len()];
-        let y_coord_size = 32;
-        let y_zeros_vec = vec![0; y_coord_size];
-        assert_ne!(y, &y_zeros_vec[..]);
-        // TODO: add a test if point (x,y) is on curve.
-        Secp256k1Point{
-            purpose: "from_key_slice",
-            ge: PK::from_slice(&EC::without_caps(), &key).unwrap()
-        }
-    }
-*/
     fn pk_to_key_slice(&self) -> Vec<u8> {
         let mut v = vec![4 as u8];
 
@@ -231,11 +250,8 @@ impl ECPoint<PK, SK> for Secp256k1Point {
             .mul_assign(&Secp256k1::new(), fe) // we can't use Secp256k1 <None> (EC) in mul_assign
             .expect("Assignment expected");
         self
-        //   Secp256k1Point{
-        //        purpose: "mul_assign",
-        //       ge: pubkey
-        //    }
     }
+
     fn add_point(&self, other: &PK) -> Secp256k1Point {
         Secp256k1Point {
             purpose: "combine".to_string(),
@@ -244,14 +260,98 @@ impl ECPoint<PK, SK> for Secp256k1Point {
     }
 }
 
+impl Serialize for Secp256k1Point {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Secp256k1Point", 2)?;
+        state.serialize_field("x", &self.get_x_coor_as_big_int().to_hex())?;
+        state.serialize_field("y", &self.get_y_coor_as_big_int().to_hex())?;
+        state.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for Secp256k1Point {
+    fn deserialize<D>(deserializer: D) -> Result<Secp256k1Point, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_map(Secp256k1PointVisitor)
+    }
+}
+
+struct Secp256k1PointVisitor;
+
+impl<'de> Visitor<'de> for Secp256k1PointVisitor {
+    type Value = Secp256k1Point;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("Secp256k1Point")
+    }
+
+    fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<Secp256k1Point, E::Error> {
+        let mut x = BigInt::from(0);
+        let mut y = BigInt::from(0);
+
+        while let Some(key) = map.next_key::<&'de str>()? {
+            let v = map.next_value::<&'de str>()?;
+            match key.as_ref() {
+                "x" => x = BigInt::from_hex(&String::from(v)),
+                "y" => y = BigInt::from_hex(&String::from(v)),
+                _ => panic!("Serialization failed!"),
+            }
+        }
+
+        let mut v = vec![4 as u8];
+        v.extend(BigInt::to_vec(&x));
+        v.extend(BigInt::to_vec(&y));
+
+        Ok(Secp256k1Point {
+            purpose: "deser_fe".to_string(),
+            ge: PublicKey::from_slice(&Secp256k1::without_caps(), &v).unwrap(),
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    /*
-    #[test]
-    fn test_from_big_int(){
-        let temp: FE = ECScalar::new_random();
-        let co = temp.get_q();
-        let temp2: FE = ECScalar::from_big_int(&co);
+    use super::BigInt;
+    use super::Secp256k1Point;
+    use super::Secp256k1Scalar;
+    use arithmetic::traits::Converter;
+    use elliptic::curves::traits::ECPoint;
+    use elliptic::curves::traits::ECScalar;
+    use serde_json;
 
-    }*/
+    #[test]
+    fn serialize_sk() {
+        let scalar = Secp256k1Scalar::from_big_int(&BigInt::from(123456));
+        let s = serde_json::to_string(&scalar).expect("Failed in serialization");
+        assert_eq!(s, "\"1e240\"");
+    }
+
+    #[test]
+    fn deserialize_sk() {
+        let s = "\"1e240\"";
+        let dummy: Secp256k1Scalar = serde_json::from_str(s).expect("Failed in serialization");
+
+        let sk = Secp256k1Scalar::from_big_int(&BigInt::from(123456));
+
+        assert_eq!(dummy, sk);
+    }
+
+    #[test]
+    fn serialize_pk() {
+        let pk = Secp256k1Point::new();
+        let x = pk.get_x_coor_as_big_int();
+        let y = pk.get_y_coor_as_big_int();
+        let s = serde_json::to_string(&pk).expect("Failed in serialization");
+
+        let expected = format!("{{\"x\":\"{}\",\"y\":\"{}\"}}", x.to_hex(), y.to_hex());
+        assert_eq!(s, expected);
+
+        let des_pk: Secp256k1Point = serde_json::from_str(&s).expect("Failed in serialization");
+        assert_eq!(des_pk.ge, pk.ge);
+    }
 }

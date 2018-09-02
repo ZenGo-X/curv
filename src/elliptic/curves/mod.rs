@@ -18,6 +18,7 @@ extern crate rand;
 
 extern crate curve25519_dalek;
 extern crate secp256k1;
+
 //#[cfg(feature = "curve25519")]
 pub mod curve25519;
 //#[cfg(feature = "curvesecp256k1")]

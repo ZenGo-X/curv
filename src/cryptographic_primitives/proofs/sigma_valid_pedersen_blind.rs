@@ -112,7 +112,6 @@ impl ProvePederesenBlind for PedersenBlindingProof {
 mod tests {
     use cryptographic_primitives::proofs::sigma_valid_pedersen_blind::*;
     use elliptic::curves::secp256_k1::Secp256k1Scalar;
-    use elliptic::curves::traits::*;
 
     #[test]
     fn test_pedersen_blind_proof() {
