@@ -34,6 +34,7 @@ use arithmetic::traits::{Converter, Modulo};
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
 use serde::de;
+use serde::de::Error;
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
@@ -310,10 +311,19 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
         v.extend(BigInt::to_vec(&x));
         v.extend(BigInt::to_vec(&y));
 
-        Ok(Secp256k1Point {
-            purpose: "deser_fe".to_string(),
-            ge: PublicKey::from_slice(&Secp256k1::without_caps(), &v).unwrap(),
-        })
+        let pk = PublicKey::from_slice(&Secp256k1::without_caps(), &v);
+
+        if pk.is_err() {
+            Err(Error::custom(format!(
+                "Can't create public key from slice: Point: {{\"x\":\"{}\",\"y\":\"{}\"}}, v: {:?}",
+                x, y, v
+            )))
+        } else {
+            Ok(Secp256k1Point {
+                purpose: "deser_fe".to_string(),
+                ge: pk.unwrap(),
+            })
+        }
     }
 }
 
@@ -335,8 +345,12 @@ mod tests {
     }
 
     #[test]
-    fn test_random_points() {
-        for _ in 0..100{Secp256k1Point::random_point();}
+    fn serialize_rand_pk() {
+        for _ in 1..100 {
+            let scalar = Secp256k1Point::random_point();
+            let s = serde_json::to_string(&scalar).expect("Failed in serialization");
+            let _e: Secp256k1Point = serde_json::from_str(&s).expect("Failed in serialization");
+        }
     }
 
     #[test]
