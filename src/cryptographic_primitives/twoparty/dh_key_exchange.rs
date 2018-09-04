@@ -37,7 +37,7 @@ use GE;
 
 const SECURITY_BITS: usize = 256;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Party1FirstMessage {
     pub public_share: GE,
     secret_share: FE,
@@ -49,7 +49,7 @@ pub struct Party1FirstMessage {
     d_log_proof: DLogProof,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Party1SecondMessage {
     pub pk_commitment_blind_factor: BigInt,
     pub zk_pok_blind_factor: BigInt,
@@ -57,14 +57,14 @@ pub struct Party1SecondMessage {
     pub d_log_proof: DLogProof,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Party2FirstMessage {
     pub d_log_proof: DLogProof,
     pub public_share: GE,
     secret_share: FE,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Party2SecondMessage {}
 
 impl Party1FirstMessage {
