@@ -127,7 +127,7 @@ impl Party2FirstMessage {
 }
 
 impl Party2SecondMessage {
-    
+
     pub fn verify_commitments_and_dlog_proof(
         first_message_party1: &Party1FirstMessage,
         second_message_party2: &Party1SecondMessage

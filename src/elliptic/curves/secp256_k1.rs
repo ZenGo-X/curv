@@ -59,11 +59,14 @@ pub type FE = Secp256k1Scalar;
 
 impl Secp256k1Point {
     pub fn random_point() -> Secp256k1Point {
+        let random_scalar: Secp256k1Scalar = Secp256k1Scalar::new_random();
+        let base_point = Secp256k1Point::generator();
+        let pk = base_point.scalar_mul(&random_scalar.get_element());
         let mut arr = [0u8; 32];
         thread_rng().fill(&mut arr[..]);
         Secp256k1Point {
-            purpose: "blind_point".to_string(),
-            ge: PK::from_slice(&EC::without_caps(), &arr[0..arr.len()]).unwrap(),
+            purpose: "random_point".to_string(),
+            ge: pk.get_element(),
         }
     }
     //TODO: implement for other curves
@@ -329,6 +332,11 @@ mod tests {
         let scalar: Secp256k1Scalar = ECScalar::from(&BigInt::from(123456));
         let s = serde_json::to_string(&scalar).expect("Failed in serialization");
         assert_eq!(s, "\"1e240\"");
+    }
+
+    #[test]
+    fn test_random_points() {
+        for _ in 0..100{Secp256k1Point::random_point();}
     }
 
     #[test]
