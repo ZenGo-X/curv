@@ -20,9 +20,9 @@ pub trait ECScalar<SK> {
     fn new_random() -> Self;
     fn get_element(&self) -> SK;
     fn set_element(&mut self, element: SK);
-    fn from_big_int(n: &BigInt) -> Self;
+    fn from(n: &BigInt) -> Self;
     fn to_big_int(&self) -> BigInt;
-    fn get_q(&self) -> BigInt;
+    fn q(&self) -> BigInt;
     fn add(&self, other: &SK) -> Self;
     fn mul(&self, other: &SK) -> Self;
     fn sub(&self, other: &SK) -> Self;
@@ -30,10 +30,10 @@ pub trait ECScalar<SK> {
 
 // TODO: add a fn is_point
 pub trait ECPoint<PK, SK> {
-    fn new() -> Self;
+    fn generator() -> Self;
     fn get_element(&self) -> PK;
-    fn get_x_coor_as_big_int(&self) -> BigInt;
-    fn get_y_coor_as_big_int(&self) -> BigInt;
+    fn x_coor(&self) -> BigInt;
+    fn y_coor(&self) -> BigInt;
     fn bytes_compressed_to_big_int(&self) -> BigInt;
     //fn from_key_slice(key: &[u8]) -> Self;
     fn pk_to_key_slice(&self) -> Vec<u8>;

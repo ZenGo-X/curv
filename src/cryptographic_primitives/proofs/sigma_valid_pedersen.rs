@@ -29,7 +29,7 @@ use elliptic::curves::traits::*;
 
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
-
+#[cfg(feature = "curvesecp256k1")]
 use cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
 use cryptographic_primitives::commitments::traits::Commitment;
 
@@ -45,15 +45,16 @@ pub struct PedersenProof {
     z1: Secp256k1Scalar,
     z2: Secp256k1Scalar,
 }
+#[cfg(feature = "curvesecp256k1")]
 pub trait ProvePederesen {
     fn prove(m: &Secp256k1Scalar, r: &Secp256k1Scalar) -> PedersenProof;
 
     fn verify(proof: &PedersenProof) -> Result<(), ProofError>;
 }
-
+#[cfg(feature = "curvesecp256k1")]
 impl ProvePederesen for PedersenProof {
     fn prove(m: &Secp256k1Scalar, r: &Secp256k1Scalar) -> PedersenProof {
-        let g: Secp256k1Point = ECPoint::new();
+        let g: Secp256k1Point = ECPoint::generator();
         let h = Secp256k1Point::base_point2();
         let s1: Secp256k1Scalar = ECScalar::new_random();
         let s2: Secp256k1Scalar = ECScalar::new_random();
@@ -63,15 +64,15 @@ impl ProvePederesen for PedersenProof {
             &m.to_big_int(),
             &r.to_big_int(),
         );
-        let g: Secp256k1Point = ECPoint::new();
+        let g: Secp256k1Point = ECPoint::generator();
         let challenge = HSha256::create_hash(vec![
-            &g.get_x_coor_as_big_int(),
-            &Secp256k1Point::base_point2().get_x_coor_as_big_int(),
-            &com.get_x_coor_as_big_int(),
-            &a1.get_x_coor_as_big_int(),
-            &a2.get_x_coor_as_big_int(),
+            &g.x_coor(),
+            &Secp256k1Point::base_point2().x_coor(),
+            &com.x_coor(),
+            &a1.x_coor(),
+            &a2.x_coor(),
         ]);
-        let e: Secp256k1Scalar = ECScalar::from_big_int(&challenge);
+        let e: Secp256k1Scalar = ECScalar::from(&challenge);
         let em = e.mul(&m.get_element());
         let z1 = s1.add(&em.get_element());
         let er = e.mul(&r.get_element());
@@ -87,16 +88,16 @@ impl ProvePederesen for PedersenProof {
     }
 
     fn verify(proof: &PedersenProof) -> Result<(), ProofError> {
-        let g: Secp256k1Point = ECPoint::new();
+        let g: Secp256k1Point = ECPoint::generator();
         let h = Secp256k1Point::base_point2();
         let challenge = HSha256::create_hash(vec![
-            &g.get_x_coor_as_big_int(),
-            &h.get_x_coor_as_big_int(),
-            &proof.com.get_x_coor_as_big_int(),
-            &proof.a1.get_x_coor_as_big_int(),
-            &proof.a2.get_x_coor_as_big_int(),
+            &g.x_coor(),
+            &h.x_coor(),
+            &proof.com.x_coor(),
+            &proof.a1.x_coor(),
+            &proof.a2.x_coor(),
         ]);
-        let e: Secp256k1Scalar = ECScalar::from_big_int(&challenge);
+        let e: Secp256k1Scalar = ECScalar::from(&challenge);
         let z1g = g.scalar_mul(&proof.z1.get_element());
         let z2h = h.scalar_mul(&proof.z2.get_element());
         let lhs = z1g.add_point(&z2h.get_element());

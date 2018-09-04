@@ -15,21 +15,20 @@
 */
 use BigInt;
 
-use super::ring::{digest, hmac};
+use ring::{digest, hmac};
 use super::traits::KeyedHash;
-use std::borrow::Borrow;
+use arithmetic::traits::Converter;
 
 pub struct HMacSha512;
 
 impl KeyedHash for HMacSha512 {
     fn create_hmac(key: &BigInt, data: Vec<&BigInt>) -> BigInt {
         let key_bytes: Vec<u8> = key.into();
-        let s_key = hmac::SigningKey::new(&digest::SHA512, key_bytes.as_ref());
+        let s_key = hmac::SigningKey::new(&digest::SHA512, &key_bytes);
         let mut s_ctx = hmac::SigningContext::with_key(&s_key);
 
         for value in data {
-            let bytes: Vec<u8> = value.borrow().into();
-            s_ctx.update(&bytes);
+            s_ctx.update(&BigInt::to_vec(&value));
         }
 
         BigInt::from(s_ctx.sign().as_ref())

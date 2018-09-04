@@ -31,7 +31,7 @@ use elliptic::curves::traits::*;
 
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
-
+#[cfg(feature = "curvesecp256k1")]
 use cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
 use cryptographic_primitives::commitments::traits::Commitment;
 
@@ -46,13 +46,13 @@ pub struct PedersenBlindingProof {
     pub com: Secp256k1Point,
     z: Secp256k1Scalar,
 }
-
+#[cfg(feature = "curvesecp256k1")]
 pub trait ProvePederesenBlind {
     fn prove(m: &Secp256k1Scalar, r: &Secp256k1Scalar) -> PedersenBlindingProof;
 
     fn verify(proof: &PedersenBlindingProof) -> Result<(), ProofError>;
 }
-
+#[cfg(feature = "curvesecp256k1")]
 impl ProvePederesenBlind for PedersenBlindingProof {
     fn prove(m: &Secp256k1Scalar, r: &Secp256k1Scalar) -> PedersenBlindingProof {
         let h = Secp256k1Point::base_point2();
@@ -62,15 +62,15 @@ impl ProvePederesenBlind for PedersenBlindingProof {
             &m.to_big_int(),
             &r.to_big_int(),
         );
-        let g: Secp256k1Point = ECPoint::new();
+        let g: Secp256k1Point = ECPoint::generator();
         let challenge = HSha256::create_hash(vec![
-            &g.get_x_coor_as_big_int(),
-            &Secp256k1Point::base_point2().get_x_coor_as_big_int(),
-            &com.get_x_coor_as_big_int(),
-            &a.get_x_coor_as_big_int(),
+            &g.x_coor(),
+            &Secp256k1Point::base_point2().x_coor(),
+            &com.x_coor(),
+            &a.x_coor(),
             &m.to_big_int(),
         ]);
-        let e: Secp256k1Scalar = ECScalar::from_big_int(&challenge);
+        let e: Secp256k1Scalar = ECScalar::from(&challenge);
         let er = e.mul(&r.get_element());
         let z = s.add(&er.get_element());
         PedersenBlindingProof {
@@ -83,16 +83,16 @@ impl ProvePederesenBlind for PedersenBlindingProof {
     }
 
     fn verify(proof: &PedersenBlindingProof) -> Result<(), ProofError> {
-        let g: Secp256k1Point = ECPoint::new();
+        let g: Secp256k1Point = ECPoint::generator();
         let h = Secp256k1Point::base_point2();
         let challenge = HSha256::create_hash(vec![
-            &g.get_x_coor_as_big_int(),
-            &h.get_x_coor_as_big_int(),
-            &proof.com.get_x_coor_as_big_int(),
-            &proof.a.get_x_coor_as_big_int(),
+            &g.x_coor(),
+            &h.x_coor(),
+            &proof.com.x_coor(),
+            &proof.a.x_coor(),
             &proof.m.to_big_int(),
         ]);
-        let e: Secp256k1Scalar = ECScalar::from_big_int(&challenge);
+        let e: Secp256k1Scalar = ECScalar::from(&challenge);
         let zh = h.scalar_mul(&proof.z.get_element());
         let mg = g.scalar_mul(&proof.m.get_element());
         let emg = mg.scalar_mul(&e.get_element());

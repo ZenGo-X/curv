@@ -16,9 +16,9 @@
 
 use BigInt;
 
-use super::ring::digest::{Context, SHA512};
+use ring::digest::{Context, SHA512};
 use super::traits::Hash;
-use std::borrow::Borrow;
+use arithmetic::traits::Converter;
 
 pub struct HSha512;
 
@@ -27,8 +27,7 @@ impl Hash for HSha512 {
         let mut digest = Context::new(&SHA512);
 
         for value in big_ints {
-            let bytes: Vec<u8> = value.borrow().into();
-            digest.update(&bytes);
+            digest.update(&BigInt::to_vec(&value));
         }
 
         BigInt::from(digest.finish().as_ref())

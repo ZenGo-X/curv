@@ -18,16 +18,19 @@
 //two non-trusting parties. Based on the
 // the protocol and proof analysis  in "How To Simulate It – A Tutorial on the Simulation
 // Proof Technique∗" (https://eprint.iacr.org/2016/046.pdf)
-
+#[cfg(feature = "curvesecp256k1")]
 use cryptographic_primitives::proofs::sigma_valid_pedersen::PedersenProof;
+#[cfg(feature = "curvesecp256k1")]
 use cryptographic_primitives::proofs::sigma_valid_pedersen::ProvePederesen;
+#[cfg(feature = "curvesecp256k1")]
 use cryptographic_primitives::proofs::sigma_valid_pedersen_blind::PedersenBlindingProof;
+#[cfg(feature = "curvesecp256k1")]
 use cryptographic_primitives::proofs::sigma_valid_pedersen_blind::ProvePederesenBlind;
 use elliptic::curves::traits::*;
 
 use elliptic::curves::secp256_k1::Secp256k1Point;
 use elliptic::curves::secp256_k1::Secp256k1Scalar;
-
+#[cfg(feature = "curvesecp256k1")]
 #[derive(Clone, PartialEq, Debug)]
 pub struct Party1FirstMessage {
     pub proof: PedersenProof,
@@ -37,13 +40,13 @@ pub struct Party1FirstMessage {
 pub struct Party2FirstMessage {
     pub seed: Secp256k1Scalar,
 }
-
+#[cfg(feature = "curvesecp256k1")]
 #[derive(Clone, PartialEq, Debug)]
 pub struct Party1SecondMessage {
     pub proof: PedersenBlindingProof,
     pub seed: Secp256k1Scalar,
 }
-
+#[cfg(feature = "curvesecp256k1")]
 impl Party1FirstMessage {
     pub fn commit() -> (Party1FirstMessage, Secp256k1Scalar, Secp256k1Scalar) {
         let seed: Secp256k1Scalar = ECScalar::new_random();
@@ -52,7 +55,7 @@ impl Party1FirstMessage {
         (Party1FirstMessage { proof }, seed, blinding)
     }
 }
-
+#[cfg(feature = "curvesecp256k1")]
 impl Party2FirstMessage {
     pub fn share(proof: &PedersenProof) -> Party2FirstMessage {
         PedersenProof::verify(&proof).expect("{(m,r),c} proof failed");
@@ -60,7 +63,7 @@ impl Party2FirstMessage {
         Party2FirstMessage { seed }
     }
 }
-
+#[cfg(feature = "curvesecp256k1")]
 impl Party1SecondMessage {
     pub fn reveal(
         party2seed: &Secp256k1Scalar,
@@ -74,12 +77,13 @@ impl Party1SecondMessage {
                 proof,
                 seed: party1seed.clone(),
             },
-            ECScalar::from_big_int(&coin_flip_result),
+            ECScalar::from(&coin_flip_result),
         )
     }
 }
 
 // party2 finalize
+#[cfg(feature = "curvesecp256k1")]
 pub fn finalize(
     proof: &PedersenBlindingProof,
     party2seed: &Secp256k1Scalar,
@@ -88,13 +92,13 @@ pub fn finalize(
     PedersenBlindingProof::verify(&proof).expect("{r,(m,c)} proof failed");
     assert_eq!(&proof.com, party1comm);
     let coin_flip_result = &proof.m.to_big_int() ^ &party2seed.to_big_int();
-    ECScalar::from_big_int(&coin_flip_result)
+    ECScalar::from(&coin_flip_result)
 }
 
 #[cfg(test)]
 mod tests {
     use cryptographic_primitives::twoparty::coin_flip_optimal_rounds::*;
-
+    #[cfg(feature = "curvesecp256k1")]
     #[test]
     pub fn test_coin_toss() {
         let (party1_first_message, m1, r1) = Party1FirstMessage::commit();

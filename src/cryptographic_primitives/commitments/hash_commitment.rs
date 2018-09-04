@@ -39,16 +39,10 @@ impl Commitment<BigInt> for HashCommitment {
     }
 
     fn create_commitment(message: &BigInt) -> (BigInt, BigInt) {
-        let mut digest = Context::new(&SHA256);
-        let bytes_message: Vec<u8> = message.into();
-        digest.update(&bytes_message);
-
         let blinding_factor = &(BigInt::sample(SECURITY_BITS));
-        let bytes_blinding_factor: Vec<u8> = blinding_factor.into();
-        digest.update(&bytes_blinding_factor);
-
+        let com = HashCommitment::create_commitment_with_user_defined_randomness(message, blinding_factor);
         (
-            BigInt::from(digest.finish().as_ref()),
+            com,
             blinding_factor.clone(),
         )
     }

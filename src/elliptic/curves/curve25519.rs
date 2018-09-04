@@ -62,7 +62,7 @@ impl ECScalar<SK> for Curve25519Scalar {
         self.fe = element
     }
 
-    fn from_big_int(n: &BigInt) -> Curve25519Scalar {
+    fn from(n: &BigInt) -> Curve25519Scalar {
         let v = BigInt::to_vec(n);
         //TODO: add consistency check for sizes max 32/ max 64
         let mut bytes_array_32: [u8; 32];
@@ -90,7 +90,7 @@ impl ECScalar<SK> for Curve25519Scalar {
         BigInt::from(&(self.fe.to_bytes()[0..self.fe.to_bytes().len()]))
     }
 
-    fn get_q(&self) -> BigInt {
+    fn q(&self) -> BigInt {
         BigInt::from(BASEPOINT_ORDER.to_bytes()[0..BASEPOINT_ORDER.to_bytes().len()].as_ref())
     }
 
@@ -117,7 +117,7 @@ impl ECScalar<SK> for Curve25519Scalar {
 }
 
 impl ECPoint<PK, SK> for Curve25519Point {
-    fn new() -> Curve25519Point {
+    fn generator() -> Curve25519Point {
         Curve25519Point {
             purpose: "base_fe",
             ge: constants::ED25519_BASEPOINT_COMPRESSED,
@@ -128,7 +128,7 @@ impl ECPoint<PK, SK> for Curve25519Point {
         self.ge
     }
 
-    fn get_x_coor_as_big_int(&self) -> BigInt {
+    fn x_coor(&self) -> BigInt {
         /* taken from https://doc-internal.dalek.rs/src/curve25519_dalek/edwards.rs.html#144
         let y = self.ge.as_bytes().clone();
         let Y = SK::from_bytes_mod_order(y);
@@ -143,7 +143,7 @@ impl ECPoint<PK, SK> for Curve25519Point {
         BigInt::from(field_y[0..field_y.len()].as_ref())
     }
 
-    fn get_y_coor_as_big_int(&self) -> BigInt {
+    fn y_coor(&self) -> BigInt {
         let field_y = self.ge.as_bytes();
         BigInt::from(field_y[0..field_y.len()].as_ref())
     }

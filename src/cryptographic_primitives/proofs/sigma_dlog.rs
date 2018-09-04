@@ -42,18 +42,18 @@ pub trait ProveDLog {
 
 impl ProveDLog for DLogProof {
     fn prove(sk: &FE) -> DLogProof {
-        let ec_point: GE = ECPoint::new();
-        let generator_x = ec_point.get_x_coor_as_big_int();
+        let base_point: GE = ECPoint::generator();
+        let generator_x = base_point.x_coor();
         let sk_t_rand_commitment: FE = ECScalar::new_random();
-        let pk_t_rand_commitment = ec_point.scalar_mul(&sk_t_rand_commitment.get_element());
-        let ec_point: GE = ECPoint::new();
+        let pk_t_rand_commitment = base_point.scalar_mul(&sk_t_rand_commitment.get_element());
+        let ec_point: GE = ECPoint::generator();
         let pk = ec_point.scalar_mul(&sk.get_element());
         let challenge = HSha256::create_hash(vec![
-            &pk_t_rand_commitment.get_x_coor_as_big_int(),
+            &pk_t_rand_commitment.x_coor(),
             &generator_x,
-            &pk.get_x_coor_as_big_int(),
+            &pk.x_coor(),
         ]);
-        let challenge_fe: FE = ECScalar::from_big_int(&challenge);
+        let challenge_fe: FE = ECScalar::from(&challenge);
         let challenge_mul_sk = challenge_fe.mul(&sk.get_element());
         let challenge_response = sk_t_rand_commitment.sub(&challenge_mul_sk.get_element());
 
@@ -65,21 +65,20 @@ impl ProveDLog for DLogProof {
     }
 
     fn verify(proof: &DLogProof) -> Result<(), ProofError> {
-        let ec_point: GE = ECPoint::new();
+        let ec_point: GE = ECPoint::generator();
         let challenge = HSha256::create_hash(vec![
-            &proof.pk_t_rand_commitment.get_x_coor_as_big_int(),
-            &ec_point.get_x_coor_as_big_int(),
-            &proof.pk.get_x_coor_as_big_int(),
+            &proof.pk_t_rand_commitment.x_coor(),
+            &ec_point.x_coor(),
+            &proof.pk.x_coor(),
         ]);
 
-        let sk_challenge: FE = ECScalar::from_big_int(&challenge);
+        let sk_challenge: FE = ECScalar::from(&challenge);
         let pk = proof.pk.clone();
         let pk_challenge = pk.scalar_mul(&sk_challenge.get_element());
 
-        let base_point: GE = ECPoint::new();
-        //let sk_challenge_response : FE = ECScalar::from_big_int(&proof.challenge_response);
-        let sk_challenge_response: FE = proof.challenge_response.clone();
-        let mut pk_verifier = base_point.scalar_mul(&sk_challenge_response.get_element());
+        let base_point: GE = ECPoint::generator();
+
+        let mut pk_verifier = base_point.scalar_mul(&proof.challenge_response.get_element());
 
         pk_verifier = pk_verifier.add_point(&pk_challenge.get_element());
 
