@@ -358,7 +358,7 @@ mod tests {
         let s = "\"1e240\"";
         let dummy: Secp256k1Scalar = serde_json::from_str(s).expect("Failed in serialization");
 
-        let sk : Secp256k1Scalar = ECScalar::from(&BigInt::from(123456));
+        let sk: Secp256k1Scalar = ECScalar::from(&BigInt::from(123456));
 
         assert_eq!(dummy, sk);
     }

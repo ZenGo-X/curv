@@ -16,9 +16,9 @@
 
 use BigInt;
 
-use ring::digest::{Context, SHA512};
 use super::traits::Hash;
 use arithmetic::traits::Converter;
+use ring::digest::{Context, SHA512};
 
 pub struct HSha512;
 

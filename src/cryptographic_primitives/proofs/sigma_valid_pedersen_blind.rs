@@ -29,11 +29,11 @@ use super::ProofError;
 /// verifier checks that mG* + zH  = A + ec
 use elliptic::curves::traits::*;
 
-use cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptographic_primitives::hashing::traits::Hash;
 #[cfg(feature = "curvesecp256k1")]
 use cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
 use cryptographic_primitives::commitments::traits::Commitment;
+use cryptographic_primitives::hashing::hash_sha256::HSha256;
+use cryptographic_primitives::hashing::traits::Hash;
 
 use elliptic::curves::secp256_k1::Secp256k1Point;
 use elliptic::curves::secp256_k1::Secp256k1Scalar;

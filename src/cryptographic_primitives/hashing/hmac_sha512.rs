@@ -15,9 +15,9 @@
 */
 use BigInt;
 
-use ring::{digest, hmac};
 use super::traits::KeyedHash;
 use arithmetic::traits::Converter;
+use ring::{digest, hmac};
 
 pub struct HMacSha512;
 

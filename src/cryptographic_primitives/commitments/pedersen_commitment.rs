@@ -13,12 +13,12 @@
 
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
-use super::SECURITY_BITS;
 use super::traits::Commitment;
+use super::SECURITY_BITS;
+use arithmetic::traits::Samplable;
 use elliptic::curves::secp256_k1::Secp256k1Point;
 use elliptic::curves::secp256_k1::Secp256k1Scalar;
 use elliptic::curves::traits::*;
-use arithmetic::traits::Samplable;
 use BigInt;
 
 #[cfg(feature = "curvesecp256k1")]
@@ -40,10 +40,10 @@ impl Commitment<Secp256k1Point> for PedersenCommitment {
 
     fn create_commitment(message: &BigInt) -> (Secp256k1Point, BigInt) {
         let blinding_factor = &(BigInt::sample(SECURITY_BITS));
-        let com = PedersenCommitment::create_commitment_with_user_defined_randomness(message, blinding_factor);
-        (
-            com,
-            blinding_factor.clone(),
-        )
+        let com = PedersenCommitment::create_commitment_with_user_defined_randomness(
+            message,
+            blinding_factor,
+        );
+        (com, blinding_factor.clone())
     }
 }

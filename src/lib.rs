@@ -15,9 +15,9 @@
 */
 #[macro_use]
 extern crate serde_derive;
+extern crate ring;
 extern crate serde;
 extern crate serde_json;
-extern crate ring;
 pub mod elliptic;
 
 #[cfg(feature = "curvesecp256k1")]

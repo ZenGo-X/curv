@@ -99,10 +99,9 @@ impl Party1FirstMessage {
 impl Party1SecondMessage {
     pub fn verify_and_decommit(
         first_message_party1: &Party1FirstMessage,
-        first_message_party2: &Party2FirstMessage
+        first_message_party2_d_log_proof: &DLogProof,
     ) -> Result<Party1SecondMessage, ProofError> {
-        let proof= &first_message_party2.d_log_proof;
-        DLogProof::verify(proof)?;
+        DLogProof::verify(first_message_party2_d_log_proof)?;
         Ok(Party1SecondMessage {
             pk_commitment_blind_factor: first_message_party1.pk_commitment_blind_factor.clone(),
             zk_pok_blind_factor: first_message_party1.zk_pok_blind_factor.clone(),
@@ -110,7 +109,6 @@ impl Party1SecondMessage {
             d_log_proof: first_message_party1.d_log_proof.clone(),
         })
     }
-
 }
 
 impl Party2FirstMessage {
@@ -127,18 +125,14 @@ impl Party2FirstMessage {
 }
 
 impl Party2SecondMessage {
-
     pub fn verify_commitments_and_dlog_proof(
-        first_message_party1: &Party1FirstMessage,
-        second_message_party2: &Party1SecondMessage
+        party_one_pk_commitment: &BigInt,
+        party_one_zk_pok_commitment: &BigInt,
+        party_one_zk_pok_blind_factor: &BigInt,
+        party_one_public_share: &GE,
+        party_one_pk_commitment_blind_factor: &BigInt,
+        party_one_d_log_proof: &DLogProof,
     ) -> Result<Party2SecondMessage, ProofError> {
-        let party_one_pk_commitment = &first_message_party1.pk_commitment;
-        let party_one_zk_pok_commitment = &first_message_party1.zk_pok_commitment;
-        let party_one_zk_pok_blind_factor= &second_message_party2.zk_pok_blind_factor;
-        let party_one_public_share = &second_message_party2.public_share;
-        let party_one_pk_commitment_blind_factor = &second_message_party2.pk_commitment_blind_factor;
-        let party_one_d_log_proof = &second_message_party2.d_log_proof;
-
         let mut flag = true;
         match party_one_pk_commitment
             == &HashCommitment::create_commitment_with_user_defined_randomness(
@@ -150,9 +144,7 @@ impl Party2SecondMessage {
         };
         match party_one_zk_pok_commitment
             == &HashCommitment::create_commitment_with_user_defined_randomness(
-                &party_one_d_log_proof
-                    .pk_t_rand_commitment
-                    .x_coor(),
+                &party_one_d_log_proof.pk_t_rand_commitment.x_coor(),
                 &party_one_zk_pok_blind_factor,
             ) {
             false => flag = false,
@@ -192,11 +184,16 @@ mod tests {
         let party_two_first_message = Party2FirstMessage::create();
         let party_one_second_message = Party1SecondMessage::verify_and_decommit(
             &party_one_first_message,
-            &party_two_first_message,
+            &party_two_first_message.d_log_proof,
         ).expect("failed to verify and decommit");
+
         let _party_two_second_message = Party2SecondMessage::verify_commitments_and_dlog_proof(
-            &party_one_first_message,
-            &party_one_second_message
+            &party_one_first_message.pk_commitment,
+            &party_one_first_message.zk_pok_commitment,
+            &party_one_second_message.zk_pok_blind_factor,
+            &party_one_second_message.public_share,
+            &party_one_second_message.pk_commitment_blind_factor,
+            &party_one_second_message.d_log_proof,
         ).expect("failed to verify commitments and DLog proof");
         assert_eq!(
             compute_pubkey_party2(

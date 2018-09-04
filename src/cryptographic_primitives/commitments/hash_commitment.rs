@@ -40,11 +40,11 @@ impl Commitment<BigInt> for HashCommitment {
 
     fn create_commitment(message: &BigInt) -> (BigInt, BigInt) {
         let blinding_factor = &(BigInt::sample(SECURITY_BITS));
-        let com = HashCommitment::create_commitment_with_user_defined_randomness(message, blinding_factor);
-        (
-            com,
-            blinding_factor.clone(),
-        )
+        let com = HashCommitment::create_commitment_with_user_defined_randomness(
+            message,
+            blinding_factor,
+        );
+        (com, blinding_factor.clone())
     }
 }
 

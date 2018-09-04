@@ -16,9 +16,9 @@
 
 use BigInt;
 
-use ring::digest::{Context, SHA256};
 use super::traits::Hash;
 use arithmetic::traits::Converter;
+use ring::digest::{Context, SHA256};
 
 pub struct HSha256;
 
