@@ -39,7 +39,7 @@ const SECURITY_BITS: usize = 256;
 
 #[derive(Debug)]
 pub struct Party1FirstMessage {
-    public_share: GE,
+    pub public_share: GE,
     secret_share: FE,
 
     pub pk_commitment: BigInt,
