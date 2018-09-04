@@ -54,10 +54,10 @@ pub trait ProveDLog {
 
 impl ProveDLog for DLogProof {
     fn prove(sk: &FE) -> DLogProof {
-        let ec_point: GE = ECPoint::generator();
-        let generator_x = ec_point.x_coor();
+        let base_point: GE = ECPoint::generator();
+        let generator_x = base_point.x_coor();
         let sk_t_rand_commitment: FE = ECScalar::new_random();
-        let pk_t_rand_commitment = ec_point.scalar_mul(&sk_t_rand_commitment.get_element());
+        let pk_t_rand_commitment = base_point.scalar_mul(&sk_t_rand_commitment.get_element());
         let ec_point: GE = ECPoint::generator();
         let pk = ec_point.scalar_mul(&sk.get_element());
         let challenge = HSha256::create_hash(vec![
