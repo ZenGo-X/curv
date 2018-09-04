@@ -160,16 +160,16 @@ impl Party2SecondMessage {
 
 pub fn compute_pubkey_party1(
     party_one_first_message: &Party1FirstMessage,
-    party_two_first_message: &Party2FirstMessage,
+    party_two_first_message_public_share: &GE,
 ) -> GE {
-    let pubkey = party_two_first_message.public_share.clone();
+    let pubkey = party_two_first_message_public_share.clone();
     pubkey.scalar_mul(&party_one_first_message.secret_share.get_element())
 }
 pub fn compute_pubkey_party2(
     party_two_first_message: &Party2FirstMessage,
-    party_one_first_message: &Party1FirstMessage,
+    party_one_first_message_public_share: &GE,
 ) -> GE {
-    let pubkey = party_one_first_message.public_share.clone();
+    let pubkey = party_one_first_message_public_share.clone();
     pubkey.scalar_mul(&party_two_first_message.secret_share.get_element())
 }
 pub fn compute_pubkey(secret_share: &FE, public_share: &GE) -> GE {
@@ -197,8 +197,14 @@ mod tests {
             &party_one_second_message.d_log_proof,
         ).expect("failed to verify commitments and DLog proof");
         assert_eq!(
-            compute_pubkey_party2(&party_two_first_message, &party_one_first_message),
-            compute_pubkey_party1(&party_one_first_message, &party_two_first_message)
+            compute_pubkey_party2(
+                &party_two_first_message,
+                &party_one_first_message.public_share
+            ),
+            compute_pubkey_party1(
+                &party_one_first_message,
+                &party_two_first_message.public_share
+            )
         );
     }
 }
