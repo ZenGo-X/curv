@@ -199,4 +199,8 @@ impl ECPoint<PK, SK> for Curve25519Point {
             ge: pkpk.compress(),
         }
     }
+
+    fn from_coor(_x: &BigInt, _y: &BigInt) -> Curve25519Point {
+        unimplemented!();
+    }
 }

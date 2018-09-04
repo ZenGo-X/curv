@@ -27,14 +27,15 @@
 use BigInt;
 
 use super::rand::{thread_rng, Rng};
-use super::secp256k1::constants::{CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE};
+use super::secp256k1::constants::{
+    CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
+};
 use super::secp256k1::{None, PublicKey, Secp256k1, SecretKey};
 use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::{Converter, Modulo};
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
 use serde::de;
-use serde::de::Error;
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
@@ -262,6 +263,38 @@ impl ECPoint<PK, SK> for Secp256k1Point {
             ge: self.ge.combine(&EC::without_caps(), other).unwrap(),
         }
     }
+
+    fn from_coor(x: &BigInt, y: &BigInt) -> Secp256k1Point {
+        let mut vec_x = BigInt::to_vec(x);
+        let mut vec_y = BigInt::to_vec(y);
+        let coor_size = (UNCOMPRESSED_PUBLIC_KEY_SIZE - 1) / 2;
+
+        if vec_x.len() < coor_size {
+            // pad
+            let mut x_buffer = vec![0; coor_size - vec_x.len()];
+            x_buffer.extend_from_slice(&vec_x);
+            vec_x = x_buffer
+        }
+
+        if vec_y.len() < coor_size {
+            // pad
+            let mut y_buffer = vec![0; coor_size - vec_y.len()];
+            y_buffer.extend_from_slice(&vec_y);
+            vec_y = y_buffer
+        }
+
+        assert_eq!(x, &BigInt::from(vec_x.as_ref()));
+        assert_eq!(y, &BigInt::from(vec_y.as_ref()));
+
+        let mut v = vec![4 as u8];
+        v.extend(vec_x);
+        v.extend(vec_y);
+
+        Secp256k1Point {
+            purpose: "base_fe".to_string(),
+            ge: PK::from_slice(&Secp256k1::without_caps(), &v).unwrap(),
+        }
+    }
 }
 
 impl Serialize for Secp256k1Point {
@@ -295,35 +328,22 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
     }
 
     fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<Secp256k1Point, E::Error> {
-        let mut x = BigInt::from(0);
-        let mut y = BigInt::from(0);
+        let mut x = String::new();
+        let mut y = String::new();
 
         while let Some(key) = map.next_key::<&'de str>()? {
             let v = map.next_value::<&'de str>()?;
             match key.as_ref() {
-                "x" => x = BigInt::from_hex(&String::from(v)),
-                "y" => y = BigInt::from_hex(&String::from(v)),
+                "x" => x = String::from(v),
+                "y" => y = String::from(v),
                 _ => panic!("Serialization failed!"),
             }
         }
 
-        let mut v = vec![4 as u8];
-        v.extend(BigInt::to_vec(&x));
-        v.extend(BigInt::to_vec(&y));
+        let bx = BigInt::from_hex(&x);
+        let by = BigInt::from_hex(&y);
 
-        let pk = PublicKey::from_slice(&Secp256k1::without_caps(), &v);
-
-        if pk.is_err() {
-            Err(Error::custom(format!(
-                "Can't create public key from slice: Point: {{\"x\":\"{}\",\"y\":\"{}\"}}, v: {:?}",
-                x, y, v
-            )))
-        } else {
-            Ok(Secp256k1Point {
-                purpose: "deser_fe".to_string(),
-                ge: pk.unwrap(),
-            })
-        }
+        Ok(Secp256k1Point::from_coor(&bx, &by))
     }
 }
 
@@ -345,12 +365,32 @@ mod tests {
     }
 
     #[test]
-    fn serialize_rand_pk() {
-        for _ in 1..100 {
-            let scalar = Secp256k1Point::random_point();
-            let s = serde_json::to_string(&scalar).expect("Failed in serialization");
-            let _e: Secp256k1Point = serde_json::from_str(&s).expect("Failed in serialization");
-        }
+    fn serialize_rand_pk_verify_pad() {
+        let vx = BigInt::from_hex(
+            &"ccaf75ab7960a01eb421c0e2705f6e84585bd0a094eb6af928c892a4a2912508".to_string(),
+        );
+
+        let vy = BigInt::from_hex(
+            &"e788e294bd64eee6a73d2fc966897a31eb370b7e8e9393b0d8f4f820b48048df".to_string(),
+        );
+
+        Secp256k1Point::from_coor(&vx, &vy); // x and y of size 32
+
+        let x = BigInt::from_hex(
+            &"5f6853305467a385b56a5d87f382abb52d10835a365ec265ce510e04b3c3366f".to_string(),
+        );
+
+        let y = BigInt::from_hex(
+            &"b868891567ca1ee8c44706c0dc190dd7779fe6f9b92ced909ad870800451e3".to_string(),
+        );
+
+        Secp256k1Point::from_coor(&x, &y); // x and y not of size 32 each
+
+        let r = Secp256k1Point::random_point();
+        let r_expected = Secp256k1Point::from_coor(&r.x_coor(), &r.y_coor());
+
+        assert_eq!(r.x_coor(), r_expected.x_coor());
+        assert_eq!(r.y_coor(), r_expected.y_coor());
     }
 
     #[test]

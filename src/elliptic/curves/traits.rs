@@ -39,4 +39,5 @@ pub trait ECPoint<PK, SK> {
     fn pk_to_key_slice(&self) -> Vec<u8>;
     fn scalar_mul(self, fe: &SK) -> Self;
     fn add_point(&self, other: &PK) -> Self;
+    fn from_coor(x: &BigInt, y: &BigInt) -> Self;
 }
