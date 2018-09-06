@@ -57,10 +57,10 @@ impl ProveDLog for DLogProof {
         let base_point: GE = ECPoint::generator();
         let generator_x = base_point.x_coor();
         let sk_t_rand_commitment: FE = ECScalar::new_random();
-        let pk_t_rand_commitment = base_point.scalar_mul(&sk_t_rand_commitment.get_element());
+        let pk_t_rand_commitment = base_point * &sk_t_rand_commitment;
         let ec_point: GE = ECPoint::generator();
         let pk = ec_point.scalar_mul(&sk.get_element());
-        let challenge = HSha256::create_hash(vec![
+        let challenge = HSha256::create_hash(&vec![
             &pk_t_rand_commitment.x_coor(),
             &generator_x,
             &pk.x_coor(),
@@ -78,7 +78,7 @@ impl ProveDLog for DLogProof {
 
     fn verify(proof: &DLogProof) -> Result<(), ProofError> {
         let ec_point: GE = ECPoint::generator();
-        let challenge = HSha256::create_hash(vec![
+        let challenge = HSha256::create_hash(&vec![
             &proof.pk_t_rand_commitment.x_coor(),
             &ec_point.x_coor(),
             &proof.pk.x_coor(),

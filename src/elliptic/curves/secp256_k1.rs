@@ -41,6 +41,7 @@ use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
 use std::fmt;
+use std::ops::{Add, Mul};
 
 pub type EC = Secp256k1<None>;
 pub type SK = SecretKey;
@@ -75,9 +76,9 @@ impl Secp256k1Point {
     //TODO: make constant
     pub fn base_point2() -> Secp256k1Point {
         let g: Secp256k1Point = ECPoint::generator();
-        let hash = HSha256::create_hash(vec![&g.bytes_compressed_to_big_int()]);
-        let hash = HSha256::create_hash(vec![&hash]);
-        let hash = HSha256::create_hash(vec![&hash]);
+        let hash = HSha256::create_hash(&vec![&g.bytes_compressed_to_big_int()]);
+        let hash = HSha256::create_hash(&vec![&hash]);
+        let hash = HSha256::create_hash(&vec![&hash]);
         let mut hash_vec = BigInt::to_vec(&hash);
         let mut template: Vec<u8> = vec![2];
         template.append(&mut hash_vec);
@@ -294,6 +295,27 @@ impl ECPoint<PK, SK> for Secp256k1Point {
             purpose: "base_fe".to_string(),
             ge: PK::from_slice(&Secp256k1::without_caps(), &v).unwrap(),
         }
+    }
+}
+
+impl Mul<Secp256k1Scalar> for Secp256k1Point {
+    type Output = Secp256k1Point;
+    fn mul(self, other: Secp256k1Scalar) -> Self::Output {
+        self.scalar_mul(&other.get_element())
+    }
+}
+
+impl<'o> Mul<&'o Secp256k1Scalar> for Secp256k1Point {
+    type Output = Secp256k1Point;
+    fn mul(self, other: &'o Secp256k1Scalar) -> Self::Output {
+        self.scalar_mul(&other.get_element())
+    }
+}
+
+impl Add<Secp256k1Point> for Secp256k1Point {
+    type Output = Secp256k1Point;
+    fn add(self, other: Secp256k1Point) -> Self::Output {
+        self.add_point(&other.get_element())
     }
 }
 

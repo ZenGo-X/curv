@@ -22,13 +22,13 @@ use ring::{digest, hmac};
 pub struct HMacSha512;
 
 impl KeyedHash for HMacSha512 {
-    fn create_hmac(key: &BigInt, data: Vec<&BigInt>) -> BigInt {
+    fn create_hmac(key: &BigInt, data: &[&BigInt]) -> BigInt {
         let key_bytes: Vec<u8> = key.into();
         let s_key = hmac::SigningKey::new(&digest::SHA512, &key_bytes);
         let mut s_ctx = hmac::SigningContext::with_key(&s_key);
 
         for value in data {
-            s_ctx.update(&BigInt::to_vec(&value));
+            s_ctx.update(&BigInt::to_vec(value));
         }
 
         BigInt::from(s_ctx.sign().as_ref())
@@ -46,7 +46,7 @@ mod tests {
     #[test]
     fn create_hmac_test() {
         let key = BigInt::sample(512);
-        let result = HMacSha512::create_hmac(&key, vec![&BigInt::from(10)]);
+        let result = HMacSha512::create_hmac(&key, &vec![&BigInt::from(10)]);
         println!("HMAC: {:?}", result.to_str_radix(16));
     }
 }

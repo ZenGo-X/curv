@@ -15,7 +15,7 @@
 */
 use BigInt;
 
-use super::ring::digest::{Context, SHA256};
+use ring::digest::{Context, SHA256};
 use super::traits::Commitment;
 use super::SECURITY_BITS;
 use arithmetic::traits::Samplable;
@@ -39,12 +39,12 @@ impl Commitment<BigInt> for HashCommitment {
     }
 
     fn create_commitment(message: &BigInt) -> (BigInt, BigInt) {
-        let blinding_factor = &(BigInt::sample(SECURITY_BITS));
+        let blinding_factor = BigInt::sample(SECURITY_BITS);
         let com = HashCommitment::create_commitment_with_user_defined_randomness(
             message,
-            blinding_factor,
+            &blinding_factor,
         );
-        (com, blinding_factor.clone())
+        (com, blinding_factor)
     }
 }
 

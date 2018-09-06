@@ -23,11 +23,11 @@ use ring::digest::{Context, SHA256};
 pub struct HSha256;
 
 impl Hash for HSha256 {
-    fn create_hash(big_ints: Vec<&BigInt>) -> BigInt {
+    fn create_hash(big_ints: &[&BigInt]) -> BigInt {
         let mut digest = Context::new(&SHA256);
 
         for value in big_ints {
-            digest.update(&BigInt::to_vec(&value));
+            digest.update(&BigInt::to_vec(value));
         }
 
         BigInt::from(digest.finish().as_ref())
@@ -43,9 +43,9 @@ mod tests {
     #[test]
     // Very basic test here, TODO: suggest better testing
     fn create_hash_test() {
-        HSha256::create_hash(vec![]);
+        HSha256::create_hash(&vec![]);
 
-        let result = HSha256::create_hash(vec![&BigInt::one(), &BigInt::zero()]);
+        let result = HSha256::create_hash(&vec![&BigInt::one(), &BigInt::zero()]);
         assert!(result > BigInt::zero());
     }
 }

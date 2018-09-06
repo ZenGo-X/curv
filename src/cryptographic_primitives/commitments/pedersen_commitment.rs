@@ -33,17 +33,17 @@ impl Commitment<Secp256k1Point> for PedersenCommitment {
         let h = Secp256k1Point::base_point2();
         let message_scalar: Secp256k1Scalar = ECScalar::from(message);
         let blinding_scalar: Secp256k1Scalar = ECScalar::from(blinding_factor);
-        let mg = g.scalar_mul(&message_scalar.get_element());
-        let rh = h.scalar_mul(&blinding_scalar.get_element());
-        mg.add_point(&rh.get_element())
+        let mg = g * message_scalar;
+        let rh = h * blinding_scalar;
+        mg + rh
     }
 
     fn create_commitment(message: &BigInt) -> (Secp256k1Point, BigInt) {
-        let blinding_factor = &(BigInt::sample(SECURITY_BITS));
+        let blinding_factor = BigInt::sample(SECURITY_BITS);
         let com = PedersenCommitment::create_commitment_with_user_defined_randomness(
             message,
-            blinding_factor,
+            &blinding_factor,
         );
-        (com, blinding_factor.clone())
+        (com, blinding_factor)
     }
 }

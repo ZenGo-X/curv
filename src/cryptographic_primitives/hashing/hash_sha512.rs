@@ -23,11 +23,11 @@ use ring::digest::{Context, SHA512};
 pub struct HSha512;
 
 impl Hash for HSha512 {
-    fn create_hash(big_ints: Vec<&BigInt>) -> BigInt {
+    fn create_hash(big_ints: &[&BigInt]) -> BigInt {
         let mut digest = Context::new(&SHA512);
 
         for value in big_ints {
-            digest.update(&BigInt::to_vec(&value));
+            digest.update(&BigInt::to_vec(value));
         }
 
         BigInt::from(digest.finish().as_ref())
