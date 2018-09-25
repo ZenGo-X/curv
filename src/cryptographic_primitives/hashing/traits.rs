@@ -15,9 +15,11 @@
 */
 
 use BigInt;
+use {GE,FE};
 
 pub trait Hash {
     fn create_hash(big_ints: &[&BigInt]) -> BigInt;
+    fn create_hash_from_ge(ge_vec: &[&GE]) -> FE;
 }
 
 pub trait KeyedHash {

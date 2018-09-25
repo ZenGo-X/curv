@@ -15,7 +15,8 @@
 */
 
 use BigInt;
-
+use {GE,FE};
+use elliptic::curves::traits::{ECPoint,ECScalar};
 use super::traits::Hash;
 use arithmetic::traits::Converter;
 use ring::digest::{Context, SHA256};
@@ -32,7 +33,21 @@ impl Hash for HSha256 {
 
         BigInt::from(digest.finish().as_ref())
     }
+
+
+    fn create_hash_from_ge(ge_vec: &[&GE]) -> FE {
+        let mut digest = Context::new(&SHA256);
+
+        for value in ge_vec {
+            digest.update(&value.pk_to_key_slice());
+        }
+
+        let result = BigInt::from(digest.finish().as_ref());
+        ECScalar::from(&result)
+    }
+
 }
+
 
 #[cfg(test)]
 mod tests {
