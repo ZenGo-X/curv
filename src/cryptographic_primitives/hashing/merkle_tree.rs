@@ -92,7 +92,7 @@ mod tests {
         let ge1 : GE = ECPoint::generator();
         let proof1 = mt256.gen_proof_for_ge(&ge1);
         let root = mt256.get_root();
-        let valid_proof = MT256::validate_proof(&proof1, root).is_ok();
+        assert!( MT256::validate_proof(&proof1, root).is_ok());
     }
 
 }
