@@ -19,8 +19,9 @@ use super::rand::{OsRng, RngCore};
 use super::traits::{Converter, Modulo, Samplable};
 
 use std::borrow::Borrow;
-
+use std::convert::AsRef;
 pub type BigInt = Mpz;
+
 
 impl Converter for Mpz {
     fn to_vec(value: &Mpz) -> Vec<u8> {

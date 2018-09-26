@@ -42,7 +42,8 @@ use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
 use std::fmt;
 use std::ops::{Add, Mul};
-
+use merkle::Hashable;
+use ring::digest::Context;
 pub type EC = Secp256k1<None>;
 pub type SK = SecretKey;
 pub type PK = PublicKey;
@@ -296,6 +297,14 @@ impl ECPoint<PK, SK> for Secp256k1Point {
             purpose: "base_fe".to_string(),
             ge: PK::from_slice(&Secp256k1::without_caps(), &v).unwrap(),
         }
+    }
+}
+
+
+impl Hashable for Secp256k1Point {
+    fn update_context(&self, context: &mut Context) {
+        let bytes: Vec<u8> = self.pk_to_key_slice();
+        context.update(&bytes);
     }
 }
 

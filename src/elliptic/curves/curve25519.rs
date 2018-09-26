@@ -30,7 +30,8 @@ use super::traits::{ECPoint, ECScalar};
 pub const SECRET_KEY_SIZE: usize = 32;
 pub const COOR_BYTE_SIZE: usize = 32;
 pub const NUM_OF_COORDINATES: usize = 4;
-
+use merkle::Hashable;
+use ring::digest::Context;
 pub type SK = Scalar;
 pub type PK = CompressedEdwardsY;
 
@@ -202,5 +203,13 @@ impl ECPoint<PK, SK> for Curve25519Point {
 
     fn from_coor(_x: &BigInt, _y: &BigInt) -> Curve25519Point {
         unimplemented!();
+    }
+}
+
+
+impl Hashable for Curve25519Point {
+    fn update_context(&self, context: &mut Context) {
+        let bytes: Vec<u8> = self.pk_to_key_slice();
+        context.update(&bytes);
     }
 }
