@@ -27,7 +27,6 @@ use super::ProofError;
 /// verifier checks that z1* + z2*H  = A1 + A2 + ec
 use elliptic::curves::traits::*;
 
-#[cfg(feature = "curvesecp256k1")]
 use cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
 use cryptographic_primitives::commitments::traits::Commitment;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;

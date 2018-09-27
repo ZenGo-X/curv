@@ -9,9 +9,9 @@ authors = [
 crate-type = ["lib"]
 
 [features]
-default = ["curvesecp256k1"]
 curvesecp256k1 = []
 curve25519 = []
+
 
 [dependencies]
 rand = "0.5"

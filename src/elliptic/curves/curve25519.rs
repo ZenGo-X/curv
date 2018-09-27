@@ -17,9 +17,13 @@
 //https://cr.yp.to/ecdh.html -> https://cr.yp.to/ecdh/curve25519-20060209.pdf
 
 use BigInt;
-
+use serde::de;
+use serde::de::{MapAccess, Visitor};
+use serde::ser::SerializeStruct;
+use serde::ser::{Serialize, Serializer};
+use serde::{Deserialize, Deserializer};
 use arithmetic::traits::Converter;
-
+use std::fmt;
 use super::curve25519_dalek::constants;
 use super::curve25519_dalek::constants::BASEPOINT_ORDER;
 use super::curve25519_dalek::edwards::CompressedEdwardsY;
@@ -117,6 +121,40 @@ impl ECScalar<SK> for Curve25519Scalar {
         }
     }
 }
+
+impl Serialize for Curve25519Scalar {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        serializer.serialize_str(&self.to_big_int().to_hex())
+    }
+}
+
+impl<'de> Deserialize<'de> for Curve25519Scalar {
+    fn deserialize<D>(deserializer: D) -> Result<Curve25519Scalar, D::Error>
+        where
+            D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(Secp256k1ScalarVisitor)
+    }
+}
+
+struct Secp256k1ScalarVisitor;
+
+impl<'de> Visitor<'de> for Secp256k1ScalarVisitor {
+    type Value = Curve25519Scalar;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("Secp256k1Scalar")
+    }
+
+    fn visit_str<E: de::Error>(self, s: &str) -> Result<Curve25519Scalar, E> {
+        let v = BigInt::from_str_radix(s, 16).expect("Failed in serde");
+        Ok(ECScalar::from(&v))
+    }
+}
+
 
 impl ECPoint<PK, SK> for Curve25519Point {
     fn generator() -> Curve25519Point {
@@ -232,5 +270,55 @@ impl Hashable for Curve25519Point {
     fn update_context(&self, context: &mut Context) {
         let bytes: Vec<u8> = self.pk_to_key_slice();
         context.update(&bytes);
+    }
+}
+
+impl Serialize for Curve25519Point {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Secp256k1Point", 2)?;
+        state.serialize_field("x", &self.x_coor().to_hex())?;
+        state.serialize_field("y", &self.y_coor().to_hex())?;
+        state.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for Curve25519Point {
+    fn deserialize<D>(deserializer: D) -> Result<Curve25519Point, D::Error>
+        where
+            D: Deserializer<'de>,
+    {
+        deserializer.deserialize_map(Secp256k1PointVisitor)
+    }
+}
+
+struct Secp256k1PointVisitor;
+
+impl<'de> Visitor<'de> for Secp256k1PointVisitor {
+    type Value = Curve25519Point;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("Secp256k1Point")
+    }
+
+    fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<Curve25519Point, E::Error> {
+        let mut x = String::new();
+        let mut y = String::new();
+
+        while let Some(key) = map.next_key::<&'de str>()? {
+            let v = map.next_value::<&'de str>()?;
+            match key.as_ref() {
+                "x" => x = String::from(v),
+                "y" => y = String::from(v),
+                _ => panic!("Serialization failed!"),
+            }
+        }
+
+        let bx = BigInt::from_hex(&x);
+        let by = BigInt::from_hex(&y);
+
+        Ok(Curve25519Point::from_coor(&bx, &by))
     }
 }

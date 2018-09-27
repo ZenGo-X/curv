@@ -19,7 +19,9 @@ use std::fmt;
 
 pub mod dlog_zk_protocol;
 pub mod sigma_dlog;
+#[cfg(feature = "curvesecp256k1")]
 pub mod sigma_valid_pedersen;
+#[cfg(feature = "curvesecp256k1")]
 pub mod sigma_valid_pedersen_blind;
 
 #[derive(Debug, Clone, Copy)]
