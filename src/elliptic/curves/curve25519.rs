@@ -25,7 +25,7 @@ use super::curve25519_dalek::constants::BASEPOINT_ORDER;
 use super::curve25519_dalek::edwards::CompressedEdwardsY;
 use super::curve25519_dalek::scalar::Scalar;
 use super::rand::thread_rng;
-
+use std::ops::{Add, Mul};
 use super::traits::{ECPoint, ECScalar};
 pub const SECRET_KEY_SIZE: usize = 32;
 pub const COOR_BYTE_SIZE: usize = 32;
@@ -203,6 +203,27 @@ impl ECPoint<PK, SK> for Curve25519Point {
 
     fn from_coor(_x: &BigInt, _y: &BigInt) -> Curve25519Point {
         unimplemented!();
+    }
+}
+
+impl Mul<Curve25519Scalar> for Curve25519Point {
+    type Output = Curve25519Point;
+    fn mul(self, other: Curve25519Scalar) -> Self::Output {
+        self.scalar_mul(&other.get_element())
+    }
+}
+
+impl<'o> Mul<&'o Curve25519Scalar> for Curve25519Point {
+    type Output = Curve25519Point;
+    fn mul(self, other: &'o Curve25519Scalar) -> Self::Output {
+        self.scalar_mul(&other.get_element())
+    }
+}
+
+impl Add<Curve25519Point> for Curve25519Point {
+    type Output = Curve25519Point;
+    fn add(self, other: Curve25519Point) -> Self::Output {
+        self.add_point(&other.get_element())
     }
 }
 
