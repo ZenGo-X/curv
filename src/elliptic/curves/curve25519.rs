@@ -265,6 +265,13 @@ impl Add<Curve25519Point> for Curve25519Point {
     }
 }
 
+impl<'o> Add<&'o Curve25519Point> for Curve25519Point {
+    type Output = Curve25519Point;
+    fn add(self, other: &'o Curve25519Point) -> Self::Output {
+        self.add_point(&other.get_element())
+    }
+}
+
 
 impl Hashable for Curve25519Point {
     fn update_context(&self, context: &mut Context) {

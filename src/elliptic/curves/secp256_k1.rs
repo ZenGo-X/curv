@@ -329,6 +329,13 @@ impl Add<Secp256k1Point> for Secp256k1Point {
     }
 }
 
+impl<'o> Add<&'o Secp256k1Point> for Secp256k1Point {
+    type Output = Secp256k1Point;
+    fn add(self, other: &'o Secp256k1Point) -> Self::Output {
+        self.add_point(&other.get_element())
+    }
+}
+
 impl Serialize for Secp256k1Point {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
