@@ -15,7 +15,6 @@
 */
 
 //https://cr.yp.to/ecdh.html -> https://cr.yp.to/ecdh/curve25519-20060209.pdf
-
 use BigInt;
 use serde::de;
 use serde::de::{MapAccess, Visitor};
@@ -109,7 +108,10 @@ impl ECScalar<SK> for Curve25519Scalar {
 
 
     fn to_big_int(&self) -> BigInt {
-        BigInt::from(&(self.fe.to_bytes()[0..self.fe.to_bytes().len()]))
+        let t1 = &self.fe.to_bytes()[0..self.fe.to_bytes().len()];
+        let mut t2  = t1.to_vec();
+        t2.reverse();
+        BigInt::from(&t2[0..self.fe.to_bytes().len()])
     }
 
     fn q(&self) -> BigInt {
@@ -343,5 +345,22 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
         let by = BigInt::from_hex(&y);
 
         Ok(Curve25519Point::from_coor(&bx, &by))
+    }
+}
+#[cfg(feature = "curve25519")]
+#[cfg(test)]
+mod tests {
+    use super::ECScalar;
+    use FE;
+    use BigInt;
+    use arithmetic::traits::Converter;
+
+    #[test]
+    fn test_from_mpz() {
+        let rand_scalar: FE = ECScalar::new_random();
+        let rand_bn = rand_scalar.to_big_int();
+        let rand_scalar2: FE  = ECScalar::from(&rand_bn);
+        assert_eq!(rand_scalar.get_element(), rand_scalar2.get_element());
+
     }
 }
