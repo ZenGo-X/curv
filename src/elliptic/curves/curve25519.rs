@@ -87,6 +87,7 @@ impl ECScalar<SK> for Curve25519Scalar {
             bytes_array_32 = [0; SECRET_KEY_SIZE];
             let bytes = &v[..];
             bytes_array_32.copy_from_slice(&bytes);
+            bytes_array_32.reverse();
              Curve25519Scalar {
                 purpose: "from_big_int",
                 fe: SK::from_bytes_mod_order(bytes_array_32),
@@ -97,6 +98,7 @@ impl ECScalar<SK> for Curve25519Scalar {
             bytes_array_64 = [0; 2 * SECRET_KEY_SIZE];
             let bytes = &v[..];
             bytes_array_64.copy_from_slice(&bytes);
+            bytes_array_64.reverse();
            Curve25519Scalar {
                 purpose: "from_big_int",
                 fe: SK::from_bytes_mod_order_wide(&bytes_array_64),
