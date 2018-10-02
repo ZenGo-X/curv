@@ -35,7 +35,7 @@ pub trait ECPoint<PK, SK> {
     fn x_coor(&self) -> BigInt;
     fn y_coor(&self) -> BigInt;
     fn bytes_compressed_to_big_int(&self) -> BigInt;
-    fn random_point() -> Self;
+    fn from(bytes: &[u8]) -> Self;
     fn pk_to_key_slice(&self) -> Vec<u8>;
     fn scalar_mul(self, fe: &SK) -> Self;
     fn add_point(&self, other: &PK) -> Self;

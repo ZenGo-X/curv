@@ -208,9 +208,17 @@ impl ECPoint<PK, SK> for Curve25519Point {
     fn bytes_compressed_to_big_int(&self) -> BigInt {
         BigInt::from(self.ge.to_bytes()[0..self.ge.to_bytes().len()].as_ref())
     }
-    fn random_point() -> Curve25519Point{
+    fn from(bytes: &[u8]) -> Curve25519Point{
+        let bytes_vec = bytes.to_vec();
         let mut bytes_array_64 =  [0u8; 64];
-        thread_rng().fill(&mut bytes_array_64[..]);
+
+        if bytes_vec.len() < 64 {
+            let mut template = vec![0; 64 - bytes_vec.len()];
+            template.extend_from_slice(&bytes);
+            let bytes_vec = template;
+        }
+        let bytes_slice = &bytes_vec[..];
+        bytes_array_64.copy_from_slice(&bytes_slice);
         let r_point = RistrettoPoint::from_uniform_bytes(&bytes_array_64);
         let r_point_compress = r_point.compress();
         Curve25519Point{
