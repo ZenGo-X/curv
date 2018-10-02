@@ -245,6 +245,17 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         return result;
     }
 
+    fn random_point() -> Secp256k1Point{
+        let g_rand : GE = ECPoint::generator();
+        let scalar : FE = ECScalar::new_random();
+        let h : GE = Secp256k1Point::base_point2();
+        let scalar_h = h * scalar;
+        scalar_h + g_rand
+
+
+
+
+    }
     fn pk_to_key_slice(&self) -> Vec<u8> {
         let mut v = vec![4 as u8];
 
