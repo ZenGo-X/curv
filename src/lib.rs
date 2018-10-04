@@ -48,3 +48,10 @@ pub mod arithmetic;
 pub use arithmetic::big_gmp::BigInt;
 
 pub mod cryptographic_primitives;
+
+
+#[derive(Copy, PartialEq, Eq, Clone, Debug)]
+pub enum ErrorKey {
+    InvalidPublicKey,
+
+}

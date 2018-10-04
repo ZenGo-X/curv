@@ -25,7 +25,7 @@
 //
 
 use BigInt;
-
+use ErrorKey::{self, InvalidPublicKey};
 use super::rand::{thread_rng, Rng};
 use super::secp256k1::constants::{
     CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
@@ -85,7 +85,7 @@ impl Secp256k1Point {
         template.append(&mut hash_vec);
 
         Secp256k1Point {
-            purpose: "blind_point".to_string(),
+            purpose: "random".to_string(),
             ge: PK::from_slice(&EC::without_caps(), &template).unwrap(),
         }
     }
@@ -245,13 +245,35 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         return result;
     }
 
-    fn from(bytes: &[u8]) -> Secp256k1Point{
-        let bn = BigInt::from(bytes);
-        let scalar : FE = ECScalar::from(&bn);
-        let g : GE = ECPoint::generator();
-        let h: GE = Secp256k1Point::base_point2();
-        let gh = g + h;
-        gh * scalar
+    fn from_bytes(bytes: &[u8]) ->  Result<Secp256k1Point, ErrorKey> {
+
+        let bytes_vec = bytes.to_vec();
+        let mut bytes_array_33 =  [0u8; 33];
+
+        if bytes_vec.len() < 32 {
+            let mut template = vec![0; 32 - bytes_vec.len()];
+            template.extend_from_slice(&bytes);
+            let bytes_vec = template;
+        }
+
+        let mut template: Vec<u8> = vec![2];
+        template.append(&mut bytes_vec.clone());
+        let bytes_slice = &template[..];
+
+        bytes_array_33.copy_from_slice(&bytes_slice);
+        println!("test");
+        let result = PK::from_slice(&EC::without_caps(), &bytes_array_33);
+        let test = result.map(|pk|  Secp256k1Point{purpose: "random".to_string(), ge: pk});
+        let test2 = test.map_err(|err| ErrorKey::InvalidPublicKey);
+        test2
+       /* let result = PK::from_slice(&EC::without_caps(), &template);
+        if result.is_ok(){
+           Ok(  Secp256k1Point{purpose: "random".to_string(), ge: result.unwrap()})
+        }
+        else {
+            Err(InvalidPublicKey)
+        }
+*/
 
     }
     fn pk_to_key_slice(&self) -> Vec<u8> {
@@ -403,7 +425,11 @@ mod tests {
     use arithmetic::traits::Converter;
     use elliptic::curves::traits::ECPoint;
     use elliptic::curves::traits::ECScalar;
+    use cryptographic_primitives::hashing::hash_sha256::HSha256;
+    use cryptographic_primitives::hashing::traits::Hash;
     use serde_json;
+
+
 
 
     #[test]
@@ -465,4 +491,31 @@ mod tests {
         let des_pk: Secp256k1Point = serde_json::from_str(&s).expect("Failed in serialization");
         assert_eq!(des_pk.ge, pk.ge);
     }
+
+    use elliptic::curves::secp256_k1::{FE,GE, EC,PK};
+    use ErrorKey::{self, InvalidPublicKey};
+
+
+    #[test]
+    fn test_from_bytes() {
+        let g = Secp256k1Point::generator();
+        let hash = HSha256::create_hash(&vec![&g.bytes_compressed_to_big_int()]);
+        let mut hash_vec = BigInt::to_vec(&hash);
+        let result   = Secp256k1Point::from_bytes(&hash_vec);
+        assert_eq!(result.unwrap_err(), ErrorKey::InvalidPublicKey )
+    }
+
+       #[test]
+       fn test_from_bytes_2(){
+           let g: Secp256k1Point = ECPoint::generator();
+           let hash = HSha256::create_hash(&vec![&g.bytes_compressed_to_big_int()]);
+           let hash = HSha256::create_hash(&vec![&hash]);
+           let hash = HSha256::create_hash(&vec![&hash]);
+           let mut hash_vec = BigInt::to_vec(&hash);
+           let result  = Secp256k1Point::from_bytes(&hash_vec);
+           let ground_truth =  Secp256k1Point::base_point2();
+           assert_eq!(result.unwrap(), ground_truth);
+   }
+
 }
+

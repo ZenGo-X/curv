@@ -15,6 +15,7 @@
 */
 
 //https://cr.yp.to/ecdh.html -> https://cr.yp.to/ecdh/curve25519-20060209.pdf
+use ErrorKey::{self, InvalidPublicKey};
 use BigInt;
 use serde::de;
 use serde::de::{MapAccess, Visitor};
@@ -208,7 +209,7 @@ impl ECPoint<PK, SK> for Curve25519Point {
     fn bytes_compressed_to_big_int(&self) -> BigInt {
         BigInt::from(self.ge.to_bytes()[0..self.ge.to_bytes().len()].as_ref())
     }
-    fn from(bytes: &[u8]) -> Curve25519Point{
+    fn from_bytes(bytes: &[u8]) ->  Result<Curve25519Point, ErrorKey> {
         let bytes_vec = bytes.to_vec();
         let mut bytes_array_64 =  [0u8; 64];
 
@@ -221,10 +222,7 @@ impl ECPoint<PK, SK> for Curve25519Point {
         bytes_array_64.copy_from_slice(&bytes_slice);
         let r_point = RistrettoPoint::from_uniform_bytes(&bytes_array_64);
         let r_point_compress = r_point.compress();
-        Curve25519Point{
-            purpose: "random bytes",
-            ge: r_point_compress,
-        }
+        Ok( Curve25519Point{purpose: "random", ge: r_point_compress})
 
 
     }
