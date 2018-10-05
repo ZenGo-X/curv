@@ -258,10 +258,9 @@ impl ECPoint<PK, SK> for Secp256k1Point {
 
         let mut template: Vec<u8> = vec![2];
         template.append(&mut bytes_vec.clone());
-        let bytes_slice = &template[..];
+        let mut bytes_slice = &template[..];
 
-        bytes_array_33.copy_from_slice(&bytes_slice);
-        println!("test");
+        bytes_array_33.copy_from_slice(&bytes_slice[0..33]);
         let result = PK::from_slice(&EC::without_caps(), &bytes_array_33);
         let test = result.map(|pk|  Secp256k1Point{purpose: "random".to_string(), ge: pk});
         let test2 = test.map_err(|err| ErrorKey::InvalidPublicKey);
@@ -505,17 +504,23 @@ mod tests {
         assert_eq!(result.unwrap_err(), ErrorKey::InvalidPublicKey )
     }
 
-       #[test]
-       fn test_from_bytes_2(){
-           let g: Secp256k1Point = ECPoint::generator();
-           let hash = HSha256::create_hash(&vec![&g.bytes_compressed_to_big_int()]);
-           let hash = HSha256::create_hash(&vec![&hash]);
-           let hash = HSha256::create_hash(&vec![&hash]);
-           let mut hash_vec = BigInt::to_vec(&hash);
-           let result  = Secp256k1Point::from_bytes(&hash_vec);
-           let ground_truth =  Secp256k1Point::base_point2();
-           assert_eq!(result.unwrap(), ground_truth);
-   }
+    #[test]
+    fn test_from_bytes_2(){
+        let g: Secp256k1Point = ECPoint::generator();
+        let hash = HSha256::create_hash(&vec![&g.bytes_compressed_to_big_int()]);
+        let hash = HSha256::create_hash(&vec![&hash]);
+        let hash = HSha256::create_hash(&vec![&hash]);
+        let mut hash_vec = BigInt::to_vec(&hash);
+        let result  = Secp256k1Point::from_bytes(&hash_vec);
+        let ground_truth =  Secp256k1Point::base_point2();
+        assert_eq!(result.unwrap(), ground_truth);
+    }
+    #[test]
+    fn test_from_bytes_3() {
+        let test_vec = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,5,6];
+        let result   = Secp256k1Point::from_bytes(&test_vec);
+        assert!(result.is_ok() | result.is_err())
+    }
 
 }
 

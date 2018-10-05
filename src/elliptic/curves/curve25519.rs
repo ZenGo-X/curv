@@ -218,7 +218,7 @@ impl ECPoint<PK, SK> for Curve25519Point {
             template.extend_from_slice(&bytes);
             let bytes_vec = template;
         }
-        let bytes_slice = &bytes_vec[..];
+        let bytes_slice = &bytes_vec[0..64];
         bytes_array_64.copy_from_slice(&bytes_slice);
         let r_point = RistrettoPoint::from_uniform_bytes(&bytes_array_64);
         let r_point_compress = r_point.compress();
