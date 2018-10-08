@@ -293,7 +293,6 @@ impl ECPoint<PK, SK> for Secp256k1Point {
             let mut bytes_slice = &template[..];
 
             bytes_array_65.copy_from_slice(&bytes_slice[0..65]);
-             println!("pubkey {:x?}", bytes_array_65.to_vec());
             let result = PK::from_slice(&EC::without_caps(), &bytes_array_65);
             let test = result.map(|pk| Secp256k1Point { purpose: "random".to_string(), ge: pk });
             let test2 = test.map_err(|err| ErrorKey::InvalidPublicKey);
