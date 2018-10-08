@@ -249,7 +249,15 @@ impl ECPoint<PK, SK> for Curve25519Point {
         }
     }
 
-    fn from_coor(_x: &BigInt, _y: &BigInt) -> Curve25519Point {
+    fn sub_point(&self, other: &PK) -> Curve25519Point {
+        let pkpk = self.ge.decompress().unwrap() - other.decompress().unwrap();
+        Curve25519Point {
+            purpose: "sub",
+            ge: pkpk.compress(),
+        }
+    }
+
+        fn from_coor(_x: &BigInt, _y: &BigInt) -> Curve25519Point {
         unimplemented!();
     }
 }
@@ -342,10 +350,18 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
 #[cfg(feature = "curve25519")]
 #[cfg(test)]
 mod tests {
-    use super::ECScalar;
-    use FE;
+
+    use {FE,GE};
     use BigInt;
+    use super::Curve25519Point;
+    use super::Curve25519Scalar;
     use arithmetic::traits::Converter;
+    use elliptic::curves::traits::ECPoint;
+    use elliptic::curves::traits::ECScalar;
+    use cryptographic_primitives::hashing::hash_sha256::HSha256;
+    use cryptographic_primitives::hashing::traits::Hash;
+    use serde_json;
+    use arithmetic::traits::Modulo;
 
     #[test]
     fn test_from_mpz() {
@@ -355,4 +371,23 @@ mod tests {
         assert_eq!(rand_scalar.get_element(), rand_scalar2.get_element());
 
     }
+    // this test fails once in a while.
+    #[test]
+    fn test_minus_point(){
+        let a : FE = ECScalar::new_random();
+        let b : FE = ECScalar::new_random();
+        let b_bn = b.to_big_int();
+        let order = b.q();
+        let minus_b =  BigInt::mod_sub(&order,&b_bn,&order);
+        let a_minus_b = BigInt::mod_add(&a.to_big_int(),&minus_b,&order);
+        let a_minus_b_fe :FE = ECScalar::from(&a_minus_b);
+        let base: GE = ECPoint::generator();
+        let point_ab1 = base.clone() * a_minus_b_fe;
+        let point_a = base.clone() * a;
+        let point_b = base.clone() * b;
+        let point_ab2 = point_a.sub_point(&point_b.get_element());
+        assert_eq!(point_ab1.get_element(), point_ab2.get_element());
+
+    }
+
 }
