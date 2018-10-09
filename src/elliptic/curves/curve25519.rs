@@ -115,7 +115,12 @@ impl ECScalar<SK> for Curve25519Scalar {
     }
 
     fn q(&self) -> BigInt {
-        BigInt::from(BASEPOINT_ORDER.to_bytes()[0..BASEPOINT_ORDER.to_bytes().len()].as_ref())
+        let l = BASEPOINT_ORDER;
+        let l_fe = Curve25519Scalar{
+            purpose: "q",
+            fe: l
+        };
+        l_fe.to_big_int()
     }
 
     fn add(&self, other: &SK) -> Curve25519Scalar {
@@ -140,12 +145,12 @@ impl ECScalar<SK> for Curve25519Scalar {
     }
 
     fn invert(&self) -> Curve25519Scalar{
-        let sk = self.get_element();
-        let sk_inv = sk.invert();
+        let inv:SK = self.get_element().invert();
         Curve25519Scalar {
             purpose: "invert",
-            fe: sk_inv,
+            fe: inv,
         }
+
     }
 }
 
@@ -401,9 +406,13 @@ mod tests {
 
     #[test]
     fn test_invert(){
+
         let a : FE = ECScalar::new_random();
+        let a_bn = a.to_big_int();
         let a_inv = a.invert();
-        println!("invert: {:?}",a.mul(&a_inv.get_element()))
+        let a_inv_bn_1 = a_bn.invert(&a.q()).unwrap();
+        let a_inv_bn_2 = a_inv.to_big_int();
+        assert_eq!(a_inv_bn_1,a_inv_bn_2);
     }
 
 }
