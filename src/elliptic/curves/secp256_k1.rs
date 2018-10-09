@@ -177,6 +177,13 @@ impl ECScalar<SK> for Secp256k1Scalar {
             fe: res.get_element(),
         }
     }
+
+    fn invert(&self) -> Secp256k1Scalar{
+        let bignum = self.to_big_int();
+        let bn_inv = bignum.invert(&self.q()).unwrap();
+        let scalar_inv = ECScalar::from(&bn_inv);
+        scalar_inv
+    }
 }
 
 impl Serialize for Secp256k1Scalar {
@@ -636,6 +643,15 @@ mod tests {
 
     }
 
+    #[test]
+    fn test_invert(){
+        let a : FE = ECScalar::new_random();
+        let a_bn = a.to_big_int();
+        let a_inv = a.invert();
+        let a_inv_bn_1 = a_bn.invert(&a.q()).unwrap();
+        let a_inv_bn_2 = a_inv.to_big_int();
+        assert_eq!(a_inv_bn_1,a_inv_bn_2);
+    }
 
 
 }

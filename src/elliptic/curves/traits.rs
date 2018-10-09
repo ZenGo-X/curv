@@ -26,6 +26,7 @@ pub trait ECScalar<SK> {
     fn add(&self, other: &SK) -> Self;
     fn mul(&self, other: &SK) -> Self;
     fn sub(&self, other: &SK) -> Self;
+    fn invert(&self) -> Self;
 }
 
 // TODO: add a fn is_point

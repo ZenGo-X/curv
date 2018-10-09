@@ -138,6 +138,15 @@ impl ECScalar<SK> for Curve25519Scalar {
             fe: &self.get_element() - other,
         }
     }
+
+    fn invert(&self) -> Curve25519Scalar{
+        let sk = self.get_element();
+        let sk_inv = sk.invert();
+        Curve25519Scalar {
+            purpose: "invert",
+            fe: sk_inv,
+        }
+    }
 }
 
 impl Serialize for Curve25519Scalar {
@@ -388,6 +397,13 @@ mod tests {
         let point_ab2 = point_a.sub_point(&point_b.get_element());
         assert_eq!(point_ab1.get_element(), point_ab2.get_element());
 
+    }
+
+    #[test]
+    fn test_invert(){
+        let a : FE = ECScalar::new_random();
+        let a_inv = a.invert();
+        println!("invert: {:?}",a.mul(&a_inv.get_element()))
     }
 
 }
