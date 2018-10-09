@@ -226,17 +226,28 @@ impl ECPoint<PK, SK> for Curve25519Point {
     fn from_bytes(bytes: &[u8]) ->  Result<Curve25519Point, ErrorKey> {
         let bytes_vec = bytes.to_vec();
         let mut bytes_array_64 =  [0u8; 64];
+        let byte_len = bytes_vec.len();
+        match  byte_len {
+            0...63 => {
+                let mut template = vec![0; 64 - bytes_vec.len()];
+                template.extend_from_slice(&bytes);
+                let bytes_vec = template;
+                let bytes_slice = &bytes_vec[0..64];
+                bytes_array_64.copy_from_slice(&bytes_slice);
+                let r_point = RistrettoPoint::from_uniform_bytes(&bytes_array_64);
+                let r_point_compress = r_point.compress();
+                Ok(Curve25519Point { purpose: "random", ge: r_point_compress })
+            }
 
-        if bytes_vec.len() < 64 {
-            let mut template = vec![0; 64 - bytes_vec.len()];
-            template.extend_from_slice(&bytes);
-            let bytes_vec = template;
+            _ => {
+                let bytes_slice = &bytes_vec[0..64];
+                bytes_array_64.copy_from_slice(&bytes_slice);
+                let r_point = RistrettoPoint::from_uniform_bytes(&bytes_array_64);
+                let r_point_compress = r_point.compress();
+                Ok(Curve25519Point { purpose: "random", ge: r_point_compress })
+            }
         }
-        let bytes_slice = &bytes_vec[0..64];
-        bytes_array_64.copy_from_slice(&bytes_slice);
-        let r_point = RistrettoPoint::from_uniform_bytes(&bytes_array_64);
-        let r_point_compress = r_point.compress();
-        Ok( Curve25519Point{purpose: "random", ge: r_point_compress})
+
 
 
     }
@@ -415,4 +426,10 @@ mod tests {
         assert_eq!(a_inv_bn_1,a_inv_bn_2);
     }
 
+    #[test]
+    fn test_from_bytes_3() {
+        let test_vec = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,5,6];
+        let result   = Curve25519Point::from_bytes(&test_vec);
+        assert!(result.is_ok())
+    }
 }
