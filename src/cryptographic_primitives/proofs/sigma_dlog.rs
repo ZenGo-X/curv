@@ -13,11 +13,16 @@
 
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
-
-//#[cfg(feature="curvesecp256k1")]
-//use secp256k1instance::{SK,PK,GE,FE};
-//#[cfg(feature="curve25519-dalek")]
-//use curve25519instance::{SK,PK,GE,FE};
+/// This is implementation of Schnorr's identification protocol for elliptic curve groups or a
+/// sigma protocol for Proof of knowledge of the discrete log of an Elliptic-curve point:
+/// C.P. Schnorr. Efficient Identification and Signatures for Smart Cards. In
+/// CRYPTO 1989, Springer (LNCS 435), pages 239–252, 1990.
+/// https://pdfs.semanticscholar.org/8d69/c06d48b618a090dd19185aea7a13def894a5.pdf.
+///
+/// The protocol is using Fiat-Shamir Transform: Amos Fiat and Adi Shamir.
+/// How to prove yourself: Practical solutions to identification and signature problems.
+/// In Advances in Cryptology - CRYPTO ’86, Santa Barbara, California, USA, 1986, Proceedings,
+/// pages 186–194, 1986.
 use super::ProofError;
 use FE;
 use GE;
@@ -92,7 +97,7 @@ impl ProveDLog for DLogProof {
 
 #[cfg(test)]
 mod tests {
-    use cryptographic_primitives::proofs::dlog_zk_protocol::*;
+    use cryptographic_primitives::proofs::sigma_dlog::*;
     use FE;
 
     use elliptic::curves::traits::*;
