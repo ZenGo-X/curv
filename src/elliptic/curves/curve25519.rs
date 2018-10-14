@@ -168,6 +168,21 @@ impl<'o> Mul<&'o Curve25519Scalar> for Curve25519Scalar {
     }
 }
 
+impl Add<Curve25519Scalar> for Curve25519Scalar {
+    type Output = Curve25519Scalar;
+    fn add(self, other: Curve25519Scalar) -> Self::Output {
+        (&self).add(&other.get_element())
+    }
+}
+
+impl<'o> Add<&'o Curve25519Scalar> for Curve25519Scalar {
+    type Output = Curve25519Scalar;
+    fn add(self, other: &'o Curve25519Scalar) -> Self::Output {
+        (&self).add(&other.get_element())
+    }
+}
+
+
 
 impl Serialize for Curve25519Scalar {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

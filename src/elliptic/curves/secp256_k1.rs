@@ -200,6 +200,21 @@ impl<'o> Mul<&'o Secp256k1Scalar> for Secp256k1Scalar {
     }
 }
 
+impl Add<Secp256k1Scalar> for Secp256k1Scalar {
+    type Output = Secp256k1Scalar;
+    fn add(self, other: Secp256k1Scalar) -> Self::Output {
+        (&self).add(&other.get_element())
+    }
+}
+
+impl<'o> Add<&'o Secp256k1Scalar> for Secp256k1Scalar {
+    type Output = Secp256k1Scalar;
+    fn add(self, other: &'o Secp256k1Scalar) -> Self::Output {
+        (&self).add(&other.get_element())
+    }
+}
+
+
 impl Serialize for Secp256k1Scalar {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
