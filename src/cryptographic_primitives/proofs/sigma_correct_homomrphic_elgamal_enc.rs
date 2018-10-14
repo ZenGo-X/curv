@@ -50,7 +50,7 @@ pub struct hegStatement {
 
 
 impl HomoELGamalProof {
-    fn prove(w: &hegWitness, delta: &hegStatement) -> HomoELGamalProof {
+    pub fn prove(w: &hegWitness, delta: &hegStatement) -> HomoELGamalProof {
         let base_point: GE = ECPoint::generator();
         let s1 : FE = ECScalar::new_random();
         let s2 : FE = ECScalar::new_random();
@@ -70,7 +70,7 @@ impl HomoELGamalProof {
         }
     }
 
-    fn verify(&self, delta: &hegStatement) -> Result<(), ProofError> {
+    pub fn verify(&self, delta: &hegStatement) -> Result<(), ProofError> {
         let e = HSha256::create_hash_from_ge(&[&self.T,&self.A3,&delta.G, &delta.Y, &delta.D, &delta.E]);
         let z1G_plus_z2Y = delta.G.clone() * &self.z1 + delta.Y.clone() * &self.z2;
         let T_plus_eD = self.T.clone() + delta.D.clone() * &e;
