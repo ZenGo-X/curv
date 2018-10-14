@@ -154,6 +154,21 @@ impl ECScalar<SK> for Curve25519Scalar {
     }
 }
 
+impl Mul<Curve25519Scalar> for Curve25519Scalar {
+    type Output = Curve25519Scalar;
+    fn mul(self, other: Curve25519Scalar) -> Self::Output {
+        (&self).mul(&other.get_element())
+    }
+}
+
+impl<'o> Mul<&'o Curve25519Scalar> for Curve25519Scalar {
+    type Output = Curve25519Scalar;
+    fn mul(self, other: &'o Curve25519Scalar) -> Self::Output {
+        (&self).mul(&other.get_element())
+    }
+}
+
+
 impl Serialize for Curve25519Scalar {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
@@ -431,5 +446,15 @@ mod tests {
         let test_vec = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,5,6];
         let result   = Curve25519Point::from_bytes(&test_vec);
         assert!(result.is_ok())
+    }
+
+
+    #[test]
+    fn test_scalar_mul(){
+        let a : FE = ECScalar::new_random();
+        let b : FE = ECScalar::new_random();
+        let c2 = a.clone() * &b;
+        let c1 = a.mul(&b.get_element());
+        assert_eq!(c1.get_element(),c1.get_element());
     }
 }

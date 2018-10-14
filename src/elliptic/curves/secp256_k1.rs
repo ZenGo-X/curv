@@ -164,6 +164,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
         }
     }
 
+
     fn sub(&self, other: &SK) -> Secp256k1Scalar {
         let mut other_scalar: FE = ECScalar::new_random();
         other_scalar.set_element(other.clone());
@@ -183,6 +184,19 @@ impl ECScalar<SK> for Secp256k1Scalar {
         let bn_inv = bignum.invert(&self.q()).unwrap();
         let scalar_inv = ECScalar::from(&bn_inv);
         scalar_inv
+    }
+}
+impl Mul<Secp256k1Scalar> for Secp256k1Scalar {
+    type Output = Secp256k1Scalar;
+    fn mul(self, other: Secp256k1Scalar) -> Self::Output {
+        (&self).mul(&other.get_element())
+    }
+}
+
+impl<'o> Mul<&'o Secp256k1Scalar> for Secp256k1Scalar {
+    type Output = Secp256k1Scalar;
+    fn mul(self, other: &'o Secp256k1Scalar) -> Self::Output {
+        (&self).mul(&other.get_element())
     }
 }
 
@@ -651,6 +665,16 @@ mod tests {
         let a_inv_bn_1 = a_bn.invert(&a.q()).unwrap();
         let a_inv_bn_2 = a_inv.to_big_int();
         assert_eq!(a_inv_bn_1,a_inv_bn_2);
+    }
+
+
+    #[test]
+    fn test_scalar_mul(){
+        let a : FE = ECScalar::new_random();
+        let b : FE = ECScalar::new_random();
+        let c1 = a.mul(&b.get_element());
+        let c2 = a * b;
+        assert_eq!(c1.get_element(),c1.get_element());
     }
 
 
