@@ -35,13 +35,13 @@ pub struct HomoELGamalProof {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct Witness {
+pub struct hegWitness {
     pub r: FE,
     pub x: FE,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct Statement {
+pub struct hegStatement {
     pub G: GE,
     pub Y: GE,
     pub D: GE,
@@ -50,7 +50,7 @@ pub struct Statement {
 
 
 impl HomoELGamalProof {
-    fn prove(w: &Witness, delta: &Statement) -> HomoELGamalProof {
+    fn prove(w: &hegWitness, delta: &hegStatement) -> HomoELGamalProof {
         let base_point: GE = ECPoint::generator();
         let s1 : FE = ECScalar::new_random();
         let s2 : FE = ECScalar::new_random();
@@ -70,7 +70,7 @@ impl HomoELGamalProof {
         }
     }
 
-    fn verify(&self, delta: &Statement) -> Result<(), ProofError> {
+    fn verify(&self, delta: &hegStatement) -> Result<(), ProofError> {
         let e = HSha256::create_hash_from_ge(&[&self.T,&self.A3,&delta.G, &delta.Y, &delta.D, &delta.E]);
         let z1G_plus_z2Y = delta.G.clone() * &self.z1 + delta.Y.clone() * &self.z2;
         let T_plus_eD = self.T.clone() + delta.D.clone() * &e;
@@ -93,7 +93,7 @@ mod tests {
 
     #[test]
     fn test_correct_homo_elgamal() {
-        let witness = Witness{
+        let witness = hegWitness {
             r:ECScalar::new_random(),
             x:ECScalar::new_random(),
         };
@@ -102,7 +102,7 @@ mod tests {
         let Y = G.clone() * &y;
         let D = G.clone() * &witness.x + Y.clone() * &witness.r;
         let E = G.clone() * &witness.r;
-        let delta = Statement{
+        let delta = hegStatement {
             G,
             Y,
             D,
@@ -116,7 +116,7 @@ mod tests {
     #[should_panic]
     fn test_wrong_homo_elgamal() {
         // test for E = (r+1)G
-        let witness = Witness{
+        let witness = hegWitness {
             r:ECScalar::new_random(),
             x:ECScalar::new_random(),
         };
@@ -125,7 +125,7 @@ mod tests {
         let Y = G.clone() * &y;
         let D = G.clone() * &witness.x + Y.clone() * &witness.r;
         let E = G.clone() * &witness.r + G.clone();
-        let delta = Statement{
+        let delta = hegStatement {
             G,
             Y,
             D,
