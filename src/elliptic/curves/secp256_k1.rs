@@ -188,28 +188,28 @@ impl ECScalar<SK> for Secp256k1Scalar {
 }
 impl Mul<Secp256k1Scalar> for Secp256k1Scalar {
     type Output = Secp256k1Scalar;
-    fn mul(self, other: Secp256k1Scalar) -> Self::Output {
+    fn mul(self, other: Secp256k1Scalar) -> Secp256k1Scalar {
         (&self).mul(&other.get_element())
     }
 }
 
 impl<'o> Mul<&'o Secp256k1Scalar> for Secp256k1Scalar {
     type Output = Secp256k1Scalar;
-    fn mul(self, other: &'o Secp256k1Scalar) -> Self::Output {
+    fn mul(self, other: &'o Secp256k1Scalar) -> Secp256k1Scalar {
         (&self).mul(&other.get_element())
     }
 }
 
 impl Add<Secp256k1Scalar> for Secp256k1Scalar {
     type Output = Secp256k1Scalar;
-    fn add(self, other: Secp256k1Scalar) -> Self::Output {
+    fn add(self, other: Secp256k1Scalar) -> Secp256k1Scalar {
         (&self).add(&other.get_element())
     }
 }
 
 impl<'o> Add<&'o Secp256k1Scalar> for Secp256k1Scalar {
     type Output = Secp256k1Scalar;
-    fn add(self, other: &'o Secp256k1Scalar) -> Self::Output {
+    fn add(self, other: &'o Secp256k1Scalar) -> Secp256k1Scalar {
         (&self).add(&other.get_element())
     }
 }

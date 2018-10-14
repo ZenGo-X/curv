@@ -156,28 +156,28 @@ impl ECScalar<SK> for Curve25519Scalar {
 
 impl Mul<Curve25519Scalar> for Curve25519Scalar {
     type Output = Curve25519Scalar;
-    fn mul(self, other: Curve25519Scalar) -> Self::Output {
+    fn mul(self, other: Curve25519Scalar) -> Curve25519Scalar {
         (&self).mul(&other.get_element())
     }
 }
 
 impl<'o> Mul<&'o Curve25519Scalar> for Curve25519Scalar {
     type Output = Curve25519Scalar;
-    fn mul(self, other: &'o Curve25519Scalar) -> Self::Output {
+    fn mul(self, other: &'o Curve25519Scalar) -> Curve25519Scalar {
         (&self).mul(&other.get_element())
     }
 }
 
 impl Add<Curve25519Scalar> for Curve25519Scalar {
     type Output = Curve25519Scalar;
-    fn add(self, other: Curve25519Scalar) -> Self::Output {
+    fn add(self, other: Curve25519Scalar) -> Curve25519Scalar {
         (&self).add(&other.get_element())
     }
 }
 
 impl<'o> Add<&'o Curve25519Scalar> for Curve25519Scalar {
     type Output = Curve25519Scalar;
-    fn add(self, other: &'o Curve25519Scalar) -> Self::Output {
+    fn add(self, other: &'o Curve25519Scalar) -> Curve25519Scalar {
         (&self).add(&other.get_element())
     }
 }
@@ -319,28 +319,28 @@ impl ECPoint<PK, SK> for Curve25519Point {
 
 impl Mul<Curve25519Scalar> for Curve25519Point {
     type Output = Curve25519Point;
-    fn mul(self, other: Curve25519Scalar) -> Self::Output {
+    fn mul(self, other: Curve25519Scalar) -> Curve25519Point {
         self.scalar_mul(&other.get_element())
     }
 }
 
 impl<'o> Mul<&'o Curve25519Scalar> for Curve25519Point {
     type Output = Curve25519Point;
-    fn mul(self, other: &'o Curve25519Scalar) -> Self::Output {
+    fn mul(self, other: &'o Curve25519Scalar) -> Curve25519Point {
         self.scalar_mul(&other.get_element())
     }
 }
 
 impl Add<Curve25519Point> for Curve25519Point {
     type Output = Curve25519Point;
-    fn add(self, other: Curve25519Point) -> Self::Output {
+    fn add(self, other: Curve25519Point) -> Curve25519Point {
         self.add_point(&other.get_element())
     }
 }
 
 impl<'o> Add<&'o Curve25519Point> for Curve25519Point {
     type Output = Curve25519Point;
-    fn add(self, other: &'o Curve25519Point) -> Self::Output {
+    fn add(self, other: &'o Curve25519Point) ->Curve25519Point {
         self.add_point(&other.get_element())
     }
 }
