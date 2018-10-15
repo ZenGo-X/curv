@@ -377,7 +377,16 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         let mut x_vec = BigInt::to_vec(&x);
         let mut y_vec = BigInt::to_vec(&minus_y);
 
+        let mut template_x = vec![0; 32 - x_vec.len()];
+        template_x.extend_from_slice(&x_vec);
+        let mut x_vec = template_x;
+
+        let mut template_y = vec![0; 32 - y_vec.len()];
+        template_y.extend_from_slice(&y_vec);
+        let mut y_vec = template_y;
+        
         x_vec.extend_from_slice(&y_vec);
+
         let minus_point: GE = ECPoint::from_bytes(&x_vec).unwrap();
         //let minus_point: GE = ECPoint::from_coor(&x, &y_inv);
         ECPoint::add_point(self, &minus_point.get_element())
@@ -655,21 +664,22 @@ mod tests {
 
     #[test]
     fn test_minus_point(){
-        let a : FE = ECScalar::new_random();
-        let b : FE = ECScalar::new_random();
-        let b_bn = b.to_big_int();
-        let order = b.q();
-        let minus_b =  BigInt::mod_sub(&order,&b_bn,&order);
-        let a_minus_b = BigInt::mod_add(&a.to_big_int(),&minus_b,&order);
-        let a_minus_b_fe :FE = ECScalar::from(&a_minus_b);
-        let base: GE = ECPoint::generator();
-        let point_ab1 = base.clone() * a_minus_b_fe;
+        for i in 0..100 {
+            let a: FE = ECScalar::new_random();
+            let b: FE = ECScalar::new_random();
+            let b_bn = b.to_big_int();
+            let order = b.q();
+            let minus_b = BigInt::mod_sub(&order, &b_bn, &order);
+            let a_minus_b = BigInt::mod_add(&a.to_big_int(), &minus_b, &order);
+            let a_minus_b_fe: FE = ECScalar::from(&a_minus_b);
+            let base: GE = ECPoint::generator();
+            let point_ab1 = base.clone() * a_minus_b_fe;
 
-        let point_a = base.clone() * a;
-        let point_b = base.clone() * b;
-        let point_ab2 = point_a.sub_point(&point_b.get_element());
-        assert_eq!(point_ab1.get_element(), point_ab2.get_element());
-
+            let point_a = base.clone() * a;
+            let point_b = base.clone() * b;
+            let point_ab2 = point_a.sub_point(&point_b.get_element());
+            assert_eq!(point_ab1.get_element(), point_ab2.get_element());
+        }
     }
 
     #[test]
