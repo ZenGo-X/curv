@@ -359,7 +359,7 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
             match key.as_ref() {
                 "x" => x = String::from(v),
                 "y" => y = String::from(v),
-                _ => panic!("Serialization failed!"),
+                _ => panic!("Serialization failed on field: {}", v),
             }
         }
 
