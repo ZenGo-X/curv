@@ -55,3 +55,8 @@ pub enum ErrorKey {
     InvalidPublicKey,
 
 }
+
+pub enum ErrorSS {
+    VerifyShareError,
+
+}

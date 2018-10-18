@@ -14,8 +14,4 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-pub mod commitments;
-pub mod hashing;
-pub mod proofs;
-pub mod twoparty;
-pub mod secret_sharing;
+pub mod feldman_vss;
