@@ -13,8 +13,8 @@
 
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
-use ErrorKey;
 use BigInt;
+use ErrorKey;
 
 pub trait ECScalar<SK> {
     fn new_random() -> Self;
@@ -31,18 +31,18 @@ pub trait ECScalar<SK> {
 
 // TODO: add a fn is_point
 pub trait ECPoint<PK, SK>
-    where Self: Sized{
+where
+    Self: Sized,
+{
     fn generator() -> Self;
     fn get_element(&self) -> PK;
     fn x_coor(&self) -> BigInt;
     fn y_coor(&self) -> BigInt;
     fn bytes_compressed_to_big_int(&self) -> BigInt;
-    fn from_bytes(bytes: &[u8]) ->  Result<Self, ErrorKey>;
+    fn from_bytes(bytes: &[u8]) -> Result<Self, ErrorKey>;
     fn pk_to_key_slice(&self) -> Vec<u8>;
     fn scalar_mul(self, fe: &SK) -> Self;
     fn add_point(&self, other: &PK) -> Self;
     fn sub_point(&self, other: &PK) -> Self;
     fn from_coor(x: &BigInt, y: &BigInt) -> Self;
 }
-
-

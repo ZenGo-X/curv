@@ -14,12 +14,12 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-use BigInt;
-use {GE,FE};
-use elliptic::curves::traits::{ECPoint,ECScalar};
 use super::traits::Hash;
 use arithmetic::traits::Converter;
+use elliptic::curves::traits::{ECPoint, ECScalar};
 use ring::digest::{Context, SHA512};
+use BigInt;
+use {FE, GE};
 
 pub struct HSha512;
 

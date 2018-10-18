@@ -24,8 +24,6 @@
 // The Public Key codec: Point <> SecretKey
 //
 
-use BigInt;
-use ErrorKey::{self, InvalidPublicKey};
 use super::rand::{thread_rng, Rng};
 use super::secp256k1::constants::{
     CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
@@ -35,6 +33,8 @@ use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::{Converter, Modulo};
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
+use merkle::Hashable;
+use ring::digest::Context;
 use serde::de;
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeStruct;
@@ -42,8 +42,8 @@ use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
 use std::fmt;
 use std::ops::{Add, Mul};
-use merkle::Hashable;
-use ring::digest::Context;
+use BigInt;
+use ErrorKey::{self, InvalidPublicKey};
 pub type EC = Secp256k1<None>;
 pub type SK = SecretKey;
 pub type PK = PublicKey;
@@ -164,7 +164,6 @@ impl ECScalar<SK> for Secp256k1Scalar {
         }
     }
 
-
     fn sub(&self, other: &SK) -> Secp256k1Scalar {
         let mut other_scalar: FE = ECScalar::new_random();
         other_scalar.set_element(other.clone());
@@ -179,7 +178,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
         }
     }
 
-    fn invert(&self) -> Secp256k1Scalar{
+    fn invert(&self) -> Secp256k1Scalar {
         let bignum = self.to_big_int();
         let bn_inv = bignum.invert(&self.q()).unwrap();
         let scalar_inv = ECScalar::from(&bn_inv);
@@ -213,7 +212,6 @@ impl<'o> Add<&'o Secp256k1Scalar> for Secp256k1Scalar {
         (&self).add(&other.get_element())
     }
 }
-
 
 impl Serialize for Secp256k1Scalar {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -283,60 +281,65 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         return result;
     }
 
-    fn from_bytes(bytes: &[u8]) ->  Result<Secp256k1Point, ErrorKey> {
-
+    fn from_bytes(bytes: &[u8]) -> Result<Secp256k1Point, ErrorKey> {
         let bytes_vec = bytes.to_vec();
-        let mut bytes_array_65 =  [0u8; 65];
-        let mut bytes_array_33 =  [0u8; 33];
+        let mut bytes_array_65 = [0u8; 65];
+        let mut bytes_array_33 = [0u8; 33];
 
         let byte_len = bytes_vec.len();
-        match  byte_len{
+        match byte_len {
+            33...63 => {
+                let mut template = vec![0; 64 - bytes_vec.len()];
+                template.extend_from_slice(&bytes);
+                let bytes_vec = template;
+                let mut template: Vec<u8> = vec![4];
+                template.append(&mut bytes_vec.clone());
+                let mut bytes_slice = &template[..];
 
-            33 ... 63 => {
-            let mut template = vec![0; 64 - bytes_vec.len()];
-            template.extend_from_slice(&bytes);
-            let bytes_vec = template;
-            let mut template: Vec<u8> = vec![4];
-            template.append(&mut bytes_vec.clone());
-            let mut bytes_slice = &template[..];
-
-            bytes_array_65.copy_from_slice(&bytes_slice[0..65]);
-            let result = PK::from_slice(&EC::without_caps(), &bytes_array_65);
-            let test = result.map(|pk| Secp256k1Point { purpose: "random".to_string(), ge: pk });
-            let test2 = test.map_err(|err| ErrorKey::InvalidPublicKey);
-            test2
-        }
-
-            0 ... 32 =>{
-            let mut template = vec![0; 32 - bytes_vec.len()];
-            template.extend_from_slice(&bytes);
-            let bytes_vec = template;
-            let mut template: Vec<u8> = vec![2];
-            template.append(&mut bytes_vec.clone());
-            let mut bytes_slice = &template[..];
-
-            bytes_array_33.copy_from_slice(&bytes_slice[0..33]);
-            let result = PK::from_slice(&EC::without_caps(), &bytes_array_33);
-            let test = result.map(|pk| Secp256k1Point { purpose: "random".to_string(), ge: pk });
-            let test2 = test.map_err(|err| ErrorKey::InvalidPublicKey);
-            test2
-        }
-         _  =>{
-            let bytes_slice = &bytes_vec[0..64];
-            let bytes_vec = bytes_slice.to_vec();
-            let mut template: Vec<u8> = vec![4];
-            template.append(&mut bytes_vec.clone());
-            let mut bytes_slice = &template[..];
-
-            bytes_array_65.copy_from_slice(&bytes_slice[0..65]);
-            let result = PK::from_slice(&EC::without_caps(), &bytes_array_65);
-            let test = result.map(|pk| Secp256k1Point { purpose: "random".to_string(), ge: pk });
-            let test2 = test.map_err(|err| ErrorKey::InvalidPublicKey);
-            return test2;
+                bytes_array_65.copy_from_slice(&bytes_slice[0..65]);
+                let result = PK::from_slice(&EC::without_caps(), &bytes_array_65);
+                let test = result.map(|pk| Secp256k1Point {
+                    purpose: "random".to_string(),
+                    ge: pk,
+                });
+                let test2 = test.map_err(|err| ErrorKey::InvalidPublicKey);
+                test2
             }
-    }
 
+            0...32 => {
+                let mut template = vec![0; 32 - bytes_vec.len()];
+                template.extend_from_slice(&bytes);
+                let bytes_vec = template;
+                let mut template: Vec<u8> = vec![2];
+                template.append(&mut bytes_vec.clone());
+                let mut bytes_slice = &template[..];
 
+                bytes_array_33.copy_from_slice(&bytes_slice[0..33]);
+                let result = PK::from_slice(&EC::without_caps(), &bytes_array_33);
+                let test = result.map(|pk| Secp256k1Point {
+                    purpose: "random".to_string(),
+                    ge: pk,
+                });
+                let test2 = test.map_err(|err| ErrorKey::InvalidPublicKey);
+                test2
+            }
+            _ => {
+                let bytes_slice = &bytes_vec[0..64];
+                let bytes_vec = bytes_slice.to_vec();
+                let mut template: Vec<u8> = vec![4];
+                template.append(&mut bytes_vec.clone());
+                let mut bytes_slice = &template[..];
+
+                bytes_array_65.copy_from_slice(&bytes_slice[0..65]);
+                let result = PK::from_slice(&EC::without_caps(), &bytes_array_65);
+                let test = result.map(|pk| Secp256k1Point {
+                    purpose: "random".to_string(),
+                    ge: pk,
+                });
+                let test2 = test.map_err(|err| ErrorKey::InvalidPublicKey);
+                return test2;
+            }
+        }
     }
     fn pk_to_key_slice(&self) -> Vec<u8> {
         let mut v = vec![4 as u8];
@@ -360,15 +363,17 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         }
     }
 
-    fn sub_point(&self, other: &PK) -> Secp256k1Point{
+    fn sub_point(&self, other: &PK) -> Secp256k1Point {
         let point = Secp256k1Point {
             purpose: "sub_point".to_string(),
             ge: other.clone(),
         };
-        let temp: FE  = ECScalar::new_random();
+        let temp: FE = ECScalar::new_random();
         let order = temp.q();
-        let p:Vec<u8> = vec![255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,
-                             255,255,255,254,255,255,252,47];
+        let p: Vec<u8> = vec![
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 255, 255, 252, 47,
+        ];
         let order = BigInt::from(&p[..]);
         let x = point.x_coor();
         let y = point.y_coor();
@@ -384,14 +389,12 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         let mut template_y = vec![0; 32 - y_vec.len()];
         template_y.extend_from_slice(&y_vec);
         let mut y_vec = template_y;
-        
+
         x_vec.extend_from_slice(&y_vec);
 
         let minus_point: GE = ECPoint::from_bytes(&x_vec).unwrap();
         //let minus_point: GE = ECPoint::from_coor(&x, &y_inv);
         ECPoint::add_point(self, &minus_point.get_element())
-
-
     }
 
     fn from_coor(x: &BigInt, y: &BigInt) -> Secp256k1Point {
@@ -426,7 +429,6 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         }
     }
 }
-
 
 impl Hashable for Secp256k1Point {
     fn update_context(&self, context: &mut Context) {
@@ -519,14 +521,12 @@ mod tests {
     use super::Secp256k1Point;
     use super::Secp256k1Scalar;
     use arithmetic::traits::Converter;
-    use elliptic::curves::traits::ECPoint;
-    use elliptic::curves::traits::ECScalar;
+    use arithmetic::traits::Modulo;
     use cryptographic_primitives::hashing::hash_sha256::HSha256;
     use cryptographic_primitives::hashing::traits::Hash;
+    use elliptic::curves::traits::ECPoint;
+    use elliptic::curves::traits::ECScalar;
     use serde_json;
-    use arithmetic::traits::Modulo;
-
-
 
     #[test]
     fn serialize_sk() {
@@ -588,54 +588,63 @@ mod tests {
         assert_eq!(des_pk.ge, pk.ge);
     }
 
-    use elliptic::curves::secp256_k1::{FE,GE, EC,PK};
+    use elliptic::curves::secp256_k1::{EC, FE, GE, PK};
     use ErrorKey::{self, InvalidPublicKey};
-
 
     #[test]
     fn test_from_bytes() {
         let g = Secp256k1Point::generator();
         let hash = HSha256::create_hash(&vec![&g.bytes_compressed_to_big_int()]);
         let mut hash_vec = BigInt::to_vec(&hash);
-        let result   = Secp256k1Point::from_bytes(&hash_vec);
-        assert_eq!(result.unwrap_err(), ErrorKey::InvalidPublicKey )
+        let result = Secp256k1Point::from_bytes(&hash_vec);
+        assert_eq!(result.unwrap_err(), ErrorKey::InvalidPublicKey)
     }
 
     #[test]
-    fn test_from_bytes_2(){
+    fn test_from_bytes_2() {
         let g: Secp256k1Point = ECPoint::generator();
         let hash = HSha256::create_hash(&vec![&g.bytes_compressed_to_big_int()]);
         let hash = HSha256::create_hash(&vec![&hash]);
         let hash = HSha256::create_hash(&vec![&hash]);
         let mut hash_vec = BigInt::to_vec(&hash);
-        let result  = Secp256k1Point::from_bytes(&hash_vec);
-        let ground_truth =  Secp256k1Point::base_point2();
+        let result = Secp256k1Point::from_bytes(&hash_vec);
+        let ground_truth = Secp256k1Point::base_point2();
         assert_eq!(result.unwrap(), ground_truth);
     }
     #[test]
     fn test_from_bytes_3() {
-        let test_vec = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,5,6];
-        let result   = Secp256k1Point::from_bytes(&test_vec);
+        let test_vec = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 1, 2, 3, 4, 5, 6,
+        ];
+        let result = Secp256k1Point::from_bytes(&test_vec);
         assert!(result.is_ok() | result.is_err())
     }
 
     #[test]
     fn test_from_bytes_4() {
-        let test_vec = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,5,6];
-        let result   = Secp256k1Point::from_bytes(&test_vec);
+        let test_vec = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6,
+        ];
+        let result = Secp256k1Point::from_bytes(&test_vec);
         assert!(result.is_ok() | result.is_err())
     }
 
     #[test]
     fn test_from_bytes_5() {
-        let test_vec = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,5,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,5,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,5,6];
-        let result   = Secp256k1Point::from_bytes(&test_vec);
+        let test_vec = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5,
+            6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4,
+            5, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3,
+            4, 5, 6,
+        ];
+        let result = Secp256k1Point::from_bytes(&test_vec);
         assert!(result.is_ok() | result.is_err())
     }
 
     #[test]
-    fn test_from_bytes_6(){
-        let a : FE = ECScalar::new_random();
+    fn test_from_bytes_6() {
+        let a: FE = ECScalar::new_random();
         let base: GE = ECPoint::generator();
         let point = base.clone() * &a;
         let x_coor = point.x_coor();
@@ -648,8 +657,10 @@ mod tests {
 
         let order = a.q();
 
-        let p:Vec<u8> = vec![255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,
-                            255,255,255,254,255,255,252,47];
+        let p: Vec<u8> = vec![
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 255, 255, 252, 47,
+        ];
         let p_bn = BigInt::from(&p[..]);
         let x_coor = base.x_coor();
         let y_coor = base.y_coor();
@@ -663,7 +674,7 @@ mod tests {
     }
 
     #[test]
-    fn test_minus_point(){
+    fn test_minus_point() {
         for i in 0..100 {
             let a: FE = ECScalar::new_random();
             let b: FE = ECScalar::new_random();
@@ -683,25 +694,22 @@ mod tests {
     }
 
     #[test]
-    fn test_invert(){
-        let a : FE = ECScalar::new_random();
+    fn test_invert() {
+        let a: FE = ECScalar::new_random();
         let a_bn = a.to_big_int();
         let a_inv = a.invert();
         let a_inv_bn_1 = a_bn.invert(&a.q()).unwrap();
         let a_inv_bn_2 = a_inv.to_big_int();
-        assert_eq!(a_inv_bn_1,a_inv_bn_2);
+        assert_eq!(a_inv_bn_1, a_inv_bn_2);
     }
-
 
     #[test]
-    fn test_scalar_mul(){
-        let a : FE = ECScalar::new_random();
-        let b : FE = ECScalar::new_random();
+    fn test_scalar_mul() {
+        let a: FE = ECScalar::new_random();
+        let b: FE = ECScalar::new_random();
         let c1 = a.mul(&b.get_element());
         let c2 = a * b;
-        assert_eq!(c1.get_element(),c1.get_element());
+        assert_eq!(c1.get_element(), c1.get_element());
     }
 
-
 }
-

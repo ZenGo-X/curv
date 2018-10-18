@@ -27,7 +27,6 @@
 /// How to prove yourself: Practical solutions to identification and signature problems.
 /// In Advances in Cryptology - CRYPTO ’86, Santa Barbara, California, USA, 1986, Proceedings,
 /// pages 186–194, 1986.
-
 use super::ProofError;
 use FE;
 use GE;

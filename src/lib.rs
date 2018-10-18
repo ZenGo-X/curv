@@ -15,10 +15,10 @@
 */
 #[macro_use]
 extern crate serde_derive;
+extern crate merkle;
 extern crate ring;
 extern crate serde;
 extern crate serde_json;
-extern crate merkle;
 pub mod elliptic;
 
 #[cfg(feature = "curvesecp256k1")]
@@ -49,14 +49,11 @@ pub use arithmetic::big_gmp::BigInt;
 
 pub mod cryptographic_primitives;
 
-
 #[derive(Copy, PartialEq, Eq, Clone, Debug)]
 pub enum ErrorKey {
     InvalidPublicKey,
-
 }
 
 pub enum ErrorSS {
     VerifyShareError,
-
 }

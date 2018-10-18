@@ -21,7 +21,6 @@ use super::traits::{Converter, Modulo, Samplable};
 use std::borrow::Borrow;
 pub type BigInt = Mpz;
 
-
 impl Converter for Mpz {
     fn to_vec(value: &Mpz) -> Vec<u8> {
         let bytes: Vec<u8> = value.borrow().into();

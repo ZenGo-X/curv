@@ -18,9 +18,9 @@ use std::error::Error;
 use std::fmt;
 
 pub mod dlog_zk_protocol;
-pub mod sigma_dlog;
-pub mod sigma_correct_homomrphic_elgamal_enc;
 pub mod sigma_correct_homomorphic_elgamal_encryption_of_dlog;
+pub mod sigma_correct_homomrphic_elgamal_enc;
+pub mod sigma_dlog;
 #[cfg(feature = "curvesecp256k1")]
 pub mod sigma_valid_pedersen;
 #[cfg(feature = "curvesecp256k1")]

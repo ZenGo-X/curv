@@ -15,7 +15,7 @@
 */
 
 use BigInt;
-use {GE,FE};
+use {FE, GE};
 
 pub trait Hash {
     fn create_hash(big_ints: &[&BigInt]) -> BigInt;

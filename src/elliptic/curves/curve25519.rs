@@ -15,22 +15,22 @@
 */
 
 //https://cr.yp.to/ecdh.html -> https://cr.yp.to/ecdh/curve25519-20060209.pdf
-use ErrorKey::{self, InvalidPublicKey};
-use BigInt;
+use super::curve25519_dalek::constants::BASEPOINT_ORDER;
+use super::curve25519_dalek::constants::RISTRETTO_BASEPOINT_COMPRESSED;
+use super::curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
+use super::curve25519_dalek::scalar::Scalar;
+use super::rand::{thread_rng, Rng};
+use super::traits::{ECPoint, ECScalar};
+use arithmetic::traits::Converter;
 use serde::de;
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
-use arithmetic::traits::Converter;
 use std::fmt;
-use super::curve25519_dalek::constants::BASEPOINT_ORDER;
-use super::curve25519_dalek::constants::RISTRETTO_BASEPOINT_COMPRESSED;
-use super::curve25519_dalek::ristretto::{CompressedRistretto,RistrettoPoint};
-use super::curve25519_dalek::scalar::Scalar;
-use super::rand::{thread_rng,Rng};
 use std::ops::{Add, Mul};
-use super::traits::{ECPoint, ECScalar};
+use BigInt;
+use ErrorKey::{self, InvalidPublicKey};
 pub const SECRET_KEY_SIZE: usize = 32;
 pub const COOR_BYTE_SIZE: usize = 32;
 pub const NUM_OF_COORDINATES: usize = 4;
@@ -77,8 +77,8 @@ impl ECScalar<SK> for Curve25519Scalar {
             template.extend_from_slice(&v);
             v = template;
         }
-        if v.len() > SECRET_KEY_SIZE && v.len() < 2*SECRET_KEY_SIZE{
-            let mut template = vec![0; 2*SECRET_KEY_SIZE - v.len()];
+        if v.len() > SECRET_KEY_SIZE && v.len() < 2 * SECRET_KEY_SIZE {
+            let mut template = vec![0; 2 * SECRET_KEY_SIZE - v.len()];
             template.extend_from_slice(&v);
             v = template;
         }
@@ -87,38 +87,34 @@ impl ECScalar<SK> for Curve25519Scalar {
             let bytes = &v[..];
             bytes_array_32.copy_from_slice(&bytes);
             bytes_array_32.reverse();
-             Curve25519Scalar {
+            Curve25519Scalar {
                 purpose: "from_big_int",
                 fe: SK::from_bytes_mod_order(bytes_array_32),
             }
-        }
-
-        else {
+        } else {
             bytes_array_64 = [0; 2 * SECRET_KEY_SIZE];
             let bytes = &v[..];
             bytes_array_64.copy_from_slice(&bytes);
             bytes_array_64.reverse();
-           Curve25519Scalar {
+            Curve25519Scalar {
                 purpose: "from_big_int",
                 fe: SK::from_bytes_mod_order_wide(&bytes_array_64),
             }
         }
-
     }
-
 
     fn to_big_int(&self) -> BigInt {
         let t1 = &self.fe.to_bytes()[0..self.fe.to_bytes().len()];
-        let mut t2  = t1.to_vec();
+        let mut t2 = t1.to_vec();
         t2.reverse();
         BigInt::from(&t2[0..self.fe.to_bytes().len()])
     }
 
     fn q(&self) -> BigInt {
         let l = BASEPOINT_ORDER;
-        let l_fe = Curve25519Scalar{
+        let l_fe = Curve25519Scalar {
             purpose: "q",
-            fe: l
+            fe: l,
         };
         l_fe.to_big_int()
     }
@@ -144,13 +140,12 @@ impl ECScalar<SK> for Curve25519Scalar {
         }
     }
 
-    fn invert(&self) -> Curve25519Scalar{
-        let inv:SK = self.get_element().invert();
+    fn invert(&self) -> Curve25519Scalar {
+        let inv: SK = self.get_element().invert();
         Curve25519Scalar {
             purpose: "invert",
             fe: inv,
         }
-
     }
 }
 
@@ -182,12 +177,10 @@ impl<'o> Add<&'o Curve25519Scalar> for Curve25519Scalar {
     }
 }
 
-
-
 impl Serialize for Curve25519Scalar {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         serializer.serialize_str(&self.to_big_int().to_hex())
     }
@@ -195,8 +188,8 @@ impl Serialize for Curve25519Scalar {
 
 impl<'de> Deserialize<'de> for Curve25519Scalar {
     fn deserialize<D>(deserializer: D) -> Result<Curve25519Scalar, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         deserializer.deserialize_str(Secp256k1ScalarVisitor)
     }
@@ -216,7 +209,6 @@ impl<'de> Visitor<'de> for Secp256k1ScalarVisitor {
         Ok(ECScalar::from(&v))
     }
 }
-
 
 impl ECPoint<PK, SK> for Curve25519Point {
     fn generator() -> Curve25519Point {
@@ -253,11 +245,11 @@ impl ECPoint<PK, SK> for Curve25519Point {
     fn bytes_compressed_to_big_int(&self) -> BigInt {
         BigInt::from(self.ge.to_bytes()[0..self.ge.to_bytes().len()].as_ref())
     }
-    fn from_bytes(bytes: &[u8]) ->  Result<Curve25519Point, ErrorKey> {
+    fn from_bytes(bytes: &[u8]) -> Result<Curve25519Point, ErrorKey> {
         let bytes_vec = bytes.to_vec();
-        let mut bytes_array_64 =  [0u8; 64];
+        let mut bytes_array_64 = [0u8; 64];
         let byte_len = bytes_vec.len();
-        match  byte_len {
+        match byte_len {
             0...63 => {
                 let mut template = vec![0; 64 - bytes_vec.len()];
                 template.extend_from_slice(&bytes);
@@ -266,7 +258,10 @@ impl ECPoint<PK, SK> for Curve25519Point {
                 bytes_array_64.copy_from_slice(&bytes_slice);
                 let r_point = RistrettoPoint::from_uniform_bytes(&bytes_array_64);
                 let r_point_compress = r_point.compress();
-                Ok(Curve25519Point { purpose: "random", ge: r_point_compress })
+                Ok(Curve25519Point {
+                    purpose: "random",
+                    ge: r_point_compress,
+                })
             }
 
             _ => {
@@ -274,14 +269,13 @@ impl ECPoint<PK, SK> for Curve25519Point {
                 bytes_array_64.copy_from_slice(&bytes_slice);
                 let r_point = RistrettoPoint::from_uniform_bytes(&bytes_array_64);
                 let r_point_compress = r_point.compress();
-                Ok(Curve25519Point { purpose: "random", ge: r_point_compress })
+                Ok(Curve25519Point {
+                    purpose: "random",
+                    ge: r_point_compress,
+                })
             }
         }
-
-
-
     }
-
 
     fn pk_to_key_slice(&self) -> Vec<u8> {
         let result = self.ge.to_bytes();
@@ -312,7 +306,7 @@ impl ECPoint<PK, SK> for Curve25519Point {
         }
     }
 
-        fn from_coor(_x: &BigInt, _y: &BigInt) -> Curve25519Point {
+    fn from_coor(_x: &BigInt, _y: &BigInt) -> Curve25519Point {
         unimplemented!();
     }
 }
@@ -340,11 +334,10 @@ impl Add<Curve25519Point> for Curve25519Point {
 
 impl<'o> Add<&'o Curve25519Point> for Curve25519Point {
     type Output = Curve25519Point;
-    fn add(self, other: &'o Curve25519Point) ->Curve25519Point {
+    fn add(self, other: &'o Curve25519Point) -> Curve25519Point {
         self.add_point(&other.get_element())
     }
 }
-
 
 impl Hashable for Curve25519Point {
     fn update_context(&self, context: &mut Context) {
@@ -355,8 +348,8 @@ impl Hashable for Curve25519Point {
 
 impl Serialize for Curve25519Point {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let mut state = serializer.serialize_struct("Secp256k1Point", 2)?;
         state.serialize_field("x", &self.x_coor().to_hex())?;
@@ -367,8 +360,8 @@ impl Serialize for Curve25519Point {
 
 impl<'de> Deserialize<'de> for Curve25519Point {
     fn deserialize<D>(deserializer: D) -> Result<Curve25519Point, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         deserializer.deserialize_map(Secp256k1PointVisitor)
     }
@@ -406,70 +399,69 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
 #[cfg(test)]
 mod tests {
 
-    use {FE,GE};
-    use BigInt;
     use super::Curve25519Point;
     use super::Curve25519Scalar;
     use arithmetic::traits::Converter;
-    use elliptic::curves::traits::ECPoint;
-    use elliptic::curves::traits::ECScalar;
+    use arithmetic::traits::Modulo;
     use cryptographic_primitives::hashing::hash_sha256::HSha256;
     use cryptographic_primitives::hashing::traits::Hash;
+    use elliptic::curves::traits::ECPoint;
+    use elliptic::curves::traits::ECScalar;
     use serde_json;
-    use arithmetic::traits::Modulo;
+    use BigInt;
+    use {FE, GE};
 
     #[test]
     fn test_from_mpz() {
         let rand_scalar: FE = ECScalar::new_random();
         let rand_bn = rand_scalar.to_big_int();
-        let rand_scalar2: FE  = ECScalar::from(&rand_bn);
+        let rand_scalar2: FE = ECScalar::from(&rand_bn);
         assert_eq!(rand_scalar.get_element(), rand_scalar2.get_element());
-
     }
     // this test fails once in a while.
     #[test]
-    fn test_minus_point(){
-        let a : FE = ECScalar::new_random();
-        let b : FE = ECScalar::new_random();
+    fn test_minus_point() {
+        let a: FE = ECScalar::new_random();
+        let b: FE = ECScalar::new_random();
         let b_bn = b.to_big_int();
         let order = b.q();
-        let minus_b =  BigInt::mod_sub(&order,&b_bn,&order);
-        let a_minus_b = BigInt::mod_add(&a.to_big_int(),&minus_b,&order);
-        let a_minus_b_fe :FE = ECScalar::from(&a_minus_b);
+        let minus_b = BigInt::mod_sub(&order, &b_bn, &order);
+        let a_minus_b = BigInt::mod_add(&a.to_big_int(), &minus_b, &order);
+        let a_minus_b_fe: FE = ECScalar::from(&a_minus_b);
         let base: GE = ECPoint::generator();
         let point_ab1 = base.clone() * a_minus_b_fe;
         let point_a = base.clone() * a;
         let point_b = base.clone() * b;
         let point_ab2 = point_a.sub_point(&point_b.get_element());
         assert_eq!(point_ab1.get_element(), point_ab2.get_element());
-
     }
 
     #[test]
-    fn test_invert(){
-
-        let a : FE = ECScalar::new_random();
+    fn test_invert() {
+        let a: FE = ECScalar::new_random();
         let a_bn = a.to_big_int();
         let a_inv = a.invert();
         let a_inv_bn_1 = a_bn.invert(&a.q()).unwrap();
         let a_inv_bn_2 = a_inv.to_big_int();
-        assert_eq!(a_inv_bn_1,a_inv_bn_2);
+        assert_eq!(a_inv_bn_1, a_inv_bn_2);
     }
 
     #[test]
     fn test_from_bytes_3() {
-        let test_vec = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,5,6];
-        let result   = Curve25519Point::from_bytes(&test_vec);
+        let test_vec = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 1, 2, 3, 4, 5, 6,
+        ];
+        let result = Curve25519Point::from_bytes(&test_vec);
         assert!(result.is_ok())
     }
 
-
     #[test]
-    fn test_scalar_mul(){
-        let a : FE = ECScalar::new_random();
-        let b : FE = ECScalar::new_random();
+    fn test_scalar_mul() {
+        let a: FE = ECScalar::new_random();
+        let b: FE = ECScalar::new_random();
         let c2 = a.clone() * &b;
         let c1 = a.mul(&b.get_element());
-        assert_eq!(c1.get_element(),c1.get_element());
+        assert_eq!(c1.get_element(), c1.get_element());
     }
 }
