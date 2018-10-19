@@ -28,7 +28,7 @@ use super::rand::{thread_rng, Rng};
 use super::secp256k1::constants::{
     CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
-use super::secp256k1::{None, PublicKey, Secp256k1, SecretKey};
+use super::secp256k1::{None, PublicKey, Secp256k1, SecretKey,key};
 use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::{Converter, Modulo};
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
@@ -83,7 +83,6 @@ impl Secp256k1Point {
         let mut hash_vec = BigInt::to_vec(&hash);
         let mut template: Vec<u8> = vec![2];
         template.append(&mut hash_vec);
-
         Secp256k1Point {
             purpose: "random".to_string(),
             ge: PK::from_slice(&EC::without_caps(), &template).unwrap(),
@@ -100,6 +99,14 @@ impl ECScalar<SK> for Secp256k1Scalar {
             //fe: SK::new( & EC::without_caps(), &mut csprng)
             fe: SK::from_slice(&EC::without_caps(), &arr[0..arr.len()]).unwrap(), // fe: SK::new( & EC::without_caps(), &mut thread_rng())
         }
+    }
+
+    fn zero() -> Secp256k1Scalar{
+        Secp256k1Scalar {
+            purpose: "zero".to_string(),
+            fe: key::ZERO_KEY,
+        }
+
     }
 
     fn get_element(&self) -> SK {

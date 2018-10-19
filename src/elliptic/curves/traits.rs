@@ -18,6 +18,7 @@ use ErrorKey;
 
 pub trait ECScalar<SK> {
     fn new_random() -> Self;
+    fn zero() -> Self;
     fn get_element(&self) -> SK;
     fn set_element(&mut self, element: SK);
     fn from(n: &BigInt) -> Self;
