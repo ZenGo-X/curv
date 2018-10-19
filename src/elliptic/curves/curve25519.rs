@@ -325,6 +325,13 @@ impl<'o> Mul<&'o Curve25519Scalar> for Curve25519Point {
     }
 }
 
+impl<'o> Mul<&'o Curve25519Scalar> for &'o Curve25519Point {
+    type Output = Curve25519Point;
+    fn mul(self, other: &'o Curve25519Scalar) -> Curve25519Point {
+        self.scalar_mul(&other.get_element())
+    }
+}
+
 impl Add<Curve25519Point> for Curve25519Point {
     type Output = Curve25519Point;
     fn add(self, other: Curve25519Point) -> Curve25519Point {
@@ -333,6 +340,13 @@ impl Add<Curve25519Point> for Curve25519Point {
 }
 
 impl<'o> Add<&'o Curve25519Point> for Curve25519Point {
+    type Output = Curve25519Point;
+    fn add(self, other: &'o Curve25519Point) -> Curve25519Point {
+        self.add_point(&other.get_element())
+    }
+}
+
+impl<'o> Add<&'o Curve25519Point> for &'o Curve25519Point {
     type Output = Curve25519Point;
     fn add(self, other: &'o Curve25519Point) -> Curve25519Point {
         self.add_point(&other.get_element())

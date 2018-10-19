@@ -443,7 +443,15 @@ impl Mul<Secp256k1Scalar> for Secp256k1Point {
     }
 }
 
+
 impl<'o> Mul<&'o Secp256k1Scalar> for Secp256k1Point {
+    type Output = Secp256k1Point;
+    fn mul(self, other: &'o Secp256k1Scalar) -> Self::Output {
+        self.scalar_mul(&other.get_element())
+    }
+}
+
+impl<'o> Mul<&'o Secp256k1Scalar> for &'o Secp256k1Point {
     type Output = Secp256k1Point;
     fn mul(self, other: &'o Secp256k1Scalar) -> Self::Output {
         self.scalar_mul(&other.get_element())
@@ -457,12 +465,21 @@ impl Add<Secp256k1Point> for Secp256k1Point {
     }
 }
 
+
 impl<'o> Add<&'o Secp256k1Point> for Secp256k1Point {
     type Output = Secp256k1Point;
     fn add(self, other: &'o Secp256k1Point) -> Self::Output {
         self.add_point(&other.get_element())
     }
 }
+
+impl<'o> Add<&'o Secp256k1Point> for &'o Secp256k1Point {
+    type Output = Secp256k1Point;
+    fn add(self, other: &'o Secp256k1Point) -> Self::Output {
+        self.add_point(&other.get_element())
+    }
+}
+
 
 impl Serialize for Secp256k1Point {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
