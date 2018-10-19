@@ -110,7 +110,7 @@ impl ECScalar<SK> for Curve25519Scalar {
         BigInt::from(&t2[0..self.fe.to_bytes().len()])
     }
 
-    fn q(&self) -> BigInt {
+    fn q() -> BigInt {
         let l = BASEPOINT_ORDER;
         let l_fe = Curve25519Scalar {
             purpose: "q",
@@ -282,7 +282,7 @@ impl ECPoint<PK, SK> for Curve25519Point {
         result.to_vec()
     }
 
-    fn scalar_mul(self, fe: &SK) -> Curve25519Point {
+    fn scalar_mul(&self, fe: &SK) -> Curve25519Point {
         let skpk = fe * (self.ge.decompress().unwrap());
         Curve25519Point {
             purpose: "scalar_point_mul",
@@ -424,7 +424,7 @@ mod tests {
         let a: FE = ECScalar::new_random();
         let b: FE = ECScalar::new_random();
         let b_bn = b.to_big_int();
-        let order = b.q();
+        let order = FE::q();
         let minus_b = BigInt::mod_sub(&order, &b_bn, &order);
         let a_minus_b = BigInt::mod_add(&a.to_big_int(), &minus_b, &order);
         let a_minus_b_fe: FE = ECScalar::from(&a_minus_b);
@@ -441,7 +441,7 @@ mod tests {
         let a: FE = ECScalar::new_random();
         let a_bn = a.to_big_int();
         let a_inv = a.invert();
-        let a_inv_bn_1 = a_bn.invert(&a.q()).unwrap();
+        let a_inv_bn_1 = a_bn.invert(&FE::q()).unwrap();
         let a_inv_bn_2 = a_inv.to_big_int();
         assert_eq!(a_inv_bn_1, a_inv_bn_2);
     }
@@ -457,11 +457,21 @@ mod tests {
     }
 
     #[test]
-    fn test_scalar_mul() {
+    fn test_scalar_mul_scalar() {
         let a: FE = ECScalar::new_random();
         let b: FE = ECScalar::new_random();
         let c2 = a.clone() * &b;
         let c1 = a.mul(&b.get_element());
         assert_eq!(c1.get_element(), c1.get_element());
     }
+
+    #[test]
+    fn test_scalar_mul_point() {
+        let A: GE = ECPoint::generator();
+        let b: FE = ECScalar::new_random();
+        let c: FE = ECScalar::new_random();
+        let Ab = A.scalar_mul(&b.get_element());
+        let Ac = A.scalar_mul(&c.get_element());
+    }
+
 }

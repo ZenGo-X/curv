@@ -22,7 +22,7 @@ pub trait ECScalar<SK> {
     fn set_element(&mut self, element: SK);
     fn from(n: &BigInt) -> Self;
     fn to_big_int(&self) -> BigInt;
-    fn q(&self) -> BigInt;
+    fn q() -> BigInt;
     fn add(&self, other: &SK) -> Self;
     fn mul(&self, other: &SK) -> Self;
     fn sub(&self, other: &SK) -> Self;
@@ -41,7 +41,7 @@ where
     fn bytes_compressed_to_big_int(&self) -> BigInt;
     fn from_bytes(bytes: &[u8]) -> Result<Self, ErrorKey>;
     fn pk_to_key_slice(&self) -> Vec<u8>;
-    fn scalar_mul(self, fe: &SK) -> Self;
+    fn scalar_mul(&self, fe: &SK) -> Self;
     fn add_point(&self, other: &PK) -> Self;
     fn sub_point(&self, other: &PK) -> Self;
     fn from_coor(x: &BigInt, y: &BigInt) -> Self;

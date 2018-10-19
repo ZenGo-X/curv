@@ -111,8 +111,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
     }
 
     fn from(n: &BigInt) -> Secp256k1Scalar {
-        let temp_fe: FE = ECScalar::new_random();
-        let curve_order = temp_fe.q();
+        let curve_order = FE::q();
         let n_reduced = BigInt::mod_add(n, &BigInt::from(0), &curve_order);
         let mut v = BigInt::to_vec(&n_reduced);
 
@@ -132,7 +131,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
         BigInt::from(&(self.fe[0..self.fe.len()]))
     }
 
-    fn q(&self) -> BigInt {
+    fn q() -> BigInt {
         BigInt::from(CURVE_ORDER.as_ref())
     }
 
@@ -142,7 +141,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
         let res: FE = ECScalar::from(&BigInt::mod_add(
             &self.to_big_int(),
             &other_scalar.to_big_int(),
-            &self.q(),
+            &FE::q(),
         ));
         Secp256k1Scalar {
             purpose: "add".to_string(),
@@ -156,7 +155,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
         let res: FE = ECScalar::from(&BigInt::mod_mul(
             &self.to_big_int(),
             &other_scalar.to_big_int(),
-            &self.q(),
+            &FE::q(),
         ));
         Secp256k1Scalar {
             purpose: "mul".to_string(),
@@ -170,7 +169,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
         let res: FE = ECScalar::from(&BigInt::mod_sub(
             &self.to_big_int(),
             &other_scalar.to_big_int(),
-            &self.q(),
+            &FE::q(),
         ));
         Secp256k1Scalar {
             purpose: "mul".to_string(),
@@ -180,7 +179,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
 
     fn invert(&self) -> Secp256k1Scalar {
         let bignum = self.to_big_int();
-        let bn_inv = bignum.invert(&self.q()).unwrap();
+        let bn_inv = bignum.invert(&FE::q()).unwrap();
         let scalar_inv = ECScalar::from(&bn_inv);
         scalar_inv
     }
@@ -349,11 +348,12 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         v
     }
 
-    fn scalar_mul(mut self, fe: &SK) -> Secp256k1Point {
-        self.ge
+    fn scalar_mul(&self, fe: &SK) -> Secp256k1Point {
+        let mut new_point = self.clone();
+        new_point.ge
             .mul_assign(&Secp256k1::new(), fe) // we can't use Secp256k1 <None> (EC) in mul_assign
             .expect("Assignment expected");
-        self
+        new_point
     }
 
     fn add_point(&self, other: &PK) -> Secp256k1Point {
@@ -368,8 +368,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
             purpose: "sub_point".to_string(),
             ge: other.clone(),
         };
-        let temp: FE = ECScalar::new_random();
-        let order = temp.q();
+        let order = FE::q();
         let p: Vec<u8> = vec![
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 255, 255, 252, 47,
@@ -655,7 +654,7 @@ mod tests {
         let new_point: GE = ECPoint::from_bytes(&x_vec).unwrap();
         assert_eq!(point.get_element(), new_point.get_element());
 
-        let order = a.q();
+        let order = FE::q();
 
         let p: Vec<u8> = vec![
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
@@ -679,7 +678,7 @@ mod tests {
             let a: FE = ECScalar::new_random();
             let b: FE = ECScalar::new_random();
             let b_bn = b.to_big_int();
-            let order = b.q();
+            let order = FE::q();
             let minus_b = BigInt::mod_sub(&order, &b_bn, &order);
             let a_minus_b = BigInt::mod_add(&a.to_big_int(), &minus_b, &order);
             let a_minus_b_fe: FE = ECScalar::from(&a_minus_b);
@@ -698,18 +697,27 @@ mod tests {
         let a: FE = ECScalar::new_random();
         let a_bn = a.to_big_int();
         let a_inv = a.invert();
-        let a_inv_bn_1 = a_bn.invert(&a.q()).unwrap();
+        let a_inv_bn_1 = a_bn.invert(&FE::q()).unwrap();
         let a_inv_bn_2 = a_inv.to_big_int();
         assert_eq!(a_inv_bn_1, a_inv_bn_2);
     }
 
     #[test]
-    fn test_scalar_mul() {
+    fn test_scalar_mul_scalar() {
         let a: FE = ECScalar::new_random();
         let b: FE = ECScalar::new_random();
         let c1 = a.mul(&b.get_element());
         let c2 = a * b;
         assert_eq!(c1.get_element(), c1.get_element());
+    }
+
+    #[test]
+    fn test_scalar_mul_point() {
+        let A: GE = ECPoint::generator();
+        let b: FE = ECScalar::new_random();
+        let c: FE = ECScalar::new_random();
+        let Ab = A.scalar_mul(&b.get_element());
+        let Ac = A.scalar_mul(&c.get_element());
     }
 
 }
