@@ -28,7 +28,7 @@ use super::rand::{thread_rng, Rng};
 use super::secp256k1::constants::{
     CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
-use super::secp256k1::{None, PublicKey, Secp256k1, SecretKey,key};
+use super::secp256k1::{key, None, PublicKey, Secp256k1, SecretKey};
 use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::{Converter, Modulo};
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
@@ -101,12 +101,11 @@ impl ECScalar<SK> for Secp256k1Scalar {
         }
     }
 
-    fn zero() -> Secp256k1Scalar{
+    fn zero() -> Secp256k1Scalar {
         Secp256k1Scalar {
             purpose: "zero".to_string(),
             fe: key::ZERO_KEY,
         }
-
     }
 
     fn get_element(&self) -> SK {
@@ -450,7 +449,6 @@ impl Mul<Secp256k1Scalar> for Secp256k1Point {
     }
 }
 
-
 impl<'o> Mul<&'o Secp256k1Scalar> for Secp256k1Point {
     type Output = Secp256k1Point;
     fn mul(self, other: &'o Secp256k1Scalar) -> Self::Output {
@@ -472,7 +470,6 @@ impl Add<Secp256k1Point> for Secp256k1Point {
     }
 }
 
-
 impl<'o> Add<&'o Secp256k1Point> for Secp256k1Point {
     type Output = Secp256k1Point;
     fn add(self, other: &'o Secp256k1Point) -> Self::Output {
@@ -486,7 +483,6 @@ impl<'o> Add<&'o Secp256k1Point> for &'o Secp256k1Point {
         self.add_point(&other.get_element())
     }
 }
-
 
 impl Serialize for Secp256k1Point {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

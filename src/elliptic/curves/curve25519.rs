@@ -60,13 +60,12 @@ impl ECScalar<SK> for Curve25519Scalar {
         }
     }
 
-    fn zero() -> Curve25519Scalar{
+    fn zero() -> Curve25519Scalar {
         let q_fe: FE = ECScalar::from(&FE::q());
         Curve25519Scalar {
             purpose: "zero",
             fe: q_fe.get_element(),
         }
-
     }
 
     fn get_element(&self) -> SK {
