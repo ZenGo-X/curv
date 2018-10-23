@@ -1,6 +1,6 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-
+Curv
 =====================================
 
 This project implements basic cryptographic primitives over elliptic curves. The API code is Rust native while the used elliptic curve libraries can be binding to other languages. 
