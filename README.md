@@ -23,7 +23,41 @@ __Supported Primitives__:
   * DH key exchange
   * Coin Flip
  
+### Adding An Elliptic Curve
+To add support of this primitives to new elliptic curve the following interfaces (trait) needs to be fulfilled for field element and group element: 
+```
+pub trait ECScalar<SK> {
+    fn new_random() -> Self;
+    fn zero() -> Self;
+    fn get_element(&self) -> SK;
+    fn set_element(&mut self, element: SK);
+    fn from(n: &BigInt) -> Self;
+    fn to_big_int(&self) -> BigInt;
+    fn q() -> BigInt;
+    fn add(&self, other: &SK) -> Self;
+    fn mul(&self, other: &SK) -> Self;
+    fn sub(&self, other: &SK) -> Self;
+    fn invert(&self) -> Self;
+}
 
+
+pub trait ECPoint<PK, SK>
+where
+    Self: Sized,
+{
+    fn generator() -> Self;
+    fn get_element(&self) -> PK;
+    fn x_coor(&self) -> BigInt;
+    fn y_coor(&self) -> BigInt;
+    fn bytes_compressed_to_big_int(&self) -> BigInt;
+    fn from_bytes(bytes: &[u8]) -> Result<Self, ErrorKey>;
+    fn pk_to_key_slice(&self) -> Vec<u8>;
+    fn scalar_mul(&self, fe: &SK) -> Self;
+    fn add_point(&self, other: &PK) -> Self;
+    fn sub_point(&self, other: &PK) -> Self;
+    fn from_coor(x: &BigInt, y: &BigInt) -> Self;
+}
+```
 License
 -------
 Cryptography utilities is released under the terms of the GPL-3.0 license. See [LICENSE](LICENSE) for more information.
