@@ -23,12 +23,12 @@ use ErrorSS::{self, VerifyShareError};
 use FE;
 use GE;
 
-#[derive(Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct ShamirSecretSharing {
     pub threshold: usize,   //t
     pub share_count: usize, //n
 }
-
+#[derive(Clone, PartialEq, Debug)]
 pub struct VerifiableSS {
     pub parameters: ShamirSecretSharing,
     pub commitments: Vec<GE>,
