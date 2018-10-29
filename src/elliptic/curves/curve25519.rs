@@ -1,3 +1,4 @@
+#![allow(non_snake_case)]
 /*
     Cryptography utilities
 
@@ -19,7 +20,7 @@ use super::curve25519_dalek::constants::BASEPOINT_ORDER;
 use super::curve25519_dalek::constants::RISTRETTO_BASEPOINT_COMPRESSED;
 use super::curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use super::curve25519_dalek::scalar::Scalar;
-use super::rand::{thread_rng, Rng};
+use super::rand::thread_rng;
 use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::Converter;
 use serde::de;
@@ -30,7 +31,7 @@ use serde::{Deserialize, Deserializer};
 use std::fmt;
 use std::ops::{Add, Mul};
 use BigInt;
-use ErrorKey::{self, InvalidPublicKey};
+use ErrorKey;
 pub const SECRET_KEY_SIZE: usize = 32;
 pub const COOR_BYTE_SIZE: usize = 32;
 pub const NUM_OF_COORDINATES: usize = 4;
@@ -422,11 +423,7 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
 mod tests {
 
     use super::Curve25519Point;
-    use super::Curve25519Scalar;
-    use arithmetic::traits::Converter;
     use arithmetic::traits::Modulo;
-    use cryptographic_primitives::hashing::hash_sha256::HSha256;
-    use cryptographic_primitives::hashing::traits::Hash;
     use elliptic::curves::traits::ECPoint;
     use elliptic::curves::traits::ECScalar;
     use serde_json;
@@ -482,18 +479,9 @@ mod tests {
     fn test_scalar_mul_scalar() {
         let a: FE = ECScalar::new_random();
         let b: FE = ECScalar::new_random();
-        let c2 = a.clone() * &b;
         let c1 = a.mul(&b.get_element());
         assert_eq!(c1.get_element(), c1.get_element());
     }
 
-    #[test]
-    fn test_scalar_mul_point() {
-        let A: GE = ECPoint::generator();
-        let b: FE = ECScalar::new_random();
-        let c: FE = ECScalar::new_random();
-        let Ab = A.scalar_mul(&b.get_element());
-        let Ac = A.scalar_mul(&c.get_element());
-    }
 
 }

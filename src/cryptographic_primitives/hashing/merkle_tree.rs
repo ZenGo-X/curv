@@ -13,7 +13,7 @@
 
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
-use elliptic::curves::traits::{ECPoint, ECScalar};
+use elliptic::curves::traits::ECPoint;
 use merkle::{MerkleTree, Proof};
 use ring::digest::{Context, SHA256};
 use BigInt;
@@ -57,7 +57,7 @@ impl MT256 {
 #[cfg(test)]
 mod tests {
     use cryptographic_primitives::hashing::merkle_tree::MT256;
-    use elliptic::curves::traits::{ECPoint, ECScalar};
+    use elliptic::curves::traits::ECPoint;
     use merkle::{MerkleTree, Proof};
     use ring::digest::{Context, SHA256};
     use {FE, GE};
@@ -73,6 +73,7 @@ mod tests {
         let proof1 = mt256.gen_proof_for_ge(&ge1);
         let root = mt256.get_root();
         let valid_proof = MT256::validate_proof(&proof1, root).is_ok();
+        assert!(valid_proof);
     }
 
     #[test]

@@ -1,3 +1,4 @@
+#![allow(non_snake_case)]
 /*
     Cryptography utilities
 
@@ -43,7 +44,7 @@ use serde::{Deserialize, Deserializer};
 use std::fmt;
 use std::ops::{Add, Mul};
 use BigInt;
-use ErrorKey::{self, InvalidPublicKey};
+use ErrorKey;
 pub type EC = Secp256k1<None>;
 pub type SK = SecretKey;
 pub type PK = PublicKey;
@@ -307,7 +308,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                     purpose: "random".to_string(),
                     ge: pk,
                 });
-                let test2 = test.map_err(|err| ErrorKey::InvalidPublicKey);
+                let test2 = test.map_err(|_err| ErrorKey::InvalidPublicKey);
                 test2
             }
 
@@ -325,7 +326,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                     purpose: "random".to_string(),
                     ge: pk,
                 });
-                let test2 = test.map_err(|err| ErrorKey::InvalidPublicKey);
+                let test2 = test.map_err(|_err| ErrorKey::InvalidPublicKey);
                 test2
             }
             _ => {
@@ -341,7 +342,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                     purpose: "random".to_string(),
                     ge: pk,
                 });
-                let test2 = test.map_err(|err| ErrorKey::InvalidPublicKey);
+                let test2 = test.map_err(|_err| ErrorKey::InvalidPublicKey);
                 return test2;
             }
         }
@@ -384,8 +385,8 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         let y = point.y_coor();
         let minus_y = BigInt::mod_sub(&order, &y, &order);
 
-        let mut x_vec = BigInt::to_vec(&x);
-        let mut y_vec = BigInt::to_vec(&minus_y);
+        let x_vec = BigInt::to_vec(&x);
+        let y_vec = BigInt::to_vec(&minus_y);
 
         let mut template_x = vec![0; 32 - x_vec.len()];
         template_x.extend_from_slice(&x_vec);
