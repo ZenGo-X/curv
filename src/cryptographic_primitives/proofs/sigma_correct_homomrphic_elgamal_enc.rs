@@ -16,8 +16,8 @@
 /// This is a proof of knowledge that a pair of group elements {D, E}
 /// form a valid homomorphic ElGamal encryption (”in the exponent”) using public key Y .
 /// (HEG is defined in B. Schoenmakers and P. Tuyls. Practical Two-Party Computation Based on the Conditional Gate)
-/// Specifically, the witness is ω = (x, r), the statement is δ = (G, Y, D, E).
-/// The relation R outputs 1 if D = xG+rY , E = rG
+/// Specifically, the witness is ω = (x, r), the statement is δ = (G, H, Y, D, E).
+/// The relation R outputs 1 if D = xH+rY , E = rG (for the case of G=H this is ElGamal)
 ///
 use super::ProofError;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
@@ -43,6 +43,7 @@ pub struct hegWitness {
 #[derive(Clone, PartialEq, Debug)]
 pub struct hegStatement {
     pub G: GE,
+    pub H: GE,
     pub Y: GE,
     pub D: GE,
     pub E: GE,
@@ -53,11 +54,11 @@ impl HomoELGamalProof {
         let base_point: GE = ECPoint::generator();
         let s1: FE = ECScalar::new_random();
         let s2: FE = ECScalar::new_random();
-        let A1 = delta.G.clone() * &s1;
-        let A2 = delta.Y.clone() * &s2;
-        let A3 = delta.G.clone() * &s2;
+        let A1 = &delta.H * &s1;
+        let A2 = &delta.Y * &s2;
+        let A3 = &delta.G * &s2;
         let T = A1 + A2;
-        let e = HSha256::create_hash_from_ge(&[&T, &A3, &delta.G, &delta.Y, &delta.D, &delta.E]);
+        let e = HSha256::create_hash_from_ge(&[&T, &A3,&delta.G, &delta.H, &delta.Y, &delta.D, &delta.E]);
         let mut z1 = s1.clone();
         // dealing with zero field element
         if w.x != FE::zero() {
@@ -70,13 +71,13 @@ impl HomoELGamalProof {
 
     pub fn verify(&self, delta: &hegStatement) -> Result<(), ProofError> {
         let e = HSha256::create_hash_from_ge(&[
-            &self.T, &self.A3, &delta.G, &delta.Y, &delta.D, &delta.E,
+            &self.T, &self.A3, &delta.G,&delta.H, &delta.Y, &delta.D, &delta.E,
         ]);
-        let z1G_plus_z2Y = delta.G.clone() * &self.z1 + delta.Y.clone() * &self.z2;
+        let z1H_plus_z2Y = delta.H.clone() * &self.z1 + delta.Y.clone() * &self.z2;
         let T_plus_eD = self.T.clone() + delta.D.clone() * &e;
         let z2G = delta.G.clone() * &self.z2;
         let A3_plus_eE = self.A3.clone() + delta.E.clone() * &e;
-        if z1G_plus_z2Y.get_element() == T_plus_eD.get_element()
+        if z1H_plus_z2Y.get_element() == T_plus_eD.get_element()
             && z2G.get_element() == A3_plus_eE.get_element()
         {
             Ok(())
@@ -93,6 +94,24 @@ mod tests {
     use {FE, GE};
 
     #[test]
+    fn test_correct_general_homo_elgamal() {
+        let witness = hegWitness {
+            r: ECScalar::new_random(),
+            x: ECScalar::new_random(),
+        };
+        let G: GE = ECPoint::generator();
+        let h: FE = ECScalar::new_random();
+        let H = &G * &h;
+        let y: FE = ECScalar::new_random();
+        let Y = &G * &y;
+        let D = &H * &witness.x + Y.clone() * &witness.r;
+        let E = G.clone() * &witness.r;
+        let delta = hegStatement { G, H, Y, D, E };
+        let proof = HomoELGamalProof::prove(&witness, &delta);
+        assert!(proof.verify(&delta).is_ok());
+    }
+
+    #[test]
     fn test_correct_homo_elgamal() {
         let witness = hegWitness {
             r: ECScalar::new_random(),
@@ -100,10 +119,10 @@ mod tests {
         };
         let G: GE = ECPoint::generator();
         let y: FE = ECScalar::new_random();
-        let Y = G.clone() * &y;
-        let D = G.clone() * &witness.x + Y.clone() * &witness.r;
+        let Y = &G * &y;
+        let D = &G * &witness.x + Y.clone() * &witness.r;
         let E = G.clone() * &witness.r;
-        let delta = hegStatement { G, Y, D, E };
+        let delta = hegStatement { G: G.clone(), H: G, Y, D, E };
         let proof = HomoELGamalProof::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
     }
@@ -117,11 +136,13 @@ mod tests {
             x: ECScalar::new_random(),
         };
         let G: GE = ECPoint::generator();
+        let h: FE = ECScalar::new_random();
+        let H = &G * &h;
         let y: FE = ECScalar::new_random();
-        let Y = G.clone() * &y;
-        let D = G.clone() * &witness.x + Y.clone() * &witness.r;
-        let E = G.clone() * &witness.r + G.clone();
-        let delta = hegStatement { G, Y, D, E };
+        let Y = &G * &y;
+        let D = &H * &witness.x + Y.clone() * &witness.r;
+        let E = &G * &witness.r + G.clone();
+        let delta = hegStatement { G, H, Y, D, E };
         let proof = HomoELGamalProof::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
     }
