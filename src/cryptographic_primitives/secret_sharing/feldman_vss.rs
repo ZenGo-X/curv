@@ -171,7 +171,7 @@ impl VerifiableSS {
     // used in http://stevengoldfeder.com/papers/GG18.pdf
     pub fn map_share_to_new_params(&self, index: &usize, s: &[usize])-> FE{
         let s_len = s.len();
-        assert!(s_len > self.reconstruct_limit());
+        assert!(s_len >= self.reconstruct_limit());
         // add one to indices to get points
         let points: Vec<FE> = s
             .iter()

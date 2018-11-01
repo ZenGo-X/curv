@@ -464,6 +464,7 @@ impl<'o> Mul<&'o Secp256k1Scalar> for &'o Secp256k1Point {
     }
 }
 
+
 impl Add<Secp256k1Point> for Secp256k1Point {
     type Output = Secp256k1Point;
     fn add(self, other: Secp256k1Point) -> Self::Output {
@@ -496,6 +497,8 @@ impl Serialize for Secp256k1Point {
         state.end()
     }
 }
+
+
 
 impl<'de> Deserialize<'de> for Secp256k1Point {
     fn deserialize<D>(deserializer: D) -> Result<Secp256k1Point, D::Error>
@@ -740,5 +743,6 @@ mod tests {
         let Ab = A.scalar_mul(&b.get_element());
         let Ac = A.scalar_mul(&c.get_element());
     }
+
 
 }
