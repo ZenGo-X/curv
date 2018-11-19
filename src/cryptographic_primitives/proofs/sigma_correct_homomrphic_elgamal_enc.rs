@@ -42,7 +42,7 @@ pub struct HomoElGamalWitness {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct HomoElGAmalStatement {
+pub struct HomoElGamalStatement {
     pub G: GE,
     pub H: GE,
     pub Y: GE,
@@ -51,7 +51,7 @@ pub struct HomoElGAmalStatement {
 }
 
 impl HomoELGamalProof {
-    pub fn prove(w: &HomoElGamalWitness, delta: &HomoElGAmalStatement) -> HomoELGamalProof {
+    pub fn prove(w: &HomoElGamalWitness, delta: &HomoElGamalStatement) -> HomoELGamalProof {
         let s1: FE = ECScalar::new_random();
         let s2: FE = ECScalar::new_random();
         let A1 = &delta.H * &s1;
@@ -71,7 +71,7 @@ impl HomoELGamalProof {
         HomoELGamalProof { T, A3, z1, z2 }
     }
 
-    pub fn verify(&self, delta: &HomoElGAmalStatement) -> Result<(), ProofError> {
+    pub fn verify(&self, delta: &HomoElGamalStatement) -> Result<(), ProofError> {
         let e = HSha256::create_hash_from_ge(&[
             &self.T, &self.A3, &delta.G, &delta.H, &delta.Y, &delta.D, &delta.E,
         ]);
@@ -107,7 +107,7 @@ mod tests {
         let Y = &G * &y;
         let D = &H * &witness.x + Y.clone() * &witness.r;
         let E = G.clone() * &witness.r;
-        let delta = HomoElGAmalStatement { G, H, Y, D, E };
+        let delta = HomoElGamalStatement { G, H, Y, D, E };
         let proof = HomoELGamalProof::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
     }
@@ -123,7 +123,7 @@ mod tests {
         let Y = &G * &y;
         let D = &G * &witness.x + Y.clone() * &witness.r;
         let E = G.clone() * &witness.r;
-        let delta = HomoElGAmalStatement {
+        let delta = HomoElGamalStatement {
             G: G.clone(),
             H: G,
             Y,
@@ -149,7 +149,7 @@ mod tests {
         let Y = &G * &y;
         let D = &H * &witness.x + Y.clone() * &witness.r;
         let E = &G * &witness.r + G.clone();
-        let delta = HomoElGAmalStatement { G, H, Y, D, E };
+        let delta = HomoElGamalStatement { G, H, Y, D, E };
         let proof = HomoELGamalProof::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
     }
