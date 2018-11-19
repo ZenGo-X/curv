@@ -357,7 +357,8 @@ impl ECPoint<PK, SK> for Secp256k1Point {
 
     fn scalar_mul(&self, fe: &SK) -> Secp256k1Point {
         let mut new_point = self.clone();
-        new_point.ge
+        new_point
+            .ge
             .mul_assign(&Secp256k1::new(), fe) // we can't use Secp256k1 <None> (EC) in mul_assign
             .expect("Assignment expected");
         new_point
@@ -463,7 +464,6 @@ impl<'o> Mul<&'o Secp256k1Scalar> for &'o Secp256k1Point {
     }
 }
 
-
 impl Add<Secp256k1Point> for Secp256k1Point {
     type Output = Secp256k1Point;
     fn add(self, other: Secp256k1Point) -> Self::Output {
@@ -496,8 +496,6 @@ impl Serialize for Secp256k1Point {
         state.end()
     }
 }
-
-
 
 impl<'de> Deserialize<'de> for Secp256k1Point {
     fn deserialize<D>(deserializer: D) -> Result<Secp256k1Point, D::Error>
@@ -664,7 +662,6 @@ mod tests {
         assert!(result.is_ok() | result.is_err())
     }
 
-
     #[test]
     fn test_minus_point() {
         for _ in 0..100 {
@@ -703,8 +700,5 @@ mod tests {
         let c2 = a * b;
         assert_eq!(c1.get_element(), c2.get_element());
     }
-
-
-
 
 }

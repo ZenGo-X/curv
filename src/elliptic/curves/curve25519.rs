@@ -483,5 +483,4 @@ mod tests {
         assert_eq!(c1.get_element(), c1.get_element());
     }
 
-
 }

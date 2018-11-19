@@ -58,7 +58,9 @@ impl HomoELGamalProof {
         let A2 = &delta.Y * &s2;
         let A3 = &delta.G * &s2;
         let T = A1 + A2;
-        let e = HSha256::create_hash_from_ge(&[&T, &A3,&delta.G, &delta.H, &delta.Y, &delta.D, &delta.E]);
+        let e = HSha256::create_hash_from_ge(&[
+            &T, &A3, &delta.G, &delta.H, &delta.Y, &delta.D, &delta.E,
+        ]);
         let mut z1 = s1.clone();
         // dealing with zero field element
         if w.x != FE::zero() {
@@ -71,7 +73,7 @@ impl HomoELGamalProof {
 
     pub fn verify(&self, delta: &HomoElGAmalStatement) -> Result<(), ProofError> {
         let e = HSha256::create_hash_from_ge(&[
-            &self.T, &self.A3, &delta.G,&delta.H, &delta.Y, &delta.D, &delta.E,
+            &self.T, &self.A3, &delta.G, &delta.H, &delta.Y, &delta.D, &delta.E,
         ]);
         let z1H_plus_z2Y = delta.H.clone() * &self.z1 + delta.Y.clone() * &self.z2;
         let T_plus_eD = self.T.clone() + delta.D.clone() * &e;
@@ -121,7 +123,13 @@ mod tests {
         let Y = &G * &y;
         let D = &G * &witness.x + Y.clone() * &witness.r;
         let E = G.clone() * &witness.r;
-        let delta = HomoElGAmalStatement { G: G.clone(), H: G, Y, D, E };
+        let delta = HomoElGAmalStatement {
+            G: G.clone(),
+            H: G,
+            Y,
+            D,
+            E,
+        };
         let proof = HomoELGamalProof::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
     }

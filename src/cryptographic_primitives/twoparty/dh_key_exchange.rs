@@ -66,11 +66,8 @@ pub struct Party1SecondMessage {
     pub comm_witness: CommWitness,
 }
 
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Party2SecondMessage {}
-
-
 
 impl Party1FirstMessage {
     pub fn create_commitments() -> (Party1FirstMessage, CommWitness, EcKeyPair) {
@@ -223,17 +220,17 @@ impl Party2SecondMessage {
         let mut flag = true;
         match party_one_pk_commitment
             == &HashCommitment::create_commitment_with_user_defined_randomness(
-            &party_one_public_share.x_coor(),
-            &party_one_pk_commitment_blind_factor,
-        ) {
+                &party_one_public_share.x_coor(),
+                &party_one_pk_commitment_blind_factor,
+            ) {
             false => flag = false,
             true => flag = flag,
         };
         match party_one_zk_pok_commitment
             == &HashCommitment::create_commitment_with_user_defined_randomness(
-            &party_one_d_log_proof.pk_t_rand_commitment.x_coor(),
-            &party_one_zk_pok_blind_factor,
-        ) {
+                &party_one_d_log_proof.pk_t_rand_commitment.x_coor(),
+                &party_one_zk_pok_blind_factor,
+            ) {
             false => flag = false,
             true => flag = flag,
         };
@@ -246,27 +243,26 @@ pub fn compute_pubkey(local_share: &EcKeyPair, other_share_public_share: &GE) ->
     other_share_public_share * &local_share.secret_share
 }
 
-
 #[cfg(test)]
 mod tests {
     use cryptographic_primitives::twoparty::dh_key_exchange::*;
 
     #[test]
-    fn  test_dh_key_exchange(){
+    fn test_dh_key_exchange() {
         let (kg_party_one_first_message, kg_comm_witness, kg_ec_key_pair_party1) =
             Party1FirstMessage::create_commitments();
-        let (kg_party_two_first_message, kg_ec_key_pair_party2) =
-            Party2FirstMessage::create();
-        let kg_party_one_second_message
-         = Party1SecondMessage::verify_and_decommit(
+        let (kg_party_two_first_message, kg_ec_key_pair_party2) = Party2FirstMessage::create();
+        let kg_party_one_second_message = Party1SecondMessage::verify_and_decommit(
             kg_comm_witness,
             &kg_party_two_first_message.d_log_proof,
-        ).expect("failed to verify and decommit");;
+        )
+        .expect("failed to verify and decommit");;
 
         let _kg_party_two_second_message = Party2SecondMessage::verify_commitments_and_dlog_proof(
             &kg_party_one_first_message,
-            &kg_party_one_second_message
-        ).expect("failed to verify commitments and DLog proof");
+            &kg_party_one_second_message,
+        )
+        .expect("failed to verify commitments and DLog proof");
 
         assert_eq!(
             compute_pubkey(

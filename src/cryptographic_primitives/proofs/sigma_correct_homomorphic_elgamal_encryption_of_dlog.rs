@@ -52,7 +52,10 @@ pub struct HomoElGamalDlogStatement {
 }
 
 impl HomoELGamalDlogProof {
-    pub fn prove(w: &HomoElGamalDlogWitness, delta: &HomoElGamalDlogStatement) -> HomoELGamalDlogProof {
+    pub fn prove(
+        w: &HomoElGamalDlogWitness,
+        delta: &HomoElGamalDlogStatement,
+    ) -> HomoELGamalDlogProof {
         let s1: FE = ECScalar::new_random();
         let s2: FE = ECScalar::new_random();
         let A1 = delta.G.clone() * &s1;

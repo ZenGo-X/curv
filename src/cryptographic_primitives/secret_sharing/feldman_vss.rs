@@ -75,7 +75,8 @@ impl VerifiableSS {
             .map(|point| {
                 let point_bn = BigInt::from(point as u32);
                 VerifiableSS::mod_evaluate_polynomial(coefficients, ECScalar::from(&point_bn))
-            }).collect::<Vec<FE>>()
+            })
+            .collect::<Vec<FE>>()
     }
 
     pub fn mod_evaluate_polynomial(coefficients: &[FE], point: FE) -> FE {
@@ -100,7 +101,8 @@ impl VerifiableSS {
             .map(|i| {
                 let index_bn = BigInt::from(i.clone() as u32 + 1 as u32);
                 ECScalar::from(&index_bn)
-            }).collect::<Vec<FE>>();
+            })
+            .collect::<Vec<FE>>();
         VerifiableSS::lagrange_interpolation_at_zero(&points, &shares)
     }
 
@@ -120,30 +122,32 @@ impl VerifiableSS {
         assert_eq!(points.len(), vec_len);
         // Lagrange interpolation for point 0
         // let mut acc = 0i64;
-        let lag_coef = (0..vec_len)
-            .map(|i| {
-                let xi = &points[i];
-                let yi = &values[i];
-                let num: FE = ECScalar::from(&BigInt::one());
-                let denum: FE = ECScalar::from(&BigInt::one());
-                let num = points.iter().zip(0..vec_len).fold(num, |acc, x| {
-                    if i != x.1 {
-                        acc * x.0
-                    } else {
-                        acc
-                    }
-                });
-                let denum = points.iter().zip(0..vec_len).fold(denum, |acc, x| {
-                    if i != x.1 {
-                        let xj_sub_xi = x.0.sub(&xi.get_element());
-                        acc * xj_sub_xi
-                    } else {
-                        acc
-                    }
-                });
-                let denum = denum.invert();
-                num * denum * yi
-            }).collect::<Vec<FE>>();
+        let lag_coef =
+            (0..vec_len)
+                .map(|i| {
+                    let xi = &points[i];
+                    let yi = &values[i];
+                    let num: FE = ECScalar::from(&BigInt::one());
+                    let denum: FE = ECScalar::from(&BigInt::one());
+                    let num = points.iter().zip(0..vec_len).fold(num, |acc, x| {
+                        if i != x.1 {
+                            acc * x.0
+                        } else {
+                            acc
+                        }
+                    });
+                    let denum = points.iter().zip(0..vec_len).fold(denum, |acc, x| {
+                        if i != x.1 {
+                            let xj_sub_xi = x.0.sub(&xi.get_element());
+                            acc * xj_sub_xi
+                        } else {
+                            acc
+                        }
+                    });
+                    let denum = denum.invert();
+                    num * denum * yi
+                })
+                .collect::<Vec<FE>>();
         let mut lag_coef_iter = lag_coef.iter();
         let head = lag_coef_iter.next().unwrap();
         let tail = lag_coef_iter;
@@ -169,7 +173,7 @@ impl VerifiableSS {
 
     //compute \lambda_{index,S}, a lagrangian coefficient that change the (t,n) scheme to (|S|,|S|)
     // used in http://stevengoldfeder.com/papers/GG18.pdf
-    pub fn map_share_to_new_params(&self, index: &usize, s: &[usize])-> FE{
+    pub fn map_share_to_new_params(&self, index: &usize, s: &[usize]) -> FE {
         let s_len = s.len();
         assert!(s_len > self.reconstruct_limit());
         // add one to indices to get points
@@ -177,9 +181,10 @@ impl VerifiableSS {
             .map(|i| {
                 let index_bn = BigInt::from(i.clone() as u32 + 1 as u32);
                 ECScalar::from(&index_bn)
-            }).collect::<Vec<FE>>();
+            })
+            .collect::<Vec<FE>>();
 
-        let xi  = &points[index.clone()];
+        let xi = &points[index.clone()];
         let num: FE = ECScalar::from(&BigInt::one());
         let denum: FE = ECScalar::from(&BigInt::one());
         let num = (0..s_len).fold(num, |acc, i| {
@@ -233,9 +238,12 @@ mod tests {
         let l2 = vss_scheme.map_share_to_new_params(&2, &s);
         let l3 = vss_scheme.map_share_to_new_params(&3, &s);
         let l4 = vss_scheme.map_share_to_new_params(&4, &s);
-        let w = l0 * secret_shares[0].clone() + l1 * secret_shares[1].clone() + l2 * secret_shares[2].clone() + l3 * secret_shares[3].clone() + l4 * secret_shares[4].clone();
+        let w = l0 * secret_shares[0].clone()
+            + l1 * secret_shares[1].clone()
+            + l2 * secret_shares[2].clone()
+            + l3 * secret_shares[3].clone()
+            + l4 * secret_shares[4].clone();
         assert_eq!(w.get_element(), secret_reconstructed.get_element());
-
     }
 
     #[test]
@@ -265,8 +273,11 @@ mod tests {
         let l3 = vss_scheme.map_share_to_new_params(&3, &s);
         let l4 = vss_scheme.map_share_to_new_params(&4, &s);
         let l6 = vss_scheme.map_share_to_new_params(&6, &s);
-        let w = l0 * secret_shares[0].clone() + l1 * secret_shares[1].clone() + l3 * secret_shares[3].clone() + l4 * secret_shares[4].clone() + l6 * secret_shares[6].clone();
+        let w = l0 * secret_shares[0].clone()
+            + l1 * secret_shares[1].clone()
+            + l3 * secret_shares[3].clone()
+            + l4 * secret_shares[4].clone()
+            + l6 * secret_shares[6].clone();
         assert_eq!(w.get_element(), secret_reconstructed.get_element());
-
     }
 }
