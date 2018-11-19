@@ -270,14 +270,14 @@ impl ECPoint<PK, SK> for Secp256k1Point {
     fn x_coor(&self) -> BigInt {
         let serialized_pk = PK::serialize_uncompressed(&self.ge);
         let x = &serialized_pk[1..serialized_pk.len() / 2 + 1];
-        let mut x_vec = x.to_vec();
+        let x_vec = x.to_vec();
         BigInt::from(&x_vec[..])
     }
 
     fn y_coor(&self) -> BigInt {
         let serialized_pk = PK::serialize_uncompressed(&self.ge);
-        let mut y = &serialized_pk[(serialized_pk.len() - 1) / 2 + 1..serialized_pk.len()];
-        let mut y_vec = y.to_vec();
+        let y = &serialized_pk[(serialized_pk.len() - 1) / 2 + 1..serialized_pk.len()];
+        let y_vec = y.to_vec();
         BigInt::from(&y_vec[..])
     }
 
@@ -375,7 +375,6 @@ impl ECPoint<PK, SK> for Secp256k1Point {
             purpose: "sub_point".to_string(),
             ge: other.clone(),
         };
-        let order = FE::q();
         let p: Vec<u8> = vec![
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 255, 255, 252, 47,
@@ -394,7 +393,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
 
         let mut template_y = vec![0; 32 - y_vec.len()];
         template_y.extend_from_slice(&y_vec);
-        let mut y_vec = template_y;
+        let y_vec = template_y;
 
         x_vec.extend_from_slice(&y_vec);
 
@@ -611,14 +610,14 @@ mod tests {
         assert_eq!(des_pk.ge, pk.ge);
     }
 
-    use elliptic::curves::secp256_k1::{EC, FE, GE, PK};
-    use ErrorKey::{self, InvalidPublicKey};
+    use elliptic::curves::secp256_k1::{FE, GE};
+    use ErrorKey;
 
     #[test]
     fn test_from_bytes() {
         let g = Secp256k1Point::generator();
         let hash = HSha256::create_hash(&vec![&g.bytes_compressed_to_big_int()]);
-        let mut hash_vec = BigInt::to_vec(&hash);
+        let hash_vec = BigInt::to_vec(&hash);
         let result = Secp256k1Point::from_bytes(&hash_vec);
         assert_eq!(result.unwrap_err(), ErrorKey::InvalidPublicKey)
     }
@@ -629,7 +628,7 @@ mod tests {
         let hash = HSha256::create_hash(&vec![&g.bytes_compressed_to_big_int()]);
         let hash = HSha256::create_hash(&vec![&hash]);
         let hash = HSha256::create_hash(&vec![&hash]);
-        let mut hash_vec = BigInt::to_vec(&hash);
+        let hash_vec = BigInt::to_vec(&hash);
         let result = Secp256k1Point::from_bytes(&hash_vec);
         let ground_truth = Secp256k1Point::base_point2();
         assert_eq!(result.unwrap(), ground_truth);
@@ -665,40 +664,10 @@ mod tests {
         assert!(result.is_ok() | result.is_err())
     }
 
-    #[test]
-    fn test_from_bytes_6() {
-        let a: FE = ECScalar::new_random();
-        let base: GE = ECPoint::generator();
-        let point = base.clone() * &a;
-        let x_coor = point.x_coor();
-        let y_coor = point.y_coor();
-        let mut x_vec = BigInt::to_vec(&x_coor);
-        let mut y_vec = BigInt::to_vec(&y_coor);
-        x_vec.extend_from_slice(&y_vec);
-        let new_point: GE = ECPoint::from_bytes(&x_vec).unwrap();
-        assert_eq!(point.get_element(), new_point.get_element());
-
-        let order = FE::q();
-
-        let p: Vec<u8> = vec![
-            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 255, 255, 252, 47,
-        ];
-        let p_bn = BigInt::from(&p[..]);
-        let x_coor = base.x_coor();
-        let y_coor = base.y_coor();
-        let y_sq = BigInt::mod_pow(&y_coor, &BigInt::from(2), &p_bn);
-        let x_cubed = BigInt::mod_pow(&x_coor, &BigInt::from(3), &p_bn);
-        let x_cubed = BigInt::mod_add(&x_cubed, &BigInt::from(7), &p_bn);
-        let mut x_vec = BigInt::to_vec(&x_coor);
-        let mut y_vec = BigInt::to_vec(&y_coor);
-        x_vec.extend_from_slice(&y_vec);
-        let new_point: GE = ECPoint::from_bytes(&x_vec).unwrap();
-    }
 
     #[test]
     fn test_minus_point() {
-        for i in 0..100 {
+        for _ in 0..100 {
             let a: FE = ECScalar::new_random();
             let b: FE = ECScalar::new_random();
             let b_bn = b.to_big_int();
@@ -732,17 +701,10 @@ mod tests {
         let b: FE = ECScalar::new_random();
         let c1 = a.mul(&b.get_element());
         let c2 = a * b;
-        assert_eq!(c1.get_element(), c1.get_element());
+        assert_eq!(c1.get_element(), c2.get_element());
     }
 
-    #[test]
-    fn test_scalar_mul_point() {
-        let A: GE = ECPoint::generator();
-        let b: FE = ECScalar::new_random();
-        let c: FE = ECScalar::new_random();
-        let Ab = A.scalar_mul(&b.get_element());
-        let Ac = A.scalar_mul(&c.get_element());
-    }
+
 
 
 }

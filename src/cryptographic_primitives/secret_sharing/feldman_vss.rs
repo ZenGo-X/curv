@@ -124,16 +124,16 @@ impl VerifiableSS {
             .map(|i| {
                 let xi = &points[i];
                 let yi = &values[i];
-                let mut num: FE = ECScalar::from(&BigInt::one());
-                let mut denum: FE = ECScalar::from(&BigInt::one());
-                let num = points.iter().zip((0..vec_len)).fold(num, |acc, x| {
+                let num: FE = ECScalar::from(&BigInt::one());
+                let denum: FE = ECScalar::from(&BigInt::one());
+                let num = points.iter().zip(0..vec_len).fold(num, |acc, x| {
                     if i != x.1 {
                         acc * x.0
                     } else {
                         acc
                     }
                 });
-                let denum = points.iter().zip((0..vec_len)).fold(denum, |acc, x| {
+                let denum = points.iter().zip(0..vec_len).fold(denum, |acc, x| {
                     if i != x.1 {
                         let xj_sub_xi = x.0.sub(&xi.get_element());
                         acc * xj_sub_xi
@@ -180,8 +180,8 @@ impl VerifiableSS {
             }).collect::<Vec<FE>>();
 
         let xi  = &points[index.clone()];
-        let mut num: FE = ECScalar::from(&BigInt::one());
-        let mut denum: FE = ECScalar::from(&BigInt::one());
+        let num: FE = ECScalar::from(&BigInt::one());
+        let denum: FE = ECScalar::from(&BigInt::one());
         let num = (0..s_len).fold(num, |acc, i| {
             if s[i].clone() != index.clone() {
                 acc * &points[s[i]]
@@ -205,8 +205,7 @@ impl VerifiableSS {
 #[cfg(test)]
 mod tests {
     use cryptographic_primitives::secret_sharing::feldman_vss::*;
-    use elliptic::curves::traits::*;
-    use {FE, GE};
+    use FE;
 
     #[test]
     fn test_secret_sharing_3_out_of_5() {

@@ -36,13 +36,13 @@ pub struct HomoELGamalProof {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct hegWitness {
+pub struct HomoElGamalWitness {
     pub r: FE,
     pub x: FE,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct hegStatement {
+pub struct HomoElGAmalStatement {
     pub G: GE,
     pub H: GE,
     pub Y: GE,
@@ -51,8 +51,7 @@ pub struct hegStatement {
 }
 
 impl HomoELGamalProof {
-    pub fn prove(w: &hegWitness, delta: &hegStatement) -> HomoELGamalProof {
-        let base_point: GE = ECPoint::generator();
+    pub fn prove(w: &HomoElGamalWitness, delta: &HomoElGAmalStatement) -> HomoELGamalProof {
         let s1: FE = ECScalar::new_random();
         let s2: FE = ECScalar::new_random();
         let A1 = &delta.H * &s1;
@@ -70,7 +69,7 @@ impl HomoELGamalProof {
         HomoELGamalProof { T, A3, z1, z2 }
     }
 
-    pub fn verify(&self, delta: &hegStatement) -> Result<(), ProofError> {
+    pub fn verify(&self, delta: &HomoElGAmalStatement) -> Result<(), ProofError> {
         let e = HSha256::create_hash_from_ge(&[
             &self.T, &self.A3, &delta.G,&delta.H, &delta.Y, &delta.D, &delta.E,
         ]);
@@ -91,12 +90,11 @@ impl HomoELGamalProof {
 #[cfg(test)]
 mod tests {
     use cryptographic_primitives::proofs::sigma_correct_homomrphic_elgamal_enc::*;
-    use elliptic::curves::traits::*;
     use {FE, GE};
 
     #[test]
     fn test_correct_general_homo_elgamal() {
-        let witness = hegWitness {
+        let witness = HomoElGamalWitness {
             r: ECScalar::new_random(),
             x: ECScalar::new_random(),
         };
@@ -107,14 +105,14 @@ mod tests {
         let Y = &G * &y;
         let D = &H * &witness.x + Y.clone() * &witness.r;
         let E = G.clone() * &witness.r;
-        let delta = hegStatement { G, H, Y, D, E };
+        let delta = HomoElGAmalStatement { G, H, Y, D, E };
         let proof = HomoELGamalProof::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
     }
 
     #[test]
     fn test_correct_homo_elgamal() {
-        let witness = hegWitness {
+        let witness = HomoElGamalWitness {
             r: ECScalar::new_random(),
             x: ECScalar::new_random(),
         };
@@ -123,7 +121,7 @@ mod tests {
         let Y = &G * &y;
         let D = &G * &witness.x + Y.clone() * &witness.r;
         let E = G.clone() * &witness.r;
-        let delta = hegStatement { G: G.clone(), H: G, Y, D, E };
+        let delta = HomoElGAmalStatement { G: G.clone(), H: G, Y, D, E };
         let proof = HomoELGamalProof::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
     }
@@ -132,7 +130,7 @@ mod tests {
     #[should_panic]
     fn test_wrong_homo_elgamal() {
         // test for E = (r+1)G
-        let witness = hegWitness {
+        let witness = HomoElGamalWitness {
             r: ECScalar::new_random(),
             x: ECScalar::new_random(),
         };
@@ -143,7 +141,7 @@ mod tests {
         let Y = &G * &y;
         let D = &H * &witness.x + Y.clone() * &witness.r;
         let E = &G * &witness.r + G.clone();
-        let delta = hegStatement { G, H, Y, D, E };
+        let delta = HomoElGAmalStatement { G, H, Y, D, E };
         let proof = HomoELGamalProof::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
     }

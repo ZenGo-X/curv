@@ -100,7 +100,6 @@ mod tests {
     use cryptographic_primitives::proofs::sigma_dlog::*;
     use FE;
 
-    use elliptic::curves::traits::*;
 
     #[test]
     fn test_dlog_proof() {

@@ -13,11 +13,9 @@
 
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
-use elliptic::curves::traits::ECPoint;
 use merkle::{MerkleTree, Proof};
 use ring::digest::{Context, SHA256};
-use BigInt;
-use {FE, GE};
+use GE;
 /*
 pub struct MT256<'a> {
     tree: MerkleTree<GE>,
@@ -31,7 +29,7 @@ pub struct MT256 {
 //impl <'a> MT256<'a>{
 impl MT256 {
     pub fn create_tree(vec: &Vec<GE>) -> MT256 {
-        let mut digest = Context::new(&SHA256);
+        let digest = Context::new(&SHA256);
         let tree = MerkleTree::from_vec(digest.algorithm, vec.to_vec());
         MT256 { tree }
     }
@@ -58,9 +56,7 @@ impl MT256 {
 mod tests {
     use cryptographic_primitives::hashing::merkle_tree::MT256;
     use elliptic::curves::traits::ECPoint;
-    use merkle::{MerkleTree, Proof};
-    use ring::digest::{Context, SHA256};
-    use {FE, GE};
+    use GE;
     #[test]
     fn test_mt_functionality_four_leaves() {
         let ge1: GE = ECPoint::generator();
