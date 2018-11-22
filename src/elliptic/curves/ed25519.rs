@@ -14,15 +14,6 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-extern crate rand;
-
-extern crate cryptoxide;
-extern crate curve25519_dalek;
-extern crate secp256k1;
-//#[cfg(feature = "curve25519")]
-pub mod ristretto;
-//#[cfg(feature = "curvesecp256k1")]
-pub mod secp256_k1;
-
-pub mod ed25519;
-pub mod traits;
+// paper: https://ed25519.cr.yp.to/ed25519-20110926.pdf
+// based on https://docs.rs/cryptoxide/0.1.0/cryptoxide/curve25519/index.html
+// https://cr.yp.to/ecdh/curve25519-20060209.pdf

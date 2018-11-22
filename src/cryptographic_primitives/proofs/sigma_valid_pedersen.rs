@@ -32,46 +32,46 @@ use cryptographic_primitives::commitments::traits::Commitment;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
 
-use elliptic::curves::secp256_k1::Secp256k1Point;
-use elliptic::curves::secp256_k1::Secp256k1Scalar;
+use arithmetic::traits::Converter;
+use {BigInt, FE, GE};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct PedersenProof {
-    e: Secp256k1Scalar,
-    a1: Secp256k1Point,
-    a2: Secp256k1Point,
-    pub com: Secp256k1Point,
-    z1: Secp256k1Scalar,
-    z2: Secp256k1Scalar,
+    e: FE,
+    a1: GE,
+    a2: GE,
+    pub com: GE,
+    z1: FE,
+    z2: FE,
 }
-#[cfg(feature = "curvesecp256k1")]
+
 pub trait ProvePederesen {
-    fn prove(m: &Secp256k1Scalar, r: &Secp256k1Scalar) -> PedersenProof;
+    fn prove(m: &FE, r: &FE) -> PedersenProof;
 
     fn verify(proof: &PedersenProof) -> Result<(), ProofError>;
 }
-#[cfg(feature = "curvesecp256k1")]
+
 impl ProvePederesen for PedersenProof {
-    fn prove(m: &Secp256k1Scalar, r: &Secp256k1Scalar) -> PedersenProof {
-        let g: Secp256k1Point = ECPoint::generator();
-        let h = Secp256k1Point::base_point2();
-        let s1: Secp256k1Scalar = ECScalar::new_random();
-        let s2: Secp256k1Scalar = ECScalar::new_random();
+    fn prove(m: &FE, r: &FE) -> PedersenProof {
+        let g: GE = ECPoint::generator();
+        let h = h();
+        let s1: FE = ECScalar::new_random();
+        let s2: FE = ECScalar::new_random();
         let a1 = g.scalar_mul(&s1.get_element());
         let a2 = h.scalar_mul(&s2.get_element());
         let com = PedersenCommitment::create_commitment_with_user_defined_randomness(
             &m.to_big_int(),
             &r.to_big_int(),
         );
-        let g: Secp256k1Point = ECPoint::generator();
+        let g: GE = ECPoint::generator();
         let challenge = HSha256::create_hash(&vec![
             &g.x_coor(),
-            &Secp256k1Point::base_point2().x_coor(),
+            &h.x_coor(),
             &com.x_coor(),
             &a1.x_coor(),
             &a2.x_coor(),
         ]);
-        let e: Secp256k1Scalar = ECScalar::from(&challenge);
+        let e: FE = ECScalar::from(&challenge);
         let em = e.mul(&m.get_element());
         let z1 = s1.add(&em.get_element());
         let er = e.mul(&r.get_element());
@@ -87,8 +87,8 @@ impl ProvePederesen for PedersenProof {
     }
 
     fn verify(proof: &PedersenProof) -> Result<(), ProofError> {
-        let g: Secp256k1Point = ECPoint::generator();
-        let h = Secp256k1Point::base_point2();
+        let g: GE = ECPoint::generator();
+        let h = h();
         let challenge = HSha256::create_hash(&vec![
             &g.x_coor(),
             &h.x_coor(),
@@ -96,7 +96,7 @@ impl ProvePederesen for PedersenProof {
             &proof.a1.x_coor(),
             &proof.a2.x_coor(),
         ]);
-        let e: Secp256k1Scalar = ECScalar::from(&challenge);
+        let e: FE = ECScalar::from(&challenge);
         let z1g = g.scalar_mul(&proof.z1.get_element());
         let z2h = h.scalar_mul(&proof.z2.get_element());
         let lhs = z1g.add_point(&z2h.get_element());
@@ -112,15 +112,31 @@ impl ProvePederesen for PedersenProof {
     }
 }
 
+#[cfg(feature = "curvesecp256k1")]
+pub fn h() -> GE {
+    let h: GE = GE::base_point2();
+    h
+}
+
+#[cfg(feature = "ristretto")]
+pub fn h() -> GE {
+    let g: GE = ECPoint::generator();
+    let hash = HSha256::create_hash(&vec![&g.x_coor()]);
+    let bytes = BigInt::to_vec(&hash);
+    let h: GE = ECPoint::from_bytes(&bytes[..]);
+    h
+}
+
 #[cfg(test)]
 mod tests {
     use cryptographic_primitives::proofs::sigma_valid_pedersen::*;
     use elliptic::curves::secp256_k1::Secp256k1Scalar;
+    use FE;
 
     #[test]
     fn test_pedersen_proof() {
-        let m: Secp256k1Scalar = ECScalar::new_random();
-        let r: Secp256k1Scalar = ECScalar::new_random();
+        let m: FE = ECScalar::new_random();
+        let r: FE = ECScalar::new_random();
         let pedersen_proof = PedersenProof::prove(&m, &r);
         PedersenProof::verify(&pedersen_proof).expect("error pedersen");
     }

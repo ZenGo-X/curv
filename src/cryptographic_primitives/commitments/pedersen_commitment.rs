@@ -21,9 +21,7 @@ use elliptic::curves::secp256_k1::Secp256k1Scalar;
 use elliptic::curves::traits::*;
 use BigInt;
 
-#[cfg(feature = "curvesecp256k1")]
 pub struct PedersenCommitment;
-#[cfg(feature = "curvesecp256k1")]
 impl Commitment<Secp256k1Point> for PedersenCommitment {
     fn create_commitment_with_user_defined_randomness(
         message: &BigInt,

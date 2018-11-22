@@ -10,7 +10,7 @@ crate-type = ["lib"]
 
 [features]
 curvesecp256k1 = []
-curve25519 = []
+ristretto = []
 
 
 [dependencies]
@@ -32,3 +32,6 @@ features = ["rand", "serde"]
 
 [dependencies.curve25519-dalek]
 version = "0.19.0"
+
+[dependencies.cryptoxide]
+version = "0.1.0"
