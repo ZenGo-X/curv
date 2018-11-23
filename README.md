@@ -7,8 +7,9 @@ This project implements basic cryptographic primitives over elliptic curves. The
 
 __Supported Curves__: 
 
-* _secp256k1_ [https://github.com/rust-bitcoin/rust-secp256k1]
-* _curve25519_ (Ristretto) [https://github.com/dalek-cryptography/curve25519-dalek]
+* [_secp256k1_](https://github.com/rust-bitcoin/rust-secp256k1)
+* [_ed25519_ ](https://github.com/typed-io/cryptoxide/blob/master/src/curve25519.rs)
+* [_ristretto_](https://github.com/dalek-cryptography/curve25519-dalek)
 
 __Supported Primitives__: 
 
