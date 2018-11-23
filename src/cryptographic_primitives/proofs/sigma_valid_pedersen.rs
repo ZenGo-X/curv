@@ -32,9 +32,7 @@ use cryptographic_primitives::commitments::traits::Commitment;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
 
-use arithmetic::traits::Converter;
-use {BigInt, FE, GE};
-
+use {FE, GE};
 #[derive(Clone, PartialEq, Debug)]
 pub struct PedersenProof {
     e: FE,
@@ -54,7 +52,7 @@ pub trait ProvePederesen {
 impl ProvePederesen for PedersenProof {
     fn prove(m: &FE, r: &FE) -> PedersenProof {
         let g: GE = ECPoint::generator();
-        let h = h();
+        let h = GE::base_point2();
         let s1: FE = ECScalar::new_random();
         let s2: FE = ECScalar::new_random();
         let a1 = g.scalar_mul(&s1.get_element());
@@ -88,7 +86,7 @@ impl ProvePederesen for PedersenProof {
 
     fn verify(proof: &PedersenProof) -> Result<(), ProofError> {
         let g: GE = ECPoint::generator();
-        let h = h();
+        let h = GE::base_point2();
         let challenge = HSha256::create_hash(&vec![
             &g.x_coor(),
             &h.x_coor(),
@@ -112,25 +110,9 @@ impl ProvePederesen for PedersenProof {
     }
 }
 
-#[cfg(feature = "curvesecp256k1")]
-pub fn h() -> GE {
-    let h: GE = GE::base_point2();
-    h
-}
-
-#[cfg(feature = "ristretto")]
-pub fn h() -> GE {
-    let g: GE = ECPoint::generator();
-    let hash = HSha256::create_hash(&vec![&g.x_coor()]);
-    let bytes = BigInt::to_vec(&hash);
-    let h: GE = ECPoint::from_bytes(&bytes[..]);
-    h
-}
-
 #[cfg(test)]
 mod tests {
     use cryptographic_primitives::proofs::sigma_valid_pedersen::*;
-    use elliptic::curves::secp256_k1::Secp256k1Scalar;
     use FE;
 
     #[test]

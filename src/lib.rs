@@ -32,16 +32,27 @@ mod secp256k1instance {
 #[cfg(feature = "curvesecp256k1")]
 pub use self::secp256k1instance::*;
 
-#[cfg(feature = "ristretto")]
-mod ristrettoinstance {
-    pub use elliptic::curves::ristretto::FE;
-    pub use elliptic::curves::ristretto::GE;
-    pub use elliptic::curves::ristretto::PK;
-    pub use elliptic::curves::ristretto::SK;
+#[cfg(feature = "curveristretto")]
+mod curveristrettoinstance {
+    pub use elliptic::curves::curve_ristretto::FE;
+    pub use elliptic::curves::curve_ristretto::GE;
+    pub use elliptic::curves::curve_ristretto::PK;
+    pub use elliptic::curves::curve_ristretto::SK;
 }
 
-#[cfg(feature = "ristretto")]
-pub use self::ristrettoinstance::*;
+#[cfg(feature = "curveristretto")]
+pub use self::curveristrettoinstance::*;
+
+#[cfg(feature = "ed25519")]
+mod ed25519instance {
+    pub use elliptic::curves::curve_ristretto::FE;
+    pub use elliptic::curves::curve_ristretto::GE;
+    pub use elliptic::curves::curve_ristretto::PK;
+    pub use elliptic::curves::curve_ristretto::SK;
+}
+
+#[cfg(feature = "ed25519")]
+pub use self::ed25519instance::*;
 
 // TODO: When we will have more than one type of big num library, add as features
 pub mod arithmetic;

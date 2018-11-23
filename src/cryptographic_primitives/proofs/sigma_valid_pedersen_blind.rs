@@ -51,7 +51,7 @@ pub trait ProvePederesenBlind {
 }
 impl ProvePederesenBlind for PedersenBlindingProof {
     fn prove(m: &FE, r: &FE) -> PedersenBlindingProof {
-        let h = super::sigma_valid_pedersen::h();
+        let h = GE::base_point2();
         let s: FE = ECScalar::new_random();
         let a = h.scalar_mul(&s.get_element());
         let com = PedersenCommitment::create_commitment_with_user_defined_randomness(
@@ -80,7 +80,7 @@ impl ProvePederesenBlind for PedersenBlindingProof {
 
     fn verify(proof: &PedersenBlindingProof) -> Result<(), ProofError> {
         let g: GE = ECPoint::generator();
-        let h = super::sigma_valid_pedersen::h();
+        let h = GE::base_point2();
         let challenge = HSha256::create_hash(&vec![
             &g.x_coor(),
             &h.x_coor(),

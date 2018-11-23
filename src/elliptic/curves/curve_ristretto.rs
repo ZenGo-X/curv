@@ -22,6 +22,8 @@ use super::curve25519_dalek::scalar::Scalar;
 use super::rand::thread_rng;
 use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::Converter;
+use cryptographic_primitives::hashing::hash_sha256::HSha256;
+use cryptographic_primitives::hashing::traits::Hash;
 use serde::de;
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeStruct;
@@ -40,29 +42,29 @@ pub type SK = Scalar;
 pub type PK = CompressedRistretto;
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct Curve25519Scalar {
+pub struct RistrettoScalar {
     purpose: &'static str,
     fe: SK,
 }
 #[derive(Clone, PartialEq, Debug)]
-pub struct Curve25519Point {
+pub struct RistrettoCurvPoint {
     purpose: &'static str,
     ge: PK,
 }
-pub type GE = Curve25519Point;
-pub type FE = Curve25519Scalar;
+pub type GE = RistrettoCurvPoint;
+pub type FE = RistrettoScalar;
 
-impl ECScalar<SK> for Curve25519Scalar {
-    fn new_random() -> Curve25519Scalar {
-        Curve25519Scalar {
+impl ECScalar<SK> for RistrettoScalar {
+    fn new_random() -> RistrettoScalar {
+        RistrettoScalar {
             purpose: "random",
             fe: SK::random(&mut thread_rng()),
         }
     }
 
-    fn zero() -> Curve25519Scalar {
+    fn zero() -> RistrettoScalar {
         let q_fe: FE = ECScalar::from(&FE::q());
-        Curve25519Scalar {
+        RistrettoScalar {
             purpose: "zero",
             fe: q_fe.get_element(),
         }
@@ -75,7 +77,7 @@ impl ECScalar<SK> for Curve25519Scalar {
         self.fe = element
     }
 
-    fn from(n: &BigInt) -> Curve25519Scalar {
+    fn from(n: &BigInt) -> RistrettoScalar {
         let mut v = BigInt::to_vec(n);
         //TODO: add consistency check for sizes max 32/ max 64
         let mut bytes_array_32: [u8; 32];
@@ -95,7 +97,7 @@ impl ECScalar<SK> for Curve25519Scalar {
             let bytes = &v[..];
             bytes_array_32.copy_from_slice(&bytes);
             bytes_array_32.reverse();
-            Curve25519Scalar {
+            RistrettoScalar {
                 purpose: "from_big_int",
                 fe: SK::from_bytes_mod_order(bytes_array_32),
             }
@@ -104,7 +106,7 @@ impl ECScalar<SK> for Curve25519Scalar {
             let bytes = &v[..];
             bytes_array_64.copy_from_slice(&bytes);
             bytes_array_64.reverse();
-            Curve25519Scalar {
+            RistrettoScalar {
                 purpose: "from_big_int",
                 fe: SK::from_bytes_mod_order_wide(&bytes_array_64),
             }
@@ -120,72 +122,72 @@ impl ECScalar<SK> for Curve25519Scalar {
 
     fn q() -> BigInt {
         let l = BASEPOINT_ORDER;
-        let l_fe = Curve25519Scalar {
+        let l_fe = RistrettoScalar {
             purpose: "q",
             fe: l,
         };
         l_fe.to_big_int()
     }
 
-    fn add(&self, other: &SK) -> Curve25519Scalar {
-        Curve25519Scalar {
+    fn add(&self, other: &SK) -> RistrettoScalar {
+        RistrettoScalar {
             purpose: "add",
             fe: &self.get_element() + other,
         }
     }
 
-    fn mul(&self, other: &SK) -> Curve25519Scalar {
-        Curve25519Scalar {
+    fn mul(&self, other: &SK) -> RistrettoScalar {
+        RistrettoScalar {
             purpose: "mul",
             fe: &self.get_element() * other,
         }
     }
 
-    fn sub(&self, other: &SK) -> Curve25519Scalar {
-        Curve25519Scalar {
+    fn sub(&self, other: &SK) -> RistrettoScalar {
+        RistrettoScalar {
             purpose: "sub",
             fe: &self.get_element() - other,
         }
     }
 
-    fn invert(&self) -> Curve25519Scalar {
+    fn invert(&self) -> RistrettoScalar {
         let inv: SK = self.get_element().invert();
-        Curve25519Scalar {
+        RistrettoScalar {
             purpose: "invert",
             fe: inv,
         }
     }
 }
 
-impl Mul<Curve25519Scalar> for Curve25519Scalar {
-    type Output = Curve25519Scalar;
-    fn mul(self, other: Curve25519Scalar) -> Curve25519Scalar {
+impl Mul<RistrettoScalar> for RistrettoScalar {
+    type Output = RistrettoScalar;
+    fn mul(self, other: RistrettoScalar) -> RistrettoScalar {
         (&self).mul(&other.get_element())
     }
 }
 
-impl<'o> Mul<&'o Curve25519Scalar> for Curve25519Scalar {
-    type Output = Curve25519Scalar;
-    fn mul(self, other: &'o Curve25519Scalar) -> Curve25519Scalar {
+impl<'o> Mul<&'o RistrettoScalar> for RistrettoScalar {
+    type Output = RistrettoScalar;
+    fn mul(self, other: &'o RistrettoScalar) -> RistrettoScalar {
         (&self).mul(&other.get_element())
     }
 }
 
-impl Add<Curve25519Scalar> for Curve25519Scalar {
-    type Output = Curve25519Scalar;
-    fn add(self, other: Curve25519Scalar) -> Curve25519Scalar {
+impl Add<RistrettoScalar> for RistrettoScalar {
+    type Output = RistrettoScalar;
+    fn add(self, other: RistrettoScalar) -> RistrettoScalar {
         (&self).add(&other.get_element())
     }
 }
 
-impl<'o> Add<&'o Curve25519Scalar> for Curve25519Scalar {
-    type Output = Curve25519Scalar;
-    fn add(self, other: &'o Curve25519Scalar) -> Curve25519Scalar {
+impl<'o> Add<&'o RistrettoScalar> for RistrettoScalar {
+    type Output = RistrettoScalar;
+    fn add(self, other: &'o RistrettoScalar) -> RistrettoScalar {
         (&self).add(&other.get_element())
     }
 }
 
-impl Serialize for Curve25519Scalar {
+impl Serialize for RistrettoScalar {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -194,8 +196,8 @@ impl Serialize for Curve25519Scalar {
     }
 }
 
-impl<'de> Deserialize<'de> for Curve25519Scalar {
-    fn deserialize<D>(deserializer: D) -> Result<Curve25519Scalar, D::Error>
+impl<'de> Deserialize<'de> for RistrettoScalar {
+    fn deserialize<D>(deserializer: D) -> Result<RistrettoScalar, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -206,21 +208,33 @@ impl<'de> Deserialize<'de> for Curve25519Scalar {
 struct Secp256k1ScalarVisitor;
 
 impl<'de> Visitor<'de> for Secp256k1ScalarVisitor {
-    type Value = Curve25519Scalar;
+    type Value = RistrettoScalar;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("Secp256k1Scalar")
     }
 
-    fn visit_str<E: de::Error>(self, s: &str) -> Result<Curve25519Scalar, E> {
+    fn visit_str<E: de::Error>(self, s: &str) -> Result<RistrettoScalar, E> {
         let v = BigInt::from_str_radix(s, 16).expect("Failed in serde");
         Ok(ECScalar::from(&v))
     }
 }
 
-impl ECPoint<PK, SK> for Curve25519Point {
-    fn generator() -> Curve25519Point {
-        Curve25519Point {
+impl RistrettoCurvPoint {
+    pub fn base_point2() -> RistrettoCurvPoint {
+        let g: GE = ECPoint::generator();
+        let hash = HSha256::create_hash(&vec![&g.x_coor()]);
+        let bytes = BigInt::to_vec(&hash);
+        let h: GE = ECPoint::from_bytes(&bytes[..]).unwrap();
+        RistrettoCurvPoint {
+            purpose: "random",
+            ge: h.get_element(),
+        }
+    }
+}
+impl ECPoint<PK, SK> for RistrettoCurvPoint {
+    fn generator() -> RistrettoCurvPoint {
+        RistrettoCurvPoint {
             purpose: "base_fe",
             ge: RISTRETTO_BASEPOINT_COMPRESSED,
         }
@@ -253,7 +267,7 @@ impl ECPoint<PK, SK> for Curve25519Point {
     fn bytes_compressed_to_big_int(&self) -> BigInt {
         BigInt::from(self.ge.to_bytes()[0..self.ge.to_bytes().len()].as_ref())
     }
-    fn from_bytes(bytes: &[u8]) -> Result<Curve25519Point, ErrorKey> {
+    fn from_bytes(bytes: &[u8]) -> Result<RistrettoCurvPoint, ErrorKey> {
         let bytes_vec = bytes.to_vec();
         let mut bytes_array_64 = [0u8; 64];
         let byte_len = bytes_vec.len();
@@ -266,7 +280,7 @@ impl ECPoint<PK, SK> for Curve25519Point {
                 bytes_array_64.copy_from_slice(&bytes_slice);
                 let r_point = RistrettoPoint::from_uniform_bytes(&bytes_array_64);
                 let r_point_compress = r_point.compress();
-                Ok(Curve25519Point {
+                Ok(RistrettoCurvPoint {
                     purpose: "random",
                     ge: r_point_compress,
                 })
@@ -277,7 +291,7 @@ impl ECPoint<PK, SK> for Curve25519Point {
                 bytes_array_64.copy_from_slice(&bytes_slice);
                 let r_point = RistrettoPoint::from_uniform_bytes(&bytes_array_64);
                 let r_point_compress = r_point.compress();
-                Ok(Curve25519Point {
+                Ok(RistrettoCurvPoint {
                     purpose: "random",
                     ge: r_point_compress,
                 })
@@ -290,115 +304,115 @@ impl ECPoint<PK, SK> for Curve25519Point {
         result.to_vec()
     }
 
-    fn scalar_mul(&self, fe: &SK) -> Curve25519Point {
+    fn scalar_mul(&self, fe: &SK) -> RistrettoCurvPoint {
         let skpk = fe * (self.ge.decompress().unwrap());
-        Curve25519Point {
+        RistrettoCurvPoint {
             purpose: "scalar_point_mul",
             ge: skpk.compress(),
         }
     }
 
-    fn add_point(&self, other: &PK) -> Curve25519Point {
+    fn add_point(&self, other: &PK) -> RistrettoCurvPoint {
         let pkpk = self.ge.decompress().unwrap() + other.decompress().unwrap();
-        Curve25519Point {
+        RistrettoCurvPoint {
             purpose: "combine",
             ge: pkpk.compress(),
         }
     }
 
-    fn sub_point(&self, other: &PK) -> Curve25519Point {
+    fn sub_point(&self, other: &PK) -> RistrettoCurvPoint {
         let pkpk = self.ge.decompress().unwrap() - other.decompress().unwrap();
-        Curve25519Point {
+        RistrettoCurvPoint {
             purpose: "sub",
             ge: pkpk.compress(),
         }
     }
 
-    fn from_coor(_x: &BigInt, _y: &BigInt) -> Curve25519Point {
+    fn from_coor(_x: &BigInt, _y: &BigInt) -> RistrettoCurvPoint {
         unimplemented!();
     }
 }
 
-impl Mul<Curve25519Scalar> for Curve25519Point {
-    type Output = Curve25519Point;
-    fn mul(self, other: Curve25519Scalar) -> Curve25519Point {
+impl Mul<RistrettoScalar> for RistrettoCurvPoint {
+    type Output = RistrettoCurvPoint;
+    fn mul(self, other: RistrettoScalar) -> RistrettoCurvPoint {
         self.scalar_mul(&other.get_element())
     }
 }
 
-impl<'o> Mul<&'o Curve25519Scalar> for Curve25519Point {
-    type Output = Curve25519Point;
-    fn mul(self, other: &'o Curve25519Scalar) -> Curve25519Point {
+impl<'o> Mul<&'o RistrettoScalar> for RistrettoCurvPoint {
+    type Output = RistrettoCurvPoint;
+    fn mul(self, other: &'o RistrettoScalar) -> RistrettoCurvPoint {
         self.scalar_mul(&other.get_element())
     }
 }
 
-impl<'o> Mul<&'o Curve25519Scalar> for &'o Curve25519Point {
-    type Output = Curve25519Point;
-    fn mul(self, other: &'o Curve25519Scalar) -> Curve25519Point {
+impl<'o> Mul<&'o RistrettoScalar> for &'o RistrettoCurvPoint {
+    type Output = RistrettoCurvPoint;
+    fn mul(self, other: &'o RistrettoScalar) -> RistrettoCurvPoint {
         self.scalar_mul(&other.get_element())
     }
 }
 
-impl Add<Curve25519Point> for Curve25519Point {
-    type Output = Curve25519Point;
-    fn add(self, other: Curve25519Point) -> Curve25519Point {
+impl Add<RistrettoCurvPoint> for RistrettoCurvPoint {
+    type Output = RistrettoCurvPoint;
+    fn add(self, other: RistrettoCurvPoint) -> RistrettoCurvPoint {
         self.add_point(&other.get_element())
     }
 }
 
-impl<'o> Add<&'o Curve25519Point> for Curve25519Point {
-    type Output = Curve25519Point;
-    fn add(self, other: &'o Curve25519Point) -> Curve25519Point {
+impl<'o> Add<&'o RistrettoCurvPoint> for RistrettoCurvPoint {
+    type Output = RistrettoCurvPoint;
+    fn add(self, other: &'o RistrettoCurvPoint) -> RistrettoCurvPoint {
         self.add_point(&other.get_element())
     }
 }
 
-impl<'o> Add<&'o Curve25519Point> for &'o Curve25519Point {
-    type Output = Curve25519Point;
-    fn add(self, other: &'o Curve25519Point) -> Curve25519Point {
+impl<'o> Add<&'o RistrettoCurvPoint> for &'o RistrettoCurvPoint {
+    type Output = RistrettoCurvPoint;
+    fn add(self, other: &'o RistrettoCurvPoint) -> RistrettoCurvPoint {
         self.add_point(&other.get_element())
     }
 }
 
-impl Hashable for Curve25519Point {
+impl Hashable for RistrettoCurvPoint {
     fn update_context(&self, context: &mut Context) {
         let bytes: Vec<u8> = self.pk_to_key_slice();
         context.update(&bytes);
     }
 }
 
-impl Serialize for Curve25519Point {
+impl Serialize for RistrettoCurvPoint {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let mut state = serializer.serialize_struct("Secp256k1Point", 2)?;
+        let mut state = serializer.serialize_struct("RistrettoCurvPoint", 2)?;
         state.serialize_field("x", &self.x_coor().to_hex())?;
         state.serialize_field("y", &self.y_coor().to_hex())?;
         state.end()
     }
 }
 
-impl<'de> Deserialize<'de> for Curve25519Point {
-    fn deserialize<D>(deserializer: D) -> Result<Curve25519Point, D::Error>
+impl<'de> Deserialize<'de> for RistrettoCurvPoint {
+    fn deserialize<D>(deserializer: D) -> Result<RistrettoCurvPoint, D::Error>
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_map(Secp256k1PointVisitor)
+        deserializer.deserialize_map(RistrettoCurvPointVisitor)
     }
 }
 
-struct Secp256k1PointVisitor;
+struct RistrettoCurvPointVisitor;
 
-impl<'de> Visitor<'de> for Secp256k1PointVisitor {
-    type Value = Curve25519Point;
+impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
+    type Value = RistrettoCurvPoint;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("Secp256k1Point")
+        formatter.write_str("RistrettoCurvPoint")
     }
 
-    fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<Curve25519Point, E::Error> {
+    fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<RistrettoCurvPoint, E::Error> {
         let mut x = String::new();
         let mut y = String::new();
 
@@ -414,18 +428,17 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
         let bx = BigInt::from_hex(&x);
         let by = BigInt::from_hex(&y);
 
-        Ok(Curve25519Point::from_coor(&bx, &by))
+        Ok(RistrettoCurvPoint::from_coor(&bx, &by))
     }
 }
-#[cfg(feature = "curve25519")]
+
 #[cfg(test)]
 mod tests {
 
-    use super::Curve25519Point;
+    use super::RistrettoCurvPoint;
     use arithmetic::traits::Modulo;
     use elliptic::curves::traits::ECPoint;
     use elliptic::curves::traits::ECScalar;
-    use serde_json;
     use BigInt;
     use {FE, GE};
 
@@ -470,7 +483,7 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 1, 2, 3, 4, 5, 6,
         ];
-        let result = Curve25519Point::from_bytes(&test_vec);
+        let result = RistrettoCurvPoint::from_bytes(&test_vec);
         assert!(result.is_ok())
     }
 

@@ -16,27 +16,26 @@
 use super::traits::Commitment;
 use super::SECURITY_BITS;
 use arithmetic::traits::Samplable;
-use elliptic::curves::secp256_k1::Secp256k1Point;
-use elliptic::curves::secp256_k1::Secp256k1Scalar;
+
 use elliptic::curves::traits::*;
-use BigInt;
+use {BigInt, FE, GE};
 
 pub struct PedersenCommitment;
-impl Commitment<Secp256k1Point> for PedersenCommitment {
+impl Commitment<GE> for PedersenCommitment {
     fn create_commitment_with_user_defined_randomness(
         message: &BigInt,
         blinding_factor: &BigInt,
-    ) -> Secp256k1Point {
-        let g: Secp256k1Point = ECPoint::generator();
-        let h = Secp256k1Point::base_point2();
-        let message_scalar: Secp256k1Scalar = ECScalar::from(message);
-        let blinding_scalar: Secp256k1Scalar = ECScalar::from(blinding_factor);
+    ) -> GE {
+        let g: GE = ECPoint::generator();
+        let h = GE::base_point2();
+        let message_scalar: FE = ECScalar::from(message);
+        let blinding_scalar: FE = ECScalar::from(blinding_factor);
         let mg = g * message_scalar;
         let rh = h * blinding_scalar;
         mg + rh
     }
 
-    fn create_commitment(message: &BigInt) -> (Secp256k1Point, BigInt) {
+    fn create_commitment(message: &BigInt) -> (GE, BigInt) {
         let blinding_factor = BigInt::sample(SECURITY_BITS);
         let com = PedersenCommitment::create_commitment_with_user_defined_randomness(
             message,

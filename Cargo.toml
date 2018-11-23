@@ -10,7 +10,8 @@ crate-type = ["lib"]
 
 [features]
 curvesecp256k1 = []
-ristretto = []
+curveristretto = []
+ed25519 = []
 
 
 [dependencies]
