@@ -277,10 +277,21 @@ impl ECPoint<PK, SK> for Ed25519Point {
     fn from_bytes(bytes: &[u8]) -> Result<Ed25519Point, ErrorKey> {
         let ge_from_bytes = PK::from_bytes_negate_vartime(bytes);
         match ge_from_bytes {
-            Some(_x) => Ok(Ed25519Point {
-                purpose: "random",
-                ge: ge_from_bytes.unwrap(),
-            }),
+            Some(_x) => {
+                let vec_1: [u8; 32];
+                vec_1 = [
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 1,
+                ];
+                let v1_bn = BigInt::from(&vec_1[..]);
+                let fe_1: FE = ECScalar::from(&v1_bn);
+                let new_point = Ed25519Point {
+                    purpose: "random",
+                    ge: ge_from_bytes.unwrap(),
+                };
+                let new_point_8 = new_point.scalar_mul(&fe_1.get_element());
+                Ok(new_point_8)
+            }
             None => Err(InvalidPublicKey),
         }
     }
@@ -291,7 +302,15 @@ impl ECPoint<PK, SK> for Ed25519Point {
     }
 
     fn scalar_mul(&self, fe: &SK) -> Ed25519Point {
-        let sk_bytes = fe.to_bytes();
+        let vec_8: [u8; 32];
+        vec_8 = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 8,
+        ];
+        let v8_bn = BigInt::from(&vec_8[..]);
+        let fe_8: FE = ECScalar::from(&v8_bn);
+        let scalar_mul_8 = fe_8.get_element() * fe.clone();
+        let sk_bytes = scalar_mul_8.to_bytes();
         Ed25519Point {
             purpose: "scalar_point_mul",
             ge: ge_scalarmult_base(&sk_bytes),
@@ -476,10 +495,17 @@ mod tests {
     }
 
     #[test]
-    fn test_scalar_mul_scalar() {
-        let a: FE = ECScalar::new_random();
-        let b: FE = ECScalar::new_random();
-        let c1 = a.mul(&b.get_element());
-        assert_eq!(c1.get_element(), c1.get_element());
+    fn test_scalar_mul_multiply_by_1() {
+        let g: GE = ECPoint::generator();
+        let test_vec: [u8; 32];
+        test_vec = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 1,
+        ];
+        let tv_bn = BigInt::from(&test_vec[..]);
+        let fe: FE = ECScalar::from(&tv_bn);
+        let b_tag = &g * &fe;
+        assert_eq!(b_tag.get_element(), g.get_element());
     }
+
 }
