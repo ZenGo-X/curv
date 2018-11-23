@@ -274,6 +274,10 @@ impl ECPoint<PK, SK> for Ed25519Point {
     fn bytes_compressed_to_big_int(&self) -> BigInt {
         BigInt::from(self.ge.to_bytes()[0..self.ge.to_bytes().len()].as_ref())
     }
+
+    // we chose to multiply by 8 all group elements to work in the prime order sub group.
+    // function scalar mul takes scalar s and return 8sG.
+    // function from bytes takes byte array, convert to point R and return 8R
     fn from_bytes(bytes: &[u8]) -> Result<Ed25519Point, ErrorKey> {
         let ge_from_bytes = PK::from_bytes_negate_vartime(bytes);
         match ge_from_bytes {
