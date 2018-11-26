@@ -252,20 +252,17 @@ impl<'de> Visitor<'de> for Secp256k1ScalarVisitor {
     }
 }
 
-
 impl PartialEq for Secp256k1Scalar {
     fn eq(&self, other: &Secp256k1Scalar) -> bool {
-        self.get_element()== other.get_element()
+        self.get_element() == other.get_element()
     }
 }
 
 impl PartialEq for Secp256k1Point {
     fn eq(&self, other: &Secp256k1Point) -> bool {
-        self.get_element()== other.get_element()
+        self.get_element() == other.get_element()
     }
 }
-
-
 
 impl ECPoint<PK, SK> for Secp256k1Point {
     fn generator() -> Secp256k1Point {

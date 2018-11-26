@@ -24,7 +24,7 @@ use super::ProofError;
 /// prover calculates z1  = s1 + em, z2 = s2 + er
 /// prover sends pi = {e, A1,A2,c, z1,z2}
 ///
-/// verifier checks that z1* + z2*H  = A1 + A2 + ec
+/// verifier checks that z1*G + z2*H  = A1 + A2 + ec
 use elliptic::curves::traits::*;
 
 use cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
@@ -69,7 +69,9 @@ impl ProvePederesen for PedersenProof {
             &a1.x_coor(),
             &a2.x_coor(),
         ]);
+
         let e: FE = ECScalar::from(&challenge);
+
         let em = e.mul(&m.get_element());
         let z1 = s1.add(&em.get_element());
         let er = e.mul(&r.get_element());
@@ -95,6 +97,7 @@ impl ProvePederesen for PedersenProof {
             &proof.a2.x_coor(),
         ]);
         let e: FE = ECScalar::from(&challenge);
+
         let z1g = g.scalar_mul(&proof.z1.get_element());
         let z2h = h.scalar_mul(&proof.z2.get_element());
         let lhs = z1g.add_point(&z2h.get_element());
@@ -102,9 +105,8 @@ impl ProvePederesen for PedersenProof {
         let com_clone = proof.com.clone();
         let ecom = com_clone.scalar_mul(&e.get_element());
         let rhs = rhs.add_point(&ecom.get_element());
-        println!("lhs{:?}", lhs.clone());
-        println!("rhs{:?}", rhs.clone());
-        if lhs == rhs{
+
+        if lhs == rhs {
             Ok(())
         } else {
             Err(ProofError)
@@ -123,7 +125,6 @@ mod tests {
         let r: FE = ECScalar::new_random();
         let pedersen_proof = PedersenProof::prove(&m, &r);
         PedersenProof::verify(&pedersen_proof).expect("error pedersen");
-
     }
 
 }

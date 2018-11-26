@@ -34,8 +34,7 @@ use cryptographic_primitives::commitments::traits::Commitment;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
 
-use {FE, GE,BigInt};
-use arithmetic::traits::Converter;
+use {FE, GE};
 #[derive(Clone, PartialEq, Debug)]
 pub struct PedersenBlindingProof {
     e: FE,
@@ -68,17 +67,9 @@ impl ProvePederesenBlind for PedersenBlindingProof {
             &m.to_big_int(),
         ]);
         let e: FE = ECScalar::from(&challenge);
-     //   let e: FE = ECScalar::from(&BigInt::from(2));
 
         let er = e.mul(&r.get_element());
         let z = s.add(&er.get_element());
-        println!("challenge {:?}", challenge.to_str_radix(16).clone());
-
-        println!("challenge {:?}", BigInt::to_vec(&challenge));
-        println!("e {:?}", e.clone());
-        println!("s {:?}", s.clone());
-        println!("z {:?}", z.clone());
-        println!("er {:?}", er.clone());
 
         PedersenBlindingProof {
             e,
@@ -101,7 +92,6 @@ impl ProvePederesenBlind for PedersenBlindingProof {
         ]);
 
         let e: FE = ECScalar::from(&challenge);
-     //   let e: FE = ECScalar::from(&BigInt::from(2));
 
         let zh = h.scalar_mul(&proof.z.get_element());
         let mg = g.scalar_mul(&proof.m.get_element());
@@ -110,15 +100,6 @@ impl ProvePederesenBlind for PedersenBlindingProof {
         let com_clone = proof.com.clone();
         let ecom = com_clone.scalar_mul(&e.get_element());
         let rhs = ecom.add_point(&proof.a.get_element());
-
-        println!("e {:?}", e.clone());
-        println!("h {:?}", h.clone());
-        println!("zh {:?}", zh.clone());
-        println!("mg {:?}", mg.clone());
-        println!("emg {:?}", emg.clone());
-        println!("ecom {:?}", ecom.clone());
-        println!("lhs {:?}", lhs.clone());
-        println!("rhs {:?}", rhs.clone());
 
         if lhs == rhs {
             Ok(())
@@ -140,8 +121,6 @@ mod tests {
         let pedersen_proof = PedersenBlindingProof::prove(&m, &r);
         let _verified =
             PedersenBlindingProof::verify(&pedersen_proof).expect("error pedersen blind");
-        assert!(false);
-
     }
 
 }

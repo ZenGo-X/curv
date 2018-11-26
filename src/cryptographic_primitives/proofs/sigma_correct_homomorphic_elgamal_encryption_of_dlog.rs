@@ -80,10 +80,7 @@ impl HomoELGamalDlogProof {
         let A3_plus_eE = self.A3.clone() + delta.E.clone() * &e;
         let D_minus_Q = delta.D.sub_point(&delta.Q.get_element());
         let A2_plus_eDmQ = self.A2.clone() + D_minus_Q * &e;
-        if z1G == A1_plus_eQ
-            && z2G == A3_plus_eE
-            && z2Y == A2_plus_eDmQ
-        {
+        if z1G == A1_plus_eQ && z2G == A3_plus_eE && z2Y == A2_plus_eDmQ {
             Ok(())
         } else {
             Err(ProofError)
