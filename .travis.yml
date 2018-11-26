@@ -5,7 +5,8 @@ rust:
 
 env:
   - CURVE=curvesecp256k1
-  - CURVE=curve25519
+  - CURVE=ed25519
+  - CURVE=curveristretto
 
 before_script:
   - rustup component add rustfmt-preview
