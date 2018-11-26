@@ -26,7 +26,7 @@ use super::ProofError;
 /// prover sends pi = {e, m,A,c, z}
 ///
 
-/// verifier checks that mG* + zH  = A + ec
+/// verifier checks that emG + zH  = A + ec
 use elliptic::curves::traits::*;
 
 use cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
@@ -34,8 +34,8 @@ use cryptographic_primitives::commitments::traits::Commitment;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
 
-use {FE, GE};
-
+use {FE, GE,BigInt};
+use arithmetic::traits::Converter;
 #[derive(Clone, PartialEq, Debug)]
 pub struct PedersenBlindingProof {
     e: FE,
@@ -50,6 +50,7 @@ pub trait ProvePederesenBlind {
     fn verify(proof: &PedersenBlindingProof) -> Result<(), ProofError>;
 }
 impl ProvePederesenBlind for PedersenBlindingProof {
+    //TODO: add self verification to prover proof
     fn prove(m: &FE, r: &FE) -> PedersenBlindingProof {
         let h = GE::base_point2();
         let s: FE = ECScalar::new_random();
@@ -67,8 +68,18 @@ impl ProvePederesenBlind for PedersenBlindingProof {
             &m.to_big_int(),
         ]);
         let e: FE = ECScalar::from(&challenge);
+     //   let e: FE = ECScalar::from(&BigInt::from(2));
+
         let er = e.mul(&r.get_element());
         let z = s.add(&er.get_element());
+        println!("challenge {:?}", challenge.to_str_radix(16).clone());
+
+        println!("challenge {:?}", BigInt::to_vec(&challenge));
+        println!("e {:?}", e.clone());
+        println!("s {:?}", s.clone());
+        println!("z {:?}", z.clone());
+        println!("er {:?}", er.clone());
+
         PedersenBlindingProof {
             e,
             m: m.clone(),
@@ -88,7 +99,10 @@ impl ProvePederesenBlind for PedersenBlindingProof {
             &proof.a.x_coor(),
             &proof.m.to_big_int(),
         ]);
+
         let e: FE = ECScalar::from(&challenge);
+     //   let e: FE = ECScalar::from(&BigInt::from(2));
+
         let zh = h.scalar_mul(&proof.z.get_element());
         let mg = g.scalar_mul(&proof.m.get_element());
         let emg = mg.scalar_mul(&e.get_element());
@@ -96,7 +110,17 @@ impl ProvePederesenBlind for PedersenBlindingProof {
         let com_clone = proof.com.clone();
         let ecom = com_clone.scalar_mul(&e.get_element());
         let rhs = ecom.add_point(&proof.a.get_element());
-        if lhs.get_element() == rhs.get_element() {
+
+        println!("e {:?}", e.clone());
+        println!("h {:?}", h.clone());
+        println!("zh {:?}", zh.clone());
+        println!("mg {:?}", mg.clone());
+        println!("emg {:?}", emg.clone());
+        println!("ecom {:?}", ecom.clone());
+        println!("lhs {:?}", lhs.clone());
+        println!("rhs {:?}", rhs.clone());
+
+        if lhs == rhs {
             Ok(())
         } else {
             Err(ProofError)
@@ -116,6 +140,8 @@ mod tests {
         let pedersen_proof = PedersenBlindingProof::prove(&m, &r);
         let _verified =
             PedersenBlindingProof::verify(&pedersen_proof).expect("error pedersen blind");
+        assert!(false);
+
     }
 
 }

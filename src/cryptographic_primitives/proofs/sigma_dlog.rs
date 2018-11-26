@@ -61,7 +61,6 @@ impl ProveDLog for DLogProof {
         let challenge_fe: FE = ECScalar::from(&challenge);
         let challenge_mul_sk = challenge_fe.mul(&sk.get_element());
         let challenge_response = sk_t_rand_commitment.sub(&challenge_mul_sk.get_element());
-
         DLogProof {
             pk,
             pk_t_rand_commitment,
@@ -87,7 +86,7 @@ impl ProveDLog for DLogProof {
 
         pk_verifier = pk_verifier.add_point(&pk_challenge.get_element());
 
-        if pk_verifier.get_element() == proof.pk_t_rand_commitment.get_element() {
+        if pk_verifier == proof.pk_t_rand_commitment {
             Ok(())
         } else {
             Err(ProofError)

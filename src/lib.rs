@@ -45,10 +45,10 @@ pub use self::curveristrettoinstance::*;
 
 #[cfg(feature = "ed25519")]
 mod ed25519instance {
-    pub use elliptic::curves::curve_ristretto::FE;
-    pub use elliptic::curves::curve_ristretto::GE;
-    pub use elliptic::curves::curve_ristretto::PK;
-    pub use elliptic::curves::curve_ristretto::SK;
+    pub use elliptic::curves::ed25519::FE;
+    pub use elliptic::curves::ed25519::GE;
+    pub use elliptic::curves::ed25519::PK;
+    pub use elliptic::curves::ed25519::SK;
 }
 
 #[cfg(feature = "ed25519")]

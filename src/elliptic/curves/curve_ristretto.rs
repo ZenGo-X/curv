@@ -41,12 +41,12 @@ use ring::digest::Context;
 pub type SK = Scalar;
 pub type PK = CompressedRistretto;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug)]
 pub struct RistrettoScalar {
     purpose: &'static str,
     fe: SK,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug)]
 pub struct RistrettoCurvPoint {
     purpose: &'static str,
     ge: PK,
@@ -217,6 +217,18 @@ impl<'de> Visitor<'de> for Secp256k1ScalarVisitor {
     fn visit_str<E: de::Error>(self, s: &str) -> Result<RistrettoScalar, E> {
         let v = BigInt::from_str_radix(s, 16).expect("Failed in serde");
         Ok(ECScalar::from(&v))
+    }
+}
+
+impl PartialEq for RistrettoScalar {
+    fn eq(&self, other: &RistrettoScalar) -> bool {
+        self.get_element() == other.get_element()
+    }
+}
+
+impl PartialEq for RistrettoCurvPoint {
+    fn eq(&self, other: &RistrettoCurvPoint) -> bool {
+        self.get_element() == other.get_element()
     }
 }
 
@@ -432,6 +444,7 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
     }
 }
 
+#[cfg(feature = "curveristretto")]
 #[cfg(test)]
 mod tests {
 
@@ -447,7 +460,7 @@ mod tests {
         let rand_scalar: FE = ECScalar::new_random();
         let rand_bn = rand_scalar.to_big_int();
         let rand_scalar2: FE = ECScalar::from(&rand_bn);
-        assert_eq!(rand_scalar.get_element(), rand_scalar2.get_element());
+        assert_eq!(rand_scalar, rand_scalar2);
     }
     // this test fails once in a while.
     #[test]
@@ -464,7 +477,7 @@ mod tests {
         let point_a = base.clone() * a;
         let point_b = base.clone() * b;
         let point_ab2 = point_a.sub_point(&point_b.get_element());
-        assert_eq!(point_ab1.get_element(), point_ab2.get_element());
+        assert_eq!(point_ab1, point_ab2);
     }
 
     #[test]
@@ -487,12 +500,5 @@ mod tests {
         assert!(result.is_ok())
     }
 
-    #[test]
-    fn test_scalar_mul_scalar() {
-        let a: FE = ECScalar::new_random();
-        let b: FE = ECScalar::new_random();
-        let c1 = a.mul(&b.get_element());
-        assert_eq!(c1.get_element(), c1.get_element());
-    }
 
 }

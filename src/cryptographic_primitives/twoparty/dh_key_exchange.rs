@@ -74,6 +74,7 @@ impl Party1FirstMessage {
         let base: GE = ECPoint::generator();
 
         let secret_share: FE = ECScalar::new_random();
+        //TODO: fix
         //in Lindell's protocol range proof works only for x1<q/3
         let secret_share: FE =
             ECScalar::from(&secret_share.to_big_int().div_floor(&BigInt::from(3)));
@@ -256,7 +257,7 @@ mod tests {
             kg_comm_witness,
             &kg_party_two_first_message.d_log_proof,
         )
-        .expect("failed to verify and decommit");;
+        .expect("failed to verify and decommit");
 
         let _kg_party_two_second_message = Party2SecondMessage::verify_commitments_and_dlog_proof(
             &kg_party_one_first_message,

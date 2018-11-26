@@ -91,8 +91,7 @@ impl ProveDLog for DLogProof {
         let mut pk_verifier = base_point.scalar_mul(&sk_challenge_response.get_element());
 
         pk_verifier = pk_verifier.add_point(&pk_challenge.get_element());
-
-        if pk_verifier.get_element() == proof.pk_t_rand_commitment.get_element() {
+        if pk_verifier == proof.pk_t_rand_commitment {
             Ok(())
         } else {
             Err(ProofError)

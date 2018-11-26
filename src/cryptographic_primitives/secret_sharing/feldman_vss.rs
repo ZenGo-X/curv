@@ -44,6 +44,8 @@ impl VerifiableSS {
     pub fn share(t: usize, n: usize, secret: &FE) -> (VerifiableSS, Vec<FE>) {
         let poly = VerifiableSS::sample_polynomial(t.clone(), secret);
         let secret_shares = VerifiableSS::evaluate_polynomial(n.clone(), &poly);
+        println!("TEST");
+
         let G: GE = ECPoint::generator();
         let commitments = (0..poly.len())
             .map(|i| G.clone() * &poly[i])
@@ -74,6 +76,7 @@ impl VerifiableSS {
         (1..n + 1)
             .map(|point| {
                 let point_bn = BigInt::from(point as u32);
+
                 VerifiableSS::mod_evaluate_polynomial(coefficients, ECScalar::from(&point_bn))
             })
             .collect::<Vec<FE>>()
@@ -164,7 +167,7 @@ impl VerifiableSS {
         let head = comm_iterator.next().unwrap();
         let tail = comm_iterator;
         let comm_to_point = tail.fold(head.clone(), |acc, x: &GE| x.clone() + acc * &index_fe);
-        if ss_point.get_element() == comm_to_point.get_element() {
+        if ss_point == comm_to_point {
             Ok(())
         } else {
             Err(VerifyShareError)
@@ -215,16 +218,19 @@ mod tests {
     #[test]
     fn test_secret_sharing_3_out_of_5() {
         let secret: FE = ECScalar::new_random();
+
         let (vss_scheme, secret_shares) = VerifiableSS::share(3, 5, &secret);
+
         let mut shares_vec = Vec::new();
         shares_vec.push(secret_shares[0].clone());
         shares_vec.push(secret_shares[1].clone());
         shares_vec.push(secret_shares[2].clone());
         shares_vec.push(secret_shares[4].clone());
         //test reconstruction
-        let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 1, 2, 4], &shares_vec);
-        assert_eq!(secret.get_element(), secret_reconstructed.get_element());
 
+        let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 1, 2, 4], &shares_vec);
+
+        assert_eq!(secret, secret_reconstructed);
         // test secret shares are verifiable
         let valid3 = vss_scheme.validate_share(&secret_shares[2], &3);
         let valid1 = vss_scheme.validate_share(&secret_shares[0], &1);
@@ -243,13 +249,15 @@ mod tests {
             + l2 * secret_shares[2].clone()
             + l3 * secret_shares[3].clone()
             + l4 * secret_shares[4].clone();
-        assert_eq!(w.get_element(), secret_reconstructed.get_element());
+        assert_eq!(w, secret_reconstructed);
     }
 
     #[test]
     fn test_secret_sharing_3_out_of_7() {
         let secret: FE = ECScalar::new_random();
+
         let (vss_scheme, secret_shares) = VerifiableSS::share(3, 7, &secret);
+
         let mut shares_vec = Vec::new();
         shares_vec.push(secret_shares[0].clone());
         shares_vec.push(secret_shares[6].clone());
@@ -258,7 +266,7 @@ mod tests {
 
         //test reconstruction
         let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 6, 2, 4], &shares_vec);
-        assert_eq!(secret.get_element(), secret_reconstructed.get_element());
+        assert_eq!(secret, secret_reconstructed);
 
         // test secret shares are verifiable
         let valid3 = vss_scheme.validate_share(&secret_shares[2], &3);
@@ -278,6 +286,7 @@ mod tests {
             + l3 * secret_shares[3].clone()
             + l4 * secret_shares[4].clone()
             + l6 * secret_shares[6].clone();
-        assert_eq!(w.get_element(), secret_reconstructed.get_element());
+        assert_eq!(w, secret_reconstructed);
     }
+
 }

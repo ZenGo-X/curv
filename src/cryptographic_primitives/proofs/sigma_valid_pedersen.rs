@@ -76,8 +76,8 @@ impl ProvePederesen for PedersenProof {
         let z2 = s2.add(&er.get_element());
         PedersenProof {
             e,
-            a1: a1,
-            a2: a2,
+            a1,
+            a2,
             com,
             z1,
             z2,
@@ -102,7 +102,9 @@ impl ProvePederesen for PedersenProof {
         let com_clone = proof.com.clone();
         let ecom = com_clone.scalar_mul(&e.get_element());
         let rhs = rhs.add_point(&ecom.get_element());
-        if lhs.get_element() == rhs.get_element() {
+        println!("lhs{:?}", lhs.clone());
+        println!("rhs{:?}", rhs.clone());
+        if lhs == rhs{
             Ok(())
         } else {
             Err(ProofError)
@@ -121,6 +123,7 @@ mod tests {
         let r: FE = ECScalar::new_random();
         let pedersen_proof = PedersenProof::prove(&m, &r);
         PedersenProof::verify(&pedersen_proof).expect("error pedersen");
+
     }
 
 }

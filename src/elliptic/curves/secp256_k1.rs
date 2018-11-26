@@ -49,12 +49,12 @@ pub type EC = Secp256k1<None>;
 pub type SK = SecretKey;
 pub type PK = PublicKey;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug)]
 pub struct Secp256k1Scalar {
     purpose: String, // it has to be a non constant string for serialization
     fe: SK,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug)]
 pub struct Secp256k1Point {
     purpose: String, // it has to be a non constant string for serialization
     ge: PK,
@@ -251,6 +251,21 @@ impl<'de> Visitor<'de> for Secp256k1ScalarVisitor {
         Ok(ECScalar::from(&v))
     }
 }
+
+
+impl PartialEq for Secp256k1Scalar {
+    fn eq(&self, other: &Secp256k1Scalar) -> bool {
+        self.get_element()== other.get_element()
+    }
+}
+
+impl PartialEq for Secp256k1Point {
+    fn eq(&self, other: &Secp256k1Point) -> bool {
+        self.get_element()== other.get_element()
+    }
+}
+
+
 
 impl ECPoint<PK, SK> for Secp256k1Point {
     fn generator() -> Secp256k1Point {

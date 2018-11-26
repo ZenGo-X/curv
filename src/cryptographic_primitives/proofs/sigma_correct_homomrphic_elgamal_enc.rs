@@ -67,20 +67,27 @@ impl HomoELGamalProof {
             z1 = s1.add(&e.mul(&w.x.get_element()).get_element());
         }
         let z2 = s2.add(&e.mul(&w.r.get_element()).get_element());
+        println!("T  {:?}",T.clone());
+        println!("A3 {:?}",A3.clone());
+        println!("z1  {:?}",z1.clone());
+        println!("z2  {:?}",z2.clone());
 
         HomoELGamalProof { T, A3, z1, z2 }
     }
-
     pub fn verify(&self, delta: &HomoElGamalStatement) -> Result<(), ProofError> {
         let e = HSha256::create_hash_from_ge(&[
             &self.T, &self.A3, &delta.G, &delta.H, &delta.Y, &delta.D, &delta.E,
         ]);
-        let z1H_plus_z2Y = delta.H.clone() * &self.z1 + delta.Y.clone() * &self.z2;
+        let z1H_plus_z2Y = &delta.H * &self.z1 + &delta.Y * &self.z2;
         let T_plus_eD = self.T.clone() + delta.D.clone() * &e;
         let z2G = delta.G.clone() * &self.z2;
         let A3_plus_eE = self.A3.clone() + delta.E.clone() * &e;
-        if z1H_plus_z2Y.get_element() == T_plus_eD.get_element()
-            && z2G.get_element() == A3_plus_eE.get_element()
+        println!("z1H_plus_z2Y {:?}",z1H_plus_z2Y.clone());
+        println!("T_plus_eD {:?}",T_plus_eD.clone());
+        println!("z2G {:?}",z2G.clone());
+        println!("A3_plus_eE {:?}",A3_plus_eE.clone());
+        if z1H_plus_z2Y == T_plus_eD
+            && z2G== A3_plus_eE
         {
             Ok(())
         } else {
