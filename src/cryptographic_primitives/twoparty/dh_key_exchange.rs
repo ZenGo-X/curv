@@ -112,7 +112,6 @@ impl Party1FirstMessage {
     pub fn create_commitments_with_fixed_secret_share(
         secret_share: FE,
     ) -> (Party1FirstMessage, CommWitness, EcKeyPair) {
-
         let base: GE = ECPoint::generator();
         let public_share = base.scalar_mul(&secret_share.get_element());
 
