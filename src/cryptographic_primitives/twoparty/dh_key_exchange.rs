@@ -74,10 +74,6 @@ impl Party1FirstMessage {
         let base: GE = ECPoint::generator();
 
         let secret_share: FE = ECScalar::new_random();
-        //TODO: fix
-        //in Lindell's protocol range proof works only for x1<q/3
-        let secret_share: FE =
-            ECScalar::from(&secret_share.to_big_int().div_floor(&BigInt::from(3)));
 
         let public_share = base.scalar_mul(&secret_share.get_element());
 
@@ -116,10 +112,7 @@ impl Party1FirstMessage {
     pub fn create_commitments_with_fixed_secret_share(
         secret_share: FE,
     ) -> (Party1FirstMessage, CommWitness, EcKeyPair) {
-        //in Lindell's protocol range proof works only for x1<q/3
-        let sk_bigint = secret_share.to_big_int();
-        let q_third = FE::q();
-        assert!(&sk_bigint < &q_third.div_floor(&BigInt::from(3)));
+
         let base: GE = ECPoint::generator();
         let public_share = base.scalar_mul(&secret_share.get_element());
 
