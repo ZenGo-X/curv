@@ -292,7 +292,7 @@ impl ECPoint<PK, SK> for RistrettoCurvPoint {
                 bytes_array_32.copy_from_slice(&bytes_slice);
                 let r_point: PK = CompressedRistretto::from_slice(&bytes_array_32);
                 let r_point_compress = r_point.decompress();
-                match r_point_compress{
+                match r_point_compress {
                     Some(x) => {
                         let new_point = RistrettoCurvPoint {
                             purpose: "random",
@@ -310,17 +310,16 @@ impl ECPoint<PK, SK> for RistrettoCurvPoint {
                 bytes_array_32.copy_from_slice(&bytes_slice);
                 let r_point: PK = CompressedRistretto::from_slice(&bytes_array_32);
                 let r_point_compress = r_point.decompress();
-                match r_point_compress{
+                match r_point_compress {
                     Some(x) => {
-                    let new_point = RistrettoCurvPoint {
-                    purpose: "random",
-                    ge: x.compress(),
-                };
-                Ok(new_point)
-            }
-            None => Err(InvalidPublicKey),
+                        let new_point = RistrettoCurvPoint {
+                            purpose: "random",
+                            ge: x.compress(),
+                        };
+                        Ok(new_point)
+                    }
+                    None => Err(InvalidPublicKey),
                 }
-
             }
         }
     }
@@ -463,12 +462,12 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
 mod tests {
 
     use super::RistrettoCurvPoint;
+    use arithmetic::traits::Converter;
     use arithmetic::traits::Modulo;
     use elliptic::curves::traits::ECPoint;
     use elliptic::curves::traits::ECScalar;
     use BigInt;
     use {FE, GE};
-    use arithmetic::traits::Converter;
 
     #[test]
     fn test_from_mpz() {
@@ -480,8 +479,8 @@ mod tests {
 
     #[test]
     fn test_from_slice() {
-        let point: GE  = GE::base_point2();
-        let point_bn  = point.bytes_compressed_to_big_int();
+        let point: GE = GE::base_point2();
+        let point_bn = point.bytes_compressed_to_big_int();
         let point_bytes = BigInt::to_vec(&point_bn);
         let point_reconstruct = GE::from_bytes(&point_bytes[..]).expect("bad encoding of point");
         assert_eq!(point_reconstruct, point);
@@ -490,11 +489,13 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_from_slice_bad_point() {
-       // let rng = &mut thread_rng();
-      //  rng.fill(&mut scalar_bytes);
-       let scalar_bytes = [47, 99, 244, 119, 185, 184, 77, 196, 233, 191, 206, 168, 191, 24, 226, 7, 254, 11, 131, 172, 57, 35, 110, 9, 103, 25, 98, 249, 219, 248, 33, 115];
+        // let rng = &mut thread_rng();
+        //  rng.fill(&mut scalar_bytes);
+        let scalar_bytes = [
+            47, 99, 244, 119, 185, 184, 77, 196, 233, 191, 206, 168, 191, 24, 226, 7, 254, 11, 131,
+            172, 57, 35, 110, 9, 103, 25, 98, 249, 219, 248, 33, 115,
+        ];
         GE::from_bytes(&scalar_bytes[..]).expect("bad encoding of point");
-
     }
     // this test fails once in a while.
     #[test]
