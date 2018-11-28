@@ -48,7 +48,6 @@ pub struct ECDDHWitness {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct ECDDHProof {
-    e: FE,
     a1: GE,
     a2: GE,
     z: FE,
@@ -71,14 +70,17 @@ impl NISigmaProof<ECDDHProof, ECDDHWitness, ECDDHStatement> for ECDDHProof {
             &delta.g1, &delta.h1, &delta.g2, &delta.h2, &a1, &a2,
         ]);
         let z = s + e.clone() * &w.x;
-        ECDDHProof { e, a1, a2, z }
+        ECDDHProof { a1, a2, z }
     }
 
     fn verify(&self, delta: &ECDDHStatement) -> Result<(), ProofError> {
+        let e = HSha256::create_hash_from_ge(&vec![
+            &delta.g1, &delta.h1, &delta.g2, &delta.h2, &self.a1, &self.a2,
+        ]);
         let z_g1 = &delta.g1 * &self.z;
         let z_g2 = &delta.g2 * &self.z;
-        let a1_plus_e_h1 = self.a1.clone() + &delta.h1 * &self.e;
-        let a2_plus_e_h2 = self.a2.clone() + &delta.h2 * &self.e;
+        let a1_plus_e_h1 = self.a1.clone() + &delta.h1 * &e;
+        let a2_plus_e_h2 = self.a2.clone() + &delta.h2 * &e;
         if z_g1 == a1_plus_e_h1 && z_g2 == a2_plus_e_h2 {
             Ok(())
         } else {
