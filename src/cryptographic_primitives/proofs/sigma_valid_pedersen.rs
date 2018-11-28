@@ -14,8 +14,12 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 
 */
-// TODO: abstract for use with elliptic curves other than secp256k1
+
 use super::ProofError;
+use cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
+use cryptographic_primitives::commitments::traits::Commitment;
+use cryptographic_primitives::hashing::hash_sha256::HSha256;
+use cryptographic_primitives::hashing::traits::Hash;
 /// protocol for proving that Pedersen commitment c was constructed correctly which is the same as
 /// proof of knowledge of (m,r) such that c = mG + rH.
 /// witness: (m,r), statement: c, The Relation R outputs 1 if c = mG + rH. The protocol:
@@ -26,13 +30,8 @@ use super::ProofError;
 ///
 /// verifier checks that z1*G + z2*H  = A1 + A2 + ec
 use elliptic::curves::traits::*;
-
-use cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
-use cryptographic_primitives::commitments::traits::Commitment;
-use cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptographic_primitives::hashing::traits::Hash;
-
 use {FE, GE};
+
 #[derive(Clone, PartialEq, Debug)]
 pub struct PedersenProof {
     e: FE,

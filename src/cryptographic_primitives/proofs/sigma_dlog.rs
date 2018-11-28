@@ -105,8 +105,14 @@ mod tests {
         let dlog_proof = DLogProof::prove(&witness);
         let verified = DLogProof::verify(&dlog_proof);
         match verified {
-            Ok(_t) => println!("OK"),
-            Err(_e) => println!("error"),
+            Ok(_t) => {
+                println!("OK");
+                assert!(true)
+            }
+            Err(_e) => {
+                println!("error");
+                assert!(false)
+            }
         }
     }
 
