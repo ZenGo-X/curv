@@ -17,7 +17,7 @@
 
 use super::curve25519_dalek::constants::BASEPOINT_ORDER;
 use super::curve25519_dalek::constants::RISTRETTO_BASEPOINT_COMPRESSED;
-use super::curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
+use super::curve25519_dalek::ristretto::CompressedRistretto;
 use super::curve25519_dalek::scalar::Scalar;
 use super::rand::thread_rng;
 use super::traits::{ECPoint, ECScalar};
@@ -32,7 +32,7 @@ use serde::{Deserialize, Deserializer};
 use std::fmt;
 use std::ops::{Add, Mul};
 use BigInt;
-use ErrorKey;
+use ErrorKey::{self, InvalidPublicKey};
 pub const SECRET_KEY_SIZE: usize = 32;
 pub const COOR_BYTE_SIZE: usize = 32;
 pub const NUM_OF_COORDINATES: usize = 4;
@@ -281,32 +281,46 @@ impl ECPoint<PK, SK> for RistrettoCurvPoint {
     }
     fn from_bytes(bytes: &[u8]) -> Result<RistrettoCurvPoint, ErrorKey> {
         let bytes_vec = bytes.to_vec();
-        let mut bytes_array_64 = [0u8; 64];
+        let mut bytes_array_32 = [0u8; 32];
         let byte_len = bytes_vec.len();
         match byte_len {
-            0...63 => {
-                let mut template = vec![0; 64 - bytes_vec.len()];
+            0...31 => {
+                let mut template = vec![0; 31 - bytes_vec.len()];
                 template.extend_from_slice(&bytes);
                 let bytes_vec = template;
-                let bytes_slice = &bytes_vec[0..64];
-                bytes_array_64.copy_from_slice(&bytes_slice);
-                let r_point = RistrettoPoint::from_uniform_bytes(&bytes_array_64);
-                let r_point_compress = r_point.compress();
-                Ok(RistrettoCurvPoint {
-                    purpose: "random",
-                    ge: r_point_compress,
-                })
+                let bytes_slice = &bytes_vec[0..31];
+                bytes_array_32.copy_from_slice(&bytes_slice);
+                let r_point: PK = CompressedRistretto::from_slice(&bytes_array_32);
+                let r_point_compress = r_point.decompress();
+                match r_point_compress{
+                    Some(x) => {
+                        let new_point = RistrettoCurvPoint {
+                            purpose: "random",
+                            ge: x.compress(),
+                        };
+                        Ok(new_point)
+                    }
+                    None => Err(InvalidPublicKey),
+                }
             }
 
             _ => {
-                let bytes_slice = &bytes_vec[0..64];
-                bytes_array_64.copy_from_slice(&bytes_slice);
-                let r_point = RistrettoPoint::from_uniform_bytes(&bytes_array_64);
-                let r_point_compress = r_point.compress();
-                Ok(RistrettoCurvPoint {
+                let bytes_slice = &bytes_vec[0..32];
+                bytes_array_32.copy_from_slice(&bytes_slice);
+                bytes_array_32.copy_from_slice(&bytes_slice);
+                let r_point: PK = CompressedRistretto::from_slice(&bytes_array_32);
+                let r_point_compress = r_point.decompress();
+                match r_point_compress{
+                    Some(x) => {
+                    let new_point = RistrettoCurvPoint {
                     purpose: "random",
-                    ge: r_point_compress,
-                })
+                    ge: x.compress(),
+                };
+                Ok(new_point)
+            }
+            None => Err(InvalidPublicKey),
+                }
+
             }
         }
     }
@@ -454,6 +468,7 @@ mod tests {
     use elliptic::curves::traits::ECScalar;
     use BigInt;
     use {FE, GE};
+    use arithmetic::traits::Converter;
 
     #[test]
     fn test_from_mpz() {
@@ -461,6 +476,25 @@ mod tests {
         let rand_bn = rand_scalar.to_big_int();
         let rand_scalar2: FE = ECScalar::from(&rand_bn);
         assert_eq!(rand_scalar, rand_scalar2);
+    }
+
+    #[test]
+    fn test_from_slice() {
+        let point: GE  = GE::base_point2();
+        let point_bn  = point.bytes_compressed_to_big_int();
+        let point_bytes = BigInt::to_vec(&point_bn);
+        let point_reconstruct = GE::from_bytes(&point_bytes[..]).expect("bad encoding of point");
+        assert_eq!(point_reconstruct, point);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_from_slice_bad_point() {
+       // let rng = &mut thread_rng();
+      //  rng.fill(&mut scalar_bytes);
+       let scalar_bytes = [47, 99, 244, 119, 185, 184, 77, 196, 233, 191, 206, 168, 191, 24, 226, 7, 254, 11, 131, 172, 57, 35, 110, 9, 103, 25, 98, 249, 219, 248, 33, 115];
+        GE::from_bytes(&scalar_bytes[..]).expect("bad encoding of point");
+
     }
     // this test fails once in a while.
     #[test]
