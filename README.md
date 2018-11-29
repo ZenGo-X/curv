@@ -18,6 +18,7 @@ __Supported Primitives__:
 * **Secret Sharing**: Feldman VSS
 * **Sigma Protocols:** 
   * Proof of knowledge of EC-DLog
+  * Proof of membership of EC-DDH
   * Proof of correct Pedersen
   * Proof of correct Homomorphic ElGamal
 * **Two Party Protocols:**
