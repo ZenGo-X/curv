@@ -307,7 +307,6 @@ impl ECPoint<PK, SK> for RistrettoCurvPoint {
             _ => {
                 let bytes_slice = &bytes_vec[0..32];
                 bytes_array_32.copy_from_slice(&bytes_slice);
-                bytes_array_32.copy_from_slice(&bytes_slice);
                 let r_point: PK = CompressedRistretto::from_slice(&bytes_array_32);
                 let r_point_compress = r_point.decompress();
                 match r_point_compress {

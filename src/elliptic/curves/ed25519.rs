@@ -311,23 +311,52 @@ impl ECPoint<PK, SK> for Ed25519Point {
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Ed25519Point, ErrorKey> {
-        let ge_from_bytes = PK::from_bytes_negate_vartime(bytes);
-        match ge_from_bytes {
-            Some(_x) => {
-                let ge_bytes = ge_from_bytes.unwrap().to_bytes();
-                let ge_from_bytes = PK::from_bytes_negate_vartime(&ge_bytes[..]);
+        let bytes_vec = bytes.to_vec();
+        let mut bytes_array_32 = [0u8; 32];
+        let byte_len = bytes_vec.len();
+        match byte_len {
+            0...32 => {
+                let ge_from_bytes = PK::from_bytes_negate_vartime(bytes);
                 match ge_from_bytes {
-                    Some(y) => {
-                        let new_point = Ed25519Point {
-                            purpose: "random",
-                            ge: y,
-                        };
-                        Ok(new_point)
+                    Some(_x) => {
+                        let ge_bytes = ge_from_bytes.unwrap().to_bytes();
+                        let ge_from_bytes = PK::from_bytes_negate_vartime(&ge_bytes[..]);
+                        match ge_from_bytes {
+                            Some(y) => {
+                                let new_point = Ed25519Point {
+                                    purpose: "random",
+                                    ge: y,
+                                };
+                                Ok(new_point)
+                            }
+                            None => Err(InvalidPublicKey),
+                        }
                     }
                     None => Err(InvalidPublicKey),
                 }
             }
-            None => Err(InvalidPublicKey),
+            _ => {
+                let bytes_slice = &bytes_vec[0..32];
+                bytes_array_32.copy_from_slice(&bytes_slice);
+                let ge_from_bytes = PK::from_bytes_negate_vartime(bytes);
+                match ge_from_bytes {
+                    Some(_x) => {
+                        let ge_bytes = ge_from_bytes.unwrap().to_bytes();
+                        let ge_from_bytes = PK::from_bytes_negate_vartime(&ge_bytes[..]);
+                        match ge_from_bytes {
+                            Some(y) => {
+                                let new_point = Ed25519Point {
+                                    purpose: "random",
+                                    ge: y,
+                                };
+                                Ok(new_point)
+                            }
+                            None => Err(InvalidPublicKey),
+                        }
+                    }
+                    None => Err(InvalidPublicKey),
+                }
+            }
         }
     }
 
