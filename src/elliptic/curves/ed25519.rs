@@ -311,16 +311,21 @@ impl ECPoint<PK, SK> for Ed25519Point {
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Ed25519Point, ErrorKey> {
-        let ge_from_bytes = PK::from_bytes_negate_vartime(bytes).unwrap();
-        let ge_bytes = ge_from_bytes.to_bytes();
-        let ge_from_bytes = PK::from_bytes_negate_vartime(&ge_bytes[..]);
+        let ge_from_bytes = PK::from_bytes_negate_vartime(bytes);
         match ge_from_bytes {
-            Some(x) => {
-                let new_point = Ed25519Point {
-                    purpose: "random",
-                    ge: x,
-                };
-                Ok(new_point)
+            Some(_x) => {
+                let ge_bytes = ge_from_bytes.unwrap().to_bytes();
+                let ge_from_bytes = PK::from_bytes_negate_vartime(&ge_bytes[..]);
+                match ge_from_bytes {
+                    Some(y) => {
+                        let new_point = Ed25519Point {
+                            purpose: "random",
+                            ge: y,
+                        };
+                        Ok(new_point)
+                    }
+                    None => Err(InvalidPublicKey),
+                }
             }
             None => Err(InvalidPublicKey),
         }
