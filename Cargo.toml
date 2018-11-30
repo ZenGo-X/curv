@@ -1,9 +1,7 @@
 [package]
-name = "cryptography-utils"
+name = "curv"
 version = "0.1.0"
-authors = [
-    "Gary <gary@kzencorp.com>"
-]
+
 
 [lib]
 crate-type = ["lib"]
