@@ -310,6 +310,12 @@ impl ECPoint<PK, SK> for Ed25519Point {
         BigInt::from(self.ge.to_bytes()[0..self.ge.to_bytes().len()].as_ref())
     }
 
+    // from_bytes will return Ok only if the bytes encode a valid point.
+    // since valid point are not necessarily in the sub group of prime order this needs to be checked
+    // as well such that Ok will be returned only for valid point of the sub group prime order.
+    // currently we change the encoded point by multiply by 8 to make sure it is in the sub group of prime order.
+    // This is because for our use cases so far it doesn't matter and multiply by 8 is faster than testing for a point
+    // in the sub group prime order
     fn from_bytes(bytes: &[u8]) -> Result<Ed25519Point, ErrorKey> {
         let bytes_vec = bytes.to_vec();
         let mut bytes_array_32 = [0u8; 32];
