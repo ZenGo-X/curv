@@ -316,7 +316,12 @@ impl ECPoint<PK, SK> for Ed25519Point {
         let byte_len = bytes_vec.len();
         match byte_len {
             0...32 => {
-                let ge_from_bytes = PK::from_bytes_negate_vartime(bytes);
+                let mut template = vec![0; 32 - byte_len];
+                template.extend_from_slice(&bytes);
+                let bytes_vec = template;
+                let bytes_slice = &bytes_vec[0..32];
+                bytes_array_32.copy_from_slice(&bytes_slice);
+                let ge_from_bytes = PK::from_bytes_negate_vartime(&bytes_array_32);
                 match ge_from_bytes {
                     Some(_x) => {
                         let ge_bytes = ge_from_bytes.unwrap().to_bytes();
@@ -607,7 +612,15 @@ mod tests {
 
         assert_eq!(a_inv_bn_1, a_inv_bn_2);
     }
-
+    #[test]
+    fn test_from_bytes_2() {
+        let test_vec = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5,
+            6,
+        ];
+        let result = Ed25519Point::from_bytes(&test_vec);
+        assert!(result.is_ok())
+    }
     #[test]
     fn test_from_bytes_3() {
         let test_vec = [
