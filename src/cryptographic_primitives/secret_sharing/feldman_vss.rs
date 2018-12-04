@@ -160,14 +160,17 @@ impl VerifiableSS {
 
     pub fn validate_share(&self, secret_share: &FE, index: &usize) -> Result<(), (ErrorSS)> {
         let G: GE = ECPoint::generator();
-        let index_fe: FE = ECScalar::from(&BigInt::from(index.clone() as u32));
         let ss_point = G.clone() * secret_share;
-        //  let comm_vec = &self.commitments.clone();
+        self.validate_share_public(&ss_point, index)
+    }
+
+    pub fn validate_share_public(&self, ss_point: &GE, index: &usize) -> Result<(), (ErrorSS)> {
+        let index_fe: FE = ECScalar::from(&BigInt::from(index.clone() as u32));
         let mut comm_iterator = self.commitments.iter().rev();
         let head = comm_iterator.next().unwrap();
         let tail = comm_iterator;
         let comm_to_point = tail.fold(head.clone(), |acc, x: &GE| x.clone() + acc * &index_fe);
-        if ss_point == comm_to_point {
+        if ss_point.clone() == comm_to_point {
             Ok(())
         } else {
             Err(VerifyShareError)
@@ -213,7 +216,7 @@ impl VerifiableSS {
 #[cfg(test)]
 mod tests {
     use cryptographic_primitives::secret_sharing::feldman_vss::*;
-    use FE;
+    use {FE, GE};
 
     #[test]
     fn test_secret_sharing_3_out_of_5() {
@@ -236,6 +239,11 @@ mod tests {
         let valid1 = vss_scheme.validate_share(&secret_shares[0], &1);
         assert!(valid3.is_ok());
         assert!(valid1.is_ok());
+
+        let g: GE = GE::generator();
+        let share1_public = g * &secret_shares[0];
+        let valid1_public = vss_scheme.validate_share_public(&share1_public, &1);
+        assert!(valid1_public.is_ok());
 
         // test map (t,n) - (t',t')
         let s = &vec![0, 1, 2, 3, 4];
