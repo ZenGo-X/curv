@@ -56,8 +56,6 @@ mod tests {
     use arithmetic::traits::Samplable;
     use BigInt;
 
-    // the first two test are probabilistic tests
-    /*
     #[test]
     fn test_bit_length_create_commitment() {
         let hex_len = SECURITY_BITS;
@@ -82,7 +80,7 @@ mod tests {
         assert!(ctr_commit_len / sample_size > 0.3);
         assert!(ctr_blind_len / sample_size > 0.3);
     }
-    
+
     #[test]
     fn test_bit_length_create_commitment_with_user_defined_randomness() {
         let message = BigInt::sample(SECURITY_BITS);
@@ -91,7 +89,6 @@ mod tests {
             HashCommitment::create_commitment_with_user_defined_randomness(&message, &blind_factor);
         assert_eq!(commitment2.to_str_radix(16).len(), SECURITY_BITS / 4);
     }
-    */
 
     #[test]
     fn test_random_num_generation_create_commitment_with_user_defined_randomness() {
