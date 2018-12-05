@@ -44,7 +44,6 @@ impl VerifiableSS {
     pub fn share(t: usize, n: usize, secret: &FE) -> (VerifiableSS, Vec<FE>) {
         let poly = VerifiableSS::sample_polynomial(t.clone(), secret);
         let secret_shares = VerifiableSS::evaluate_polynomial(n.clone(), &poly);
-        println!("TEST");
 
         let G: GE = ECPoint::generator();
         let commitments = (0..poly.len())
