@@ -48,9 +48,9 @@ pub struct ECDDHWitness {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct ECDDHProof {
-    a1: GE,
-    a2: GE,
-    z: FE,
+    pub a1: GE,
+    pub a2: GE,
+    pub z: FE,
 }
 
 // TODO: move to super and use in other sigma protocols
