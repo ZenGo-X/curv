@@ -47,6 +47,5 @@ mod tests {
     fn create_hmac_test() {
         let key = BigInt::sample(512);
         let result = HMacSha512::create_hmac(&key, &vec![&BigInt::from(10)]);
-        println!("HMAC: {:?}", result.to_str_radix(16));
     }
 }
