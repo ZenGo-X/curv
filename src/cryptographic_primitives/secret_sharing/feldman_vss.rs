@@ -43,7 +43,35 @@ impl VerifiableSS {
     // generate VerifiableSS from a secret
     pub fn share(t: usize, n: usize, secret: &FE) -> (VerifiableSS, Vec<FE>) {
         let poly = VerifiableSS::sample_polynomial(t.clone(), secret);
-        let secret_shares = VerifiableSS::evaluate_polynomial(n.clone(), &poly);
+        let index_vec: Vec<usize> = (1..n.clone() + 1).collect();
+        let secret_shares = VerifiableSS::evaluate_polynomial(&poly, &index_vec);
+
+        let G: GE = ECPoint::generator();
+        let commitments = (0..poly.len())
+            .map(|i| G.clone() * &poly[i])
+            .collect::<Vec<GE>>();
+        (
+            VerifiableSS {
+                parameters: ShamirSecretSharing {
+                    threshold: t.clone(),
+                    share_count: n.clone(),
+                },
+                commitments,
+            },
+            secret_shares,
+        )
+    }
+
+    // generate VerifiableSS from a secret and user defined x values (in case user wants to distribute point f(1), f(4), f(6) and not f(1),f(2),f(3))
+    pub fn share_at_indices(
+        t: usize,
+        n: usize,
+        secret: &FE,
+        index_vec: &[usize],
+    ) -> (VerifiableSS, Vec<FE>) {
+        assert_eq!(n, index_vec.len());
+        let poly = VerifiableSS::sample_polynomial(t.clone(), secret);
+        let secret_shares = VerifiableSS::evaluate_polynomial(&poly, index_vec);
 
         let G: GE = ECPoint::generator();
         let commitments = (0..poly.len())
@@ -71,10 +99,10 @@ impl VerifiableSS {
         coefficients
     }
 
-    pub fn evaluate_polynomial(n: usize, coefficients: &[FE]) -> Vec<FE> {
-        (1..n + 1)
+    pub fn evaluate_polynomial(coefficients: &[FE], index_vec: &[usize]) -> Vec<FE> {
+        (0..index_vec.len())
             .map(|point| {
-                let point_bn = BigInt::from(point as u32);
+                let point_bn = BigInt::from(index_vec[point] as u32);
 
                 VerifiableSS::mod_evaluate_polynomial(coefficients, ECScalar::from(&point_bn))
             })
