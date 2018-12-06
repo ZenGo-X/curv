@@ -46,7 +46,7 @@ pub struct ECDDHWitness {
     pub x: FE,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct ECDDHProof {
     pub a1: GE,
     pub a2: GE,
