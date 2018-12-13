@@ -363,7 +363,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         let mut v = vec![4 as u8];
 
         v.extend(BigInt::to_vec(&self.x_coor()));
-        v.extend(BigInt::to_vec(&self.x_coor()));
+        v.extend(BigInt::to_vec(&self.y_coor()));
         v
     }
 
@@ -622,6 +622,30 @@ mod tests {
 
     use elliptic::curves::secp256_k1::{FE, GE};
     use ErrorKey;
+
+    #[test]
+    fn test_serdes_pk() {
+        let pk = GE::generator();
+        let s = serde_json::to_string(&pk).expect("Failed in serialization");
+        let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
+        assert_eq!(des_pk, pk);
+
+        let pk = GE::base_point2();
+        let s = serde_json::to_string(&pk).expect("Failed in serialization");
+        let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
+        assert_eq!(des_pk, pk);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_serdes_bad_pk() {
+        let pk = GE::generator();
+        let s = serde_json::to_string(&pk).expect("Failed in serialization");
+        // we make sure that the string encodes invalid point:
+        let s: String = s.replace("79be", "79bf");
+        let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
+        assert_eq!(des_pk, pk);
+    }
 
     #[test]
     fn test_from_bytes() {

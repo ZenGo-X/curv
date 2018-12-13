@@ -17,8 +17,8 @@
 // paper: https://ed25519.cr.yp.to/ed25519-20110926.pdf
 // based on https://docs.rs/cryptoxide/0.1.0/cryptoxide/curve25519/index.html
 // https://cr.yp.to/ecdh/curve25519-20060209.pdf
-
 use std::fmt::Debug;
+use std::str;
 pub const SECRET_KEY_SIZE: usize = 32;
 use super::cryptoxide::curve25519::*;
 use super::rand::{thread_rng, Rng};
@@ -478,9 +478,10 @@ impl Serialize for Ed25519Point {
     where
         S: Serializer,
     {
-        let mut state = serializer.serialize_struct("ed25519CurvPoint", 2)?;
-        state.serialize_field("x", &self.x_coor().to_hex())?;
-        state.serialize_field("y", &self.y_coor().to_hex())?;
+        let bytes = self.pk_to_key_slice();
+        let bytes_as_bn = BigInt::from(&bytes[..]);
+        let mut state = serializer.serialize_struct("ed25519CurvePoint", 1)?;
+        state.serialize_field("bytes_str", &bytes_as_bn.to_hex())?;
         state.end()
     }
 }
@@ -504,22 +505,21 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
     }
 
     fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<Ed25519Point, E::Error> {
-        let mut x = String::new();
-        let mut y = String::new();
+        let mut bytes_str: String = "".to_string();
 
         while let Some(key) = map.next_key::<&'de str>()? {
             let v = map.next_value::<&'de str>()?;
             match key.as_ref() {
-                "x" => x = String::from(v),
-                "y" => y = String::from(v),
-                _ => panic!("Serialization failed!"),
+                "bytes_str" => {
+                    bytes_str = String::from(v);
+                }
+                _ => panic!("deSerialization failed!"),
             }
         }
-
-        let bx = BigInt::from_hex(&x);
-        let by = BigInt::from_hex(&y);
-
-        Ok(Ed25519Point::from_coor(&bx, &by))
+        let bytes_bn = BigInt::from_hex(&bytes_str);
+        let bytes = BigInt::to_vec(&bytes_bn);
+        // println!("bytes des {:?}", bytes.clone());
+        Ok(Ed25519Point::from_bytes(&bytes[..]).expect("error deserializing point"))
     }
 }
 
@@ -530,8 +530,36 @@ mod tests {
     use arithmetic::traits::Modulo;
     use elliptic::curves::traits::ECPoint;
     use elliptic::curves::traits::ECScalar;
+    use serde_json;
     use BigInt;
     use {FE, GE};
+
+    #[test]
+    fn test_serdes_pk() {
+        let pk = GE::generator();
+        let s = serde_json::to_string(&pk).expect("Failed in serialization");
+        let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
+        let eight = ECScalar::from(&BigInt::from(8));
+        assert_eq!(des_pk, pk * &eight);
+
+        let pk = GE::base_point2();
+        let s = serde_json::to_string(&pk).expect("Failed in serialization");
+        let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
+        let eight = ECScalar::from(&BigInt::from(8));
+        assert_eq!(des_pk, pk * &eight);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_serdes_bad_pk() {
+        let pk = GE::generator();
+        let s = serde_json::to_string(&pk).expect("Failed in serialization");
+        // we make sure that the string encodes invalid point:
+        let s: String = s.replace("5866", "5867");
+        let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
+        let eight = ECScalar::from(&BigInt::from(8));
+        assert_eq!(des_pk, pk * &eight);
+    }
 
     #[test]
     fn test_from_mpz() {
