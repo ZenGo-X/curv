@@ -27,7 +27,7 @@ use elliptic::curves::traits::*;
 use FE;
 use GE;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct HomoELGamalProof {
     pub T: GE,
     pub A3: GE,
@@ -35,13 +35,13 @@ pub struct HomoELGamalProof {
     pub z2: FE,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct HomoElGamalWitness {
     pub r: FE,
     pub x: FE,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct HomoElGamalStatement {
     pub G: GE,
     pub H: GE,
