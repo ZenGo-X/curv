@@ -27,7 +27,7 @@ __Supported Primitives__:
  
 ### Adding An Elliptic Curve
 To add support of this primitives to new elliptic curve the following interfaces (trait) needs to be fulfilled for field element and group element: 
-```
+```Rust
 pub trait ECScalar<SK> {
     fn new_random() -> Self;
     fn zero() -> Self;
