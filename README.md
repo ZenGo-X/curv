@@ -61,7 +61,7 @@ where
 }
 ```
 
-__Build__: 
+###  Build
 
 This library has no default elliptic curve, therefore a feature must be specified in order to choose one:
 - `cargo build --features=curvesecp256k1` for secp256k1
