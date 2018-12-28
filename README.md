@@ -60,6 +60,14 @@ where
     fn from_coor(x: &BigInt, y: &BigInt) -> Self;
 }
 ```
+
+__Build__: 
+
+This library has no default elliptic curve, therefore a feature must be specified in order to choose one:
+- `cargo build --features=curvesecp256k1` for secp256k1
+- `cargo build --features=ed25519` for ed25519
+- `cargo build --features=curveristretto` for ristretto
+
 License
 -------
 Cryptography utilities is released under the terms of the GPL-3.0 license. See [LICENSE](LICENSE) for more information.
