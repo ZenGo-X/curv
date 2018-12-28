@@ -35,7 +35,7 @@ use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
 
 use {FE, GE};
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct PedersenBlindingProof {
     e: FE,
     pub m: FE,

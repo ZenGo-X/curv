@@ -24,16 +24,16 @@ use cryptographic_primitives::proofs::sigma_valid_pedersen_blind::PedersenBlindi
 use cryptographic_primitives::proofs::sigma_valid_pedersen_blind::ProvePederesenBlind;
 use elliptic::curves::traits::*;
 use {FE, GE};
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Party1FirstMessage {
     pub proof: PedersenProof,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Party2FirstMessage {
     pub seed: FE,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Party1SecondMessage {
     pub proof: PedersenBlindingProof,
     pub seed: FE,

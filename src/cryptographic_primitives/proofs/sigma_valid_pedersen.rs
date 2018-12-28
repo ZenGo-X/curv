@@ -32,7 +32,7 @@ use cryptographic_primitives::hashing::traits::Hash;
 use elliptic::curves::traits::*;
 use {FE, GE};
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct PedersenProof {
     e: FE,
     a1: GE,
