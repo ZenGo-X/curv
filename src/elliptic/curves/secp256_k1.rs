@@ -1,20 +1,19 @@
 #![allow(non_snake_case)]
 /*
-    Cryptography utilities
+    Curv
 
     Copyright 2018 by Kzen Networks
 
-    This file is part of Cryptography utilities library
-    (https://github.com/KZen-networks/cryptography-utils)
+    This file is part of curv library
+    (https://github.com/KZen-networks/curv)
 
     Cryptography utilities is free software: you can redistribute
     it and/or modify it under the terms of the GNU General Public
     License as published by the Free Software Foundation, either
     version 3 of the License, or (at your option) any later version.
 
-    @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
+    @license GPL-3.0+ <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
-
 // Secp256k1 elliptic curve utility functions (se: https://en.bitcoin.it/wiki/Secp256k1).
 //
 // In Cryptography utilities, we need to manipulate low level elliptic curve members as Point
@@ -29,7 +28,7 @@ use super::rand::{thread_rng, Rng};
 use super::secp256k1::constants::{
     CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
-use super::secp256k1::{key, None, PublicKey, Secp256k1, SecretKey};
+use super::secp256k1::{PublicKey, Secp256k1, SecretKey};
 use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::{Converter, Modulo};
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
@@ -45,7 +44,6 @@ use std::fmt;
 use std::ops::{Add, Mul};
 use BigInt;
 use ErrorKey;
-pub type EC = Secp256k1<None>;
 pub type SK = SecretKey;
 pub type PK = PublicKey;
 
@@ -86,7 +84,7 @@ impl Secp256k1Point {
         template.append(&mut hash_vec);
         Secp256k1Point {
             purpose: "random".to_string(),
-            ge: PK::from_slice(&EC::without_caps(), &template).unwrap(),
+            ge: PK::from_slice(&template).unwrap(),
         }
     }
 }
@@ -97,15 +95,17 @@ impl ECScalar<SK> for Secp256k1Scalar {
         thread_rng().fill(&mut arr[..]);
         Secp256k1Scalar {
             purpose: "random".to_string(),
-            //fe: SK::new( & EC::without_caps(), &mut csprng)
-            fe: SK::from_slice(&EC::without_caps(), &arr[0..arr.len()]).unwrap(), // fe: SK::new( & EC::without_caps(), &mut thread_rng())
+            fe: SK::from_slice(&arr[0..arr.len()]).unwrap(),
         }
     }
 
+    // open discussion with Andrew Poelstra. ZERO_KEY was removed from last version so we used transmute
     fn zero() -> Secp256k1Scalar {
+        let zero_arr = [0u8; 32];
+        let zero = unsafe { std::mem::transmute::<[u8; 32], SecretKey>(zero_arr) };
         Secp256k1Scalar {
             purpose: "zero".to_string(),
-            fe: key::ZERO_KEY,
+            fe: zero,
         }
     }
 
@@ -130,7 +130,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
 
         Secp256k1Scalar {
             purpose: "from_big_int".to_string(),
-            fe: SK::from_slice(&EC::without_caps(), &v).unwrap(),
+            fe: SK::from_slice(&v).unwrap(),
         }
     }
 
@@ -271,12 +271,18 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         v.extend(GENERATOR_Y.as_ref());
         Secp256k1Point {
             purpose: "base_fe".to_string(),
-            ge: PK::from_slice(&Secp256k1::without_caps(), &v).unwrap(),
+            ge: PK::from_slice(&v).unwrap(),
         }
     }
 
     fn get_element(&self) -> PK {
         self.ge
+    }
+
+    fn bytes_compressed_to_big_int(&self) -> BigInt {
+        let serial = self.ge.serialize();
+        let result = BigInt::from(&serial[0..33]);
+        return result;
     }
 
     fn x_coor(&self) -> BigInt {
@@ -291,12 +297,6 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         let y = &serialized_pk[(serialized_pk.len() - 1) / 2 + 1..serialized_pk.len()];
         let y_vec = y.to_vec();
         BigInt::from(&y_vec[..])
-    }
-
-    fn bytes_compressed_to_big_int(&self) -> BigInt {
-        let serial = self.ge.serialize();
-        let result = BigInt::from(&serial[0..33]);
-        return result;
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Secp256k1Point, ErrorKey> {
@@ -315,7 +315,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                 let mut bytes_slice = &template[..];
 
                 bytes_array_65.copy_from_slice(&bytes_slice[0..65]);
-                let result = PK::from_slice(&EC::without_caps(), &bytes_array_65);
+                let result = PK::from_slice(&bytes_array_65);
                 let test = result.map(|pk| Secp256k1Point {
                     purpose: "random".to_string(),
                     ge: pk,
@@ -333,7 +333,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                 let mut bytes_slice = &template[..];
 
                 bytes_array_33.copy_from_slice(&bytes_slice[0..33]);
-                let result = PK::from_slice(&EC::without_caps(), &bytes_array_33);
+                let result = PK::from_slice(&bytes_array_33);
                 let test = result.map(|pk| Secp256k1Point {
                     purpose: "random".to_string(),
                     ge: pk,
@@ -349,7 +349,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                 let mut bytes_slice = &template[..];
 
                 bytes_array_65.copy_from_slice(&bytes_slice[0..65]);
-                let result = PK::from_slice(&EC::without_caps(), &bytes_array_65);
+                let result = PK::from_slice(&bytes_array_65);
                 let test = result.map(|pk| Secp256k1Point {
                     purpose: "random".to_string(),
                     ge: pk,
@@ -371,7 +371,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         let mut new_point = self.clone();
         new_point
             .ge
-            .mul_assign(&Secp256k1::new(), fe) // we can't use Secp256k1 <None> (EC) in mul_assign
+            .mul_assign(&Secp256k1::new(), &fe[..])
             .expect("Assignment expected");
         new_point
     }
@@ -379,7 +379,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
     fn add_point(&self, other: &PK) -> Secp256k1Point {
         Secp256k1Point {
             purpose: "combine".to_string(),
-            ge: self.ge.combine(&EC::without_caps(), other).unwrap(),
+            ge: self.ge.combine(other).unwrap(),
         }
     }
 
@@ -443,7 +443,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
 
         Secp256k1Point {
             purpose: "base_fe".to_string(),
-            ge: PK::from_slice(&Secp256k1::without_caps(), &v).unwrap(),
+            ge: PK::from_slice(&v).unwrap(),
         }
     }
 }

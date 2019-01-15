@@ -60,10 +60,10 @@ impl ProvePederesenBlind for PedersenBlindingProof {
         );
         let g: GE = ECPoint::generator();
         let challenge = HSha256::create_hash(&vec![
-            &g.x_coor(),
-            &h.x_coor(),
-            &com.x_coor(),
-            &a.x_coor(),
+            &g.bytes_compressed_to_big_int(),
+            &h.bytes_compressed_to_big_int(),
+            &com.bytes_compressed_to_big_int(),
+            &a.bytes_compressed_to_big_int(),
             &m.to_big_int(),
         ]);
         let e: FE = ECScalar::from(&challenge);
@@ -84,10 +84,10 @@ impl ProvePederesenBlind for PedersenBlindingProof {
         let g: GE = ECPoint::generator();
         let h = GE::base_point2();
         let challenge = HSha256::create_hash(&vec![
-            &g.x_coor(),
-            &h.x_coor(),
-            &proof.com.x_coor(),
-            &proof.a.x_coor(),
+            &g.bytes_compressed_to_big_int(),
+            &h.bytes_compressed_to_big_int(),
+            &proof.com.bytes_compressed_to_big_int(),
+            &proof.a.bytes_compressed_to_big_int(),
             &proof.m.to_big_int(),
         ]);
 

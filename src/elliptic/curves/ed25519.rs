@@ -266,7 +266,7 @@ impl PartialEq for Ed25519Point {
 impl Ed25519Point {
     pub fn base_point2() -> Ed25519Point {
         let g: GE = ECPoint::generator();
-        let hash = HSha256::create_hash(&vec![&g.x_coor()]);
+        let hash = HSha256::create_hash(&vec![&g.bytes_compressed_to_big_int()]);
         let hash = HSha256::create_hash(&vec![&hash]);
         let bytes = BigInt::to_vec(&hash);
         let h: GE = ECPoint::from_bytes(&bytes[..]).unwrap();
@@ -297,13 +297,17 @@ impl ECPoint<PK, SK> for Ed25519Point {
     }
 
     fn x_coor(&self) -> BigInt {
-        //TODO: find a way to return x-coor
-        let field_y = self.ge.to_bytes();
-        BigInt::from(field_y[0..field_y.len()].as_ref())
+        let y = self.y_coor();
+        xrecover(y)
     }
 
     fn y_coor(&self) -> BigInt {
-        self.x_coor()
+        let y_fe = SK::from_bytes(self.ge.to_bytes()[0..self.ge.to_bytes().len()].as_ref());
+        let y = Ed25519Scalar {
+            purpose: "base_fe",
+            fe: y_fe,
+        };
+        y.to_big_int()
     }
 
     fn bytes_compressed_to_big_int(&self) -> BigInt {
@@ -523,6 +527,52 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
     }
 }
 
+//helper function, based on https://ed25519.cr.yp.to/python/ed25519.py
+pub fn xrecover(y_coor: BigInt) -> BigInt {
+    //   let d = "37095705934669439343138083508754565189542113879843219016388785533085940283555";
+    //   let d_bn = BigInt::from(d.as_bytes());
+    let q = BigInt::from(2u32).pow(255u32) - BigInt::from(19u32);
+    let one = BigInt::one();
+    let d_n = -BigInt::from(121665i32);
+    let d_d = expmod(&BigInt::from(121666), &(q.clone() - BigInt::from(2)), &q);
+
+    let d_bn = d_n * d_d;
+    let y_sqr = y_coor.clone() * y_coor.clone();
+    let u = y_sqr.clone() - one.clone();
+    let v = y_sqr * d_bn.clone() + one.clone();
+    let v_inv = expmod(&v, &(q.clone() - BigInt::from(2)), &q);
+
+    let x_sqr = u * v_inv;
+    let q_plus_3_div_8 = (q.clone() + BigInt::from(3i32)) / BigInt::from(8i32);
+
+    let mut x = expmod(&x_sqr, &q_plus_3_div_8, &q);
+    if BigInt::mod_sub(&(x.clone() * x.clone()), &x_sqr, &q) != BigInt::zero() {
+        let q_minus_1_div_4 = (q.clone() - BigInt::from(3i32)) / BigInt::from(4i32);
+        let i = expmod(&BigInt::from(2i32), &q_minus_1_div_4, &q);
+        x = BigInt::mod_mul(&x, &i, &q);
+    }
+    if x.modulus(&BigInt::from(2i32)) != BigInt::zero() {
+        x = q.clone() - x.clone();
+    }
+
+    x
+}
+
+//helper function, based on https://ed25519.cr.yp.to/python/ed25519.py
+pub fn expmod(b: &BigInt, e: &BigInt, m: &BigInt) -> BigInt {
+    let one = BigInt::one();
+    if e.clone() == BigInt::zero() {
+        return one.clone();
+    };
+    let t_temp = expmod(b, &(e.clone() / BigInt::from(2u32)), m);
+    let mut t = BigInt::mod_pow(&t_temp, &BigInt::from(2u32), m);
+
+    if e.clone().modulus(&BigInt::from(2)) != BigInt::zero() {
+        t = BigInt::mod_mul(&t, b, m);
+    }
+    return t;
+}
+
 #[cfg(feature = "ed25519")]
 #[cfg(test)]
 mod tests {
@@ -700,6 +750,14 @@ mod tests {
         let s_bn = s_a.to_big_int();
         let s_b: FE = ECScalar::from(&s_bn);
         assert_eq!(s_a, s_b);
+    }
+    #[test]
+    fn test_xy_coor() {
+        let g: GE = GE::generator();
+        assert_eq!(
+            g.x_coor().to_str_radix(10),
+            "15112221349535400772501151409588531511454012693041857206046113283949847762202"
+        );
     }
 
 }

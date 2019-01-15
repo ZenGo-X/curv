@@ -41,6 +41,7 @@ use ring::digest::Context;
 pub type SK = Scalar;
 pub type PK = CompressedRistretto;
 
+use super::ed25519::xrecover;
 #[derive(Clone, Debug)]
 pub struct RistrettoScalar {
     purpose: &'static str,
@@ -235,7 +236,7 @@ impl PartialEq for RistrettoCurvPoint {
 impl RistrettoCurvPoint {
     pub fn base_point2() -> RistrettoCurvPoint {
         let g: GE = ECPoint::generator();
-        let hash = HSha256::create_hash(&vec![&g.x_coor()]);
+        let hash = HSha256::create_hash(&vec![&g.bytes_compressed_to_big_int()]);
         let bytes = BigInt::to_vec(&hash);
         let h: GE = ECPoint::from_bytes(&bytes[..]).unwrap();
         RistrettoCurvPoint {
@@ -257,23 +258,17 @@ impl ECPoint<PK, SK> for RistrettoCurvPoint {
     }
 
     fn x_coor(&self) -> BigInt {
-        /* taken from https://doc-internal.dalek.rs/src/curve25519_dalek/edwards.rs.html#144
-        let y = self.ge.as_bytes().clone();
-        let Y = SK::from_bytes_mod_order(y);
-        let Z = SK::one();
-        let YY = Y*Y;
-        let u = &YY - &Z;
-        let v = &(&YY * &constants::EDWARDS_D) + &Z;
-        let (is_nonzero_square, mut X) = sqrt_ratio(&u, &v);
-        */
-        //TODO: find a way to return x-coor
-        let field_y = self.ge.as_bytes();
-        BigInt::from(field_y[0..field_y.len()].as_ref())
+        let y = self.y_coor();
+        xrecover(y)
     }
 
     fn y_coor(&self) -> BigInt {
-        let field_y = self.ge.as_bytes();
-        BigInt::from(field_y[0..field_y.len()].as_ref())
+        let y_fe = SK::from_bytes_mod_order(self.ge.to_bytes());
+        let y_fe = RistrettoScalar {
+            purpose: "base_fe",
+            fe: y_fe,
+        };
+        y_fe.to_big_int()
     }
 
     fn bytes_compressed_to_big_int(&self) -> BigInt {

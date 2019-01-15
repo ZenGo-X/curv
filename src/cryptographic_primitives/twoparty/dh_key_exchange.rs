@@ -1,26 +1,26 @@
 /*
-    Cryptography utilities
+    Curv
 
     Copyright 2018 by Kzen Networks
 
-    This file is part of Cryptography utilities library
-        (https://github.com/KZen-networks/cryptography-utils)
+    This file is part of curv library
+    (https://github.com/KZen-networks/curv)
 
     Cryptography utilities is free software: you can redistribute
     it and/or modify it under the terms of the GNU General Public
     License as published by the Free Software Foundation, either
     version 3 of the License, or (at your option) any later version.
 
-    @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
+    @license GPL-3.0+ <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-//This is an implementation of a Difie Hellman Key Exchange.
+//This is an implementation of a Diffie Hellman Key Exchange.
 // Party1 private key is "x",
 // Party2 private key is "y",
 //protocol:
 // party1 sends a commitmemt to P1 = xG a commitment to a proof of knowledge of x
 // party2 sends P2 and a proof of knowledge of y
-// party1 verifies party2 proof decommit to P1 and and to the PoK
+// party1 verifies party2 proof decommit to P1 and  to the PoK
 // party2 verifies party1 proof
 // the shared secret is Q = xyG
 // reference can be found in protocol 3.1 step 1 - 3(b) in the paper https://eprint.iacr.org/2017/552.pdf
@@ -81,13 +81,15 @@ impl Party1FirstMessage {
         // we use hash based commitment
         let pk_commitment_blind_factor = BigInt::sample(SECURITY_BITS);
         let pk_commitment = HashCommitment::create_commitment_with_user_defined_randomness(
-            &public_share.x_coor(),
+            &public_share.bytes_compressed_to_big_int(),
             &pk_commitment_blind_factor,
         );
 
         let zk_pok_blind_factor = BigInt::sample(SECURITY_BITS);
         let zk_pok_commitment = HashCommitment::create_commitment_with_user_defined_randomness(
-            &d_log_proof.pk_t_rand_commitment.x_coor(),
+            &d_log_proof
+                .pk_t_rand_commitment
+                .bytes_compressed_to_big_int(),
             &zk_pok_blind_factor,
         );
         let ec_key_pair = EcKeyPair {
@@ -119,13 +121,15 @@ impl Party1FirstMessage {
 
         let pk_commitment_blind_factor = BigInt::sample(SECURITY_BITS);
         let pk_commitment = HashCommitment::create_commitment_with_user_defined_randomness(
-            &public_share.x_coor(),
+            &public_share.bytes_compressed_to_big_int(),
             &pk_commitment_blind_factor,
         );
 
         let zk_pok_blind_factor = BigInt::sample(SECURITY_BITS);
         let zk_pok_commitment = HashCommitment::create_commitment_with_user_defined_randomness(
-            &d_log_proof.pk_t_rand_commitment.x_coor(),
+            &d_log_proof
+                .pk_t_rand_commitment
+                .bytes_compressed_to_big_int(),
             &zk_pok_blind_factor,
         );
 
@@ -213,7 +217,7 @@ impl Party2SecondMessage {
         let mut flag = true;
         match party_one_pk_commitment
             == &HashCommitment::create_commitment_with_user_defined_randomness(
-                &party_one_public_share.x_coor(),
+                &party_one_public_share.bytes_compressed_to_big_int(),
                 &party_one_pk_commitment_blind_factor,
             ) {
             false => flag = false,
@@ -221,7 +225,9 @@ impl Party2SecondMessage {
         };
         match party_one_zk_pok_commitment
             == &HashCommitment::create_commitment_with_user_defined_randomness(
-                &party_one_d_log_proof.pk_t_rand_commitment.x_coor(),
+                &party_one_d_log_proof
+                    .pk_t_rand_commitment
+                    .bytes_compressed_to_big_int(),
                 &party_one_zk_pok_blind_factor,
             ) {
             false => flag = false,

@@ -15,7 +15,8 @@
 */
 
 use super::gmp::mpz::Mpz;
-use super::rand::{OsRng, RngCore};
+use super::rand::rngs::OsRng;
+use super::rand::RngCore;
 use super::traits::{Converter, Modulo, Samplable};
 
 use std::borrow::Borrow;

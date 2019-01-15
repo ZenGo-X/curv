@@ -48,15 +48,15 @@ pub trait ProveDLog {
 impl ProveDLog for DLogProof {
     fn prove(sk: &FE) -> DLogProof {
         let base_point: GE = ECPoint::generator();
-        let generator_x = base_point.x_coor();
+        let generator_x = base_point.bytes_compressed_to_big_int();
         let sk_t_rand_commitment: FE = ECScalar::new_random();
         let pk_t_rand_commitment = base_point.scalar_mul(&sk_t_rand_commitment.get_element());
         let ec_point: GE = ECPoint::generator();
         let pk = ec_point.scalar_mul(&sk.get_element());
         let challenge = HSha256::create_hash(&vec![
-            &pk_t_rand_commitment.x_coor(),
+            &pk_t_rand_commitment.bytes_compressed_to_big_int(),
             &generator_x,
-            &pk.x_coor(),
+            &pk.bytes_compressed_to_big_int(),
         ]);
         let challenge_fe: FE = ECScalar::from(&challenge);
         let challenge_mul_sk = challenge_fe.mul(&sk.get_element());
@@ -71,9 +71,9 @@ impl ProveDLog for DLogProof {
     fn verify(proof: &DLogProof) -> Result<(), ProofError> {
         let ec_point: GE = ECPoint::generator();
         let challenge = HSha256::create_hash(&vec![
-            &proof.pk_t_rand_commitment.x_coor(),
-            &ec_point.x_coor(),
-            &proof.pk.x_coor(),
+            &proof.pk_t_rand_commitment.bytes_compressed_to_big_int(),
+            &ec_point.bytes_compressed_to_big_int(),
+            &proof.pk.bytes_compressed_to_big_int(),
         ]);
 
         let sk_challenge: FE = ECScalar::from(&challenge);

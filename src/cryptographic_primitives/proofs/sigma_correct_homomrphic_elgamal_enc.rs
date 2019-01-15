@@ -112,11 +112,11 @@ mod tests {
     #[test]
     fn test_correct_homo_elgamal() {
         let witness = HomoElGamalWitness {
-            r: ECScalar::new_random(),
-            x: ECScalar::new_random(),
+            r: FE::new_random(),
+            x: FE::new_random(),
         };
-        let G: GE = ECPoint::generator();
-        let y: FE = ECScalar::new_random();
+        let G: GE = GE::generator();
+        let y: FE = FE::new_random();
         let Y = &G * &y;
         let D = &G * &witness.x + Y.clone() * &witness.r;
         let E = G.clone() * &witness.r;
