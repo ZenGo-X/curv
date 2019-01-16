@@ -285,18 +285,18 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         return result;
     }
 
-    fn x_coor(&self) -> BigInt {
+    fn x_coor(&self) -> Option<BigInt> {
         let serialized_pk = PK::serialize_uncompressed(&self.ge);
         let x = &serialized_pk[1..serialized_pk.len() / 2 + 1];
         let x_vec = x.to_vec();
-        BigInt::from(&x_vec[..])
+        Some(BigInt::from(&x_vec[..]))
     }
 
-    fn y_coor(&self) -> BigInt {
+    fn y_coor(&self) -> Option<BigInt> {
         let serialized_pk = PK::serialize_uncompressed(&self.ge);
         let y = &serialized_pk[(serialized_pk.len() - 1) / 2 + 1..serialized_pk.len()];
         let y_vec = y.to_vec();
-        BigInt::from(&y_vec[..])
+        Some(BigInt::from(&y_vec[..]))
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Secp256k1Point, ErrorKey> {
@@ -362,8 +362,8 @@ impl ECPoint<PK, SK> for Secp256k1Point {
     fn pk_to_key_slice(&self) -> Vec<u8> {
         let mut v = vec![4 as u8];
 
-        v.extend(BigInt::to_vec(&self.x_coor()));
-        v.extend(BigInt::to_vec(&self.y_coor()));
+        v.extend(BigInt::to_vec(&self.x_coor().unwrap()));
+        v.extend(BigInt::to_vec(&self.y_coor().unwrap()));
         v
     }
 
@@ -393,8 +393,8 @@ impl ECPoint<PK, SK> for Secp256k1Point {
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 255, 255, 252, 47,
         ];
         let order = BigInt::from(&p[..]);
-        let x = point.x_coor();
-        let y = point.y_coor();
+        let x = point.x_coor().unwrap();
+        let y = point.y_coor().unwrap();
         let minus_y = BigInt::mod_sub(&order, &y, &order);
 
         let x_vec = BigInt::to_vec(&x);
@@ -503,8 +503,8 @@ impl Serialize for Secp256k1Point {
         S: Serializer,
     {
         let mut state = serializer.serialize_struct("Secp256k1Point", 2)?;
-        state.serialize_field("x", &self.x_coor().to_hex())?;
-        state.serialize_field("y", &self.y_coor().to_hex())?;
+        state.serialize_field("x", &self.x_coor().unwrap().to_hex())?;
+        state.serialize_field("y", &self.y_coor().unwrap().to_hex())?;
         state.end()
     }
 }
@@ -590,10 +590,10 @@ mod tests {
         Secp256k1Point::from_coor(&x, &y); // x and y not of size 32 each
 
         let r = Secp256k1Point::random_point();
-        let r_expected = Secp256k1Point::from_coor(&r.x_coor(), &r.y_coor());
+        let r_expected = Secp256k1Point::from_coor(&r.x_coor().unwrap(), &r.y_coor().unwrap());
 
-        assert_eq!(r.x_coor(), r_expected.x_coor());
-        assert_eq!(r.y_coor(), r_expected.y_coor());
+        assert_eq!(r.x_coor().unwrap(), r_expected.x_coor().unwrap());
+        assert_eq!(r.y_coor().unwrap(), r_expected.y_coor().unwrap());
     }
 
     #[test]
@@ -609,8 +609,8 @@ mod tests {
     #[test]
     fn serialize_pk() {
         let pk = Secp256k1Point::generator();
-        let x = pk.x_coor();
-        let y = pk.y_coor();
+        let x = pk.x_coor().unwrap();
+        let y = pk.y_coor().unwrap();
         let s = serde_json::to_string(&pk).expect("Failed in serialization");
 
         let expected = format!("{{\"x\":\"{}\",\"y\":\"{}\"}}", x.to_hex(), y.to_hex());

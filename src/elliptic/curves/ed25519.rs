@@ -296,18 +296,18 @@ impl ECPoint<PK, SK> for Ed25519Point {
         self.ge
     }
 
-    fn x_coor(&self) -> BigInt {
-        let y = self.y_coor();
-        xrecover(y)
+    fn x_coor(&self) -> Option<BigInt> {
+        let y = self.y_coor().unwrap();
+        Some(xrecover(y))
     }
 
-    fn y_coor(&self) -> BigInt {
+    fn y_coor(&self) -> Option<BigInt> {
         let y_fe = SK::from_bytes(self.ge.to_bytes()[0..self.ge.to_bytes().len()].as_ref());
         let y = Ed25519Scalar {
             purpose: "base_fe",
             fe: y_fe,
         };
-        y.to_big_int()
+        Some(y.to_big_int())
     }
 
     fn bytes_compressed_to_big_int(&self) -> BigInt {
@@ -755,7 +755,7 @@ mod tests {
     fn test_xy_coor() {
         let g: GE = GE::generator();
         assert_eq!(
-            g.x_coor().to_str_radix(10),
+            g.x_coor().unwrap().to_str_radix(10),
             "15112221349535400772501151409588531511454012693041857206046113283949847762202"
         );
     }

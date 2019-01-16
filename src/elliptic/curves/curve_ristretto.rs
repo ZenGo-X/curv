@@ -41,7 +41,6 @@ use ring::digest::Context;
 pub type SK = Scalar;
 pub type PK = CompressedRistretto;
 
-use super::ed25519::xrecover;
 #[derive(Clone, Debug)]
 pub struct RistrettoScalar {
     purpose: &'static str,
@@ -257,18 +256,20 @@ impl ECPoint<PK, SK> for RistrettoCurvPoint {
         self.ge
     }
 
-    fn x_coor(&self) -> BigInt {
-        let y = self.y_coor();
-        xrecover(y)
+    fn x_coor(&self) -> Option<BigInt> {
+        //TODO:
+        // let y = self.y_coor();
+        // xrecover(y)
+        None
     }
 
-    fn y_coor(&self) -> BigInt {
+    fn y_coor(&self) -> Option<BigInt> {
         let y_fe = SK::from_bytes_mod_order(self.ge.to_bytes());
         let y_fe = RistrettoScalar {
             purpose: "base_fe",
             fe: y_fe,
         };
-        y_fe.to_big_int()
+        Some(y_fe.to_big_int())
     }
 
     fn bytes_compressed_to_big_int(&self) -> BigInt {
