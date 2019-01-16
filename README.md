@@ -49,8 +49,8 @@ where
 {
     fn generator() -> Self;
     fn get_element(&self) -> PK;
-    fn x_coor(&self) -> BigInt;
-    fn y_coor(&self) -> BigInt;
+    fn x_coor(&self) -> Option<BigInt>;
+    fn y_coor(&self) -> Option<BigInt>;
     fn bytes_compressed_to_big_int(&self) -> BigInt;
     fn from_bytes(bytes: &[u8]) -> Result<Self, ErrorKey>;
     fn pk_to_key_slice(&self) -> Vec<u8>;
