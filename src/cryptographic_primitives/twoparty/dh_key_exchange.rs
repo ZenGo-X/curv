@@ -215,24 +215,26 @@ impl Party2SecondMessage {
         let party_one_d_log_proof = &party_one_second_message.comm_witness.d_log_proof;
 
         let mut flag = true;
-        match party_one_pk_commitment
-            == &HashCommitment::create_commitment_with_user_defined_randomness(
+        if party_one_pk_commitment
+            != &HashCommitment::create_commitment_with_user_defined_randomness(
                 &party_one_public_share.bytes_compressed_to_big_int(),
                 &party_one_pk_commitment_blind_factor,
-            ) {
-            false => flag = false,
-            true => flag = flag,
+            )
+        {
+            flag = false
         };
-        match party_one_zk_pok_commitment
-            == &HashCommitment::create_commitment_with_user_defined_randomness(
+
+        if party_one_zk_pok_commitment
+            != &HashCommitment::create_commitment_with_user_defined_randomness(
                 &party_one_d_log_proof
                     .pk_t_rand_commitment
                     .bytes_compressed_to_big_int(),
                 &party_one_zk_pok_blind_factor,
-            ) {
-            false => flag = false,
-            true => flag = flag,
+            )
+        {
+            flag = false
         };
+
         assert!(flag);
         DLogProof::verify(&party_one_d_log_proof)?;
         Ok(Party2SecondMessage {})

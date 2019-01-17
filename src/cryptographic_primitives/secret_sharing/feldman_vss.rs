@@ -42,8 +42,8 @@ impl VerifiableSS {
 
     // generate VerifiableSS from a secret
     pub fn share(t: usize, n: usize, secret: &FE) -> (VerifiableSS, Vec<FE>) {
-        let poly = VerifiableSS::sample_polynomial(t.clone(), secret);
-        let index_vec: Vec<usize> = (1..n.clone() + 1).collect();
+        let poly = VerifiableSS::sample_polynomial(t, secret);
+        let index_vec: Vec<usize> = (1..n + 1).collect();
         let secret_shares = VerifiableSS::evaluate_polynomial(&poly, &index_vec);
 
         let G: GE = ECPoint::generator();
@@ -53,8 +53,8 @@ impl VerifiableSS {
         (
             VerifiableSS {
                 parameters: ShamirSecretSharing {
-                    threshold: t.clone(),
-                    share_count: n.clone(),
+                    threshold: t,
+                    share_count: n,
                 },
                 commitments,
             },
@@ -70,7 +70,7 @@ impl VerifiableSS {
         index_vec: &[usize],
     ) -> (VerifiableSS, Vec<FE>) {
         assert_eq!(n, index_vec.len());
-        let poly = VerifiableSS::sample_polynomial(t.clone(), secret);
+        let poly = VerifiableSS::sample_polynomial(t, secret);
         let secret_shares = VerifiableSS::evaluate_polynomial(&poly, index_vec);
 
         let G: GE = ECPoint::generator();
@@ -80,8 +80,8 @@ impl VerifiableSS {
         (
             VerifiableSS {
                 parameters: ShamirSecretSharing {
-                    threshold: t.clone(),
-                    share_count: n.clone(),
+                    threshold: t,
+                    share_count: n,
                 },
                 commitments,
             },
@@ -129,7 +129,7 @@ impl VerifiableSS {
         let points: Vec<FE> = indices
             .iter()
             .map(|i| {
-                let index_bn = BigInt::from(i.clone() as u32 + 1 as u32);
+                let index_bn = BigInt::from(*i as u32 + 1 as u32);
                 ECScalar::from(&index_bn)
             })
             .collect::<Vec<FE>>();
@@ -181,8 +181,7 @@ impl VerifiableSS {
         let mut lag_coef_iter = lag_coef.iter();
         let head = lag_coef_iter.next().unwrap();
         let tail = lag_coef_iter;
-        let result = tail.fold(head.clone(), |acc, x| acc.add(&x.get_element()));
-        result
+        tail.fold(head.clone(), |acc, x| acc.add(&x.get_element()))
     }
 
     pub fn validate_share(&self, secret_share: &FE, index: &usize) -> Result<(), (ErrorSS)> {
@@ -192,7 +191,7 @@ impl VerifiableSS {
     }
 
     pub fn validate_share_public(&self, ss_point: &GE, index: &usize) -> Result<(), (ErrorSS)> {
-        let index_fe: FE = ECScalar::from(&BigInt::from(index.clone() as u32));
+        let index_fe: FE = ECScalar::from(&BigInt::from(*index as u32));
         let mut comm_iterator = self.commitments.iter().rev();
         let head = comm_iterator.next().unwrap();
         let tail = comm_iterator;
@@ -212,23 +211,23 @@ impl VerifiableSS {
         // add one to indices to get points
         let points: Vec<FE> = (0..self.parameters.share_count)
             .map(|i| {
-                let index_bn = BigInt::from(i.clone() as u32 + 1 as u32);
+                let index_bn = BigInt::from(i as u32 + 1 as u32);
                 ECScalar::from(&index_bn)
             })
             .collect::<Vec<FE>>();
 
-        let xi = &points[index.clone()];
+        let xi = &points[*index];
         let num: FE = ECScalar::from(&BigInt::one());
         let denum: FE = ECScalar::from(&BigInt::one());
         let num = (0..s_len).fold(num, |acc, i| {
-            if s[i].clone() != index.clone() {
+            if s[i] != *index {
                 acc * &points[s[i]]
             } else {
                 acc
             }
         });
         let denum = (0..s_len).fold(denum, |acc, i| {
-            if s[i].clone() != index.clone() {
+            if s[i] != *index {
                 let xj_sub_xi = points[s[i]].sub(&xi.get_element());
                 acc * xj_sub_xi
             } else {

@@ -76,9 +76,9 @@ impl Secp256k1Point {
     //TODO: make constant
     pub fn base_point2() -> Secp256k1Point {
         let g: Secp256k1Point = ECPoint::generator();
-        let hash = HSha256::create_hash(&vec![&g.bytes_compressed_to_big_int()]);
-        let hash = HSha256::create_hash(&vec![&hash]);
-        let hash = HSha256::create_hash(&vec![&hash]);
+        let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
+        let hash = HSha256::create_hash(&[&hash]);
+        let hash = HSha256::create_hash(&[&hash]);
         let mut hash_vec = BigInt::to_vec(&hash);
         let mut template: Vec<u8> = vec![2];
         template.append(&mut hash_vec);
@@ -187,8 +187,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
     fn invert(&self) -> Secp256k1Scalar {
         let bignum = self.to_big_int();
         let bn_inv = bignum.invert(&FE::q()).unwrap();
-        let scalar_inv = ECScalar::from(&bn_inv);
-        scalar_inv
+        ECScalar::from(&bn_inv)
     }
 }
 impl Mul<Secp256k1Scalar> for Secp256k1Scalar {
@@ -281,8 +280,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
 
     fn bytes_compressed_to_big_int(&self) -> BigInt {
         let serial = self.ge.serialize();
-        let result = BigInt::from(&serial[0..33]);
-        return result;
+        BigInt::from(&serial[0..33])
     }
 
     fn x_coor(&self) -> Option<BigInt> {
@@ -320,8 +318,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                     purpose: "random".to_string(),
                     ge: pk,
                 });
-                let test2 = test.map_err(|_err| ErrorKey::InvalidPublicKey);
-                test2
+                test.map_err(|_err| ErrorKey::InvalidPublicKey)
             }
 
             0...32 => {
@@ -338,8 +335,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                     purpose: "random".to_string(),
                     ge: pk,
                 });
-                let test2 = test.map_err(|_err| ErrorKey::InvalidPublicKey);
-                test2
+                test.map_err(|_err| ErrorKey::InvalidPublicKey)
             }
             _ => {
                 let bytes_slice = &bytes_vec[0..64];
@@ -354,8 +350,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                     purpose: "random".to_string(),
                     ge: pk,
                 });
-                let test2 = test.map_err(|_err| ErrorKey::InvalidPublicKey);
-                return test2;
+                test.map_err(|_err| ErrorKey::InvalidPublicKey)
             }
         }
     }
@@ -386,7 +381,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
     fn sub_point(&self, other: &PK) -> Secp256k1Point {
         let point = Secp256k1Point {
             purpose: "sub_point".to_string(),
-            ge: other.clone(),
+            ge: *other,
         };
         let p: Vec<u8> = vec![
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
@@ -533,7 +528,7 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
 
         while let Some(key) = map.next_key::<&'de str>()? {
             let v = map.next_value::<&'de str>()?;
-            match key.as_ref() {
+            match key {
                 "x" => x = String::from(v),
                 "y" => y = String::from(v),
                 _ => panic!("Serialization failed!"),

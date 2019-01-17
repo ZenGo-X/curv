@@ -126,7 +126,7 @@ impl ECScalar<SK> for Ed25519Scalar {
     fn add(&self, other: &SK) -> Ed25519Scalar {
         let other_point = Ed25519Scalar {
             purpose: "other add",
-            fe: other.clone(),
+            fe: *other,
         };
         let lhs_bn = self.to_big_int();
         let rhs_bn = other_point.to_big_int();
@@ -139,7 +139,7 @@ impl ECScalar<SK> for Ed25519Scalar {
     fn mul(&self, other: &SK) -> Ed25519Scalar {
         let other_point = Ed25519Scalar {
             purpose: "other mul",
-            fe: other.clone(),
+            fe: *other,
         };
         let lhs_bn = self.to_big_int();
         let rhs_bn = other_point.to_big_int();
@@ -151,7 +151,7 @@ impl ECScalar<SK> for Ed25519Scalar {
     fn sub(&self, other: &SK) -> Ed25519Scalar {
         let other_point = Ed25519Scalar {
             purpose: "other sub",
-            fe: other.clone(),
+            fe: *other,
         };
         let lhs_bn = self.to_big_int();
         let rhs_bn = other_point.to_big_int();
@@ -266,8 +266,8 @@ impl PartialEq for Ed25519Point {
 impl Ed25519Point {
     pub fn base_point2() -> Ed25519Point {
         let g: GE = ECPoint::generator();
-        let hash = HSha256::create_hash(&vec![&g.bytes_compressed_to_big_int()]);
-        let hash = HSha256::create_hash(&vec![&hash]);
+        let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
+        let hash = HSha256::create_hash(&[&hash]);
         let bytes = BigInt::to_vec(&hash);
         let h: GE = ECPoint::from_bytes(&bytes[..]).unwrap();
         let eight = BigInt::from(8);
@@ -403,7 +403,7 @@ impl ECPoint<PK, SK> for Ed25519Point {
     }
 
     fn add_point(&self, other: &PK) -> Ed25519Point {
-        let pkpk = self.ge.clone() + other.to_cached();
+        let pkpk = self.ge + other.to_cached();
         let mut pk_p2_bytes = pkpk.to_p2().to_bytes();
         pk_p2_bytes[31] ^= 1 << 7;
         Ed25519Point {
@@ -413,7 +413,7 @@ impl ECPoint<PK, SK> for Ed25519Point {
     }
 
     fn sub_point(&self, other: &PK) -> Ed25519Point {
-        let pkpk = self.ge.clone() - other.to_cached();
+        let pkpk = self.ge - other.to_cached();
         let mut pk_p2_bytes = pkpk.to_p2().to_bytes();
         pk_p2_bytes[31] ^= 1 << 7;
 
@@ -513,7 +513,7 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
 
         while let Some(key) = map.next_key::<&'de str>()? {
             let v = map.next_value::<&'de str>()?;
-            match key.as_ref() {
+            match key {
                 "bytes_str" => {
                     bytes_str = String::from(v);
                 }
@@ -533,8 +533,8 @@ pub fn xrecover(y_coor: BigInt) -> BigInt {
     //   let d_bn = BigInt::from(d.as_bytes());
     let q = BigInt::from(2u32).pow(255u32) - BigInt::from(19u32);
     let one = BigInt::one();
-    let d_n = -BigInt::from(121665i32);
-    let d_d = expmod(&BigInt::from(121666), &(q.clone() - BigInt::from(2)), &q);
+    let d_n = -BigInt::from(121_665i32);
+    let d_d = expmod(&BigInt::from(121_666), &(q.clone() - BigInt::from(2)), &q);
 
     let d_bn = d_n * d_d;
     let y_sqr = y_coor.clone() * y_coor.clone();
@@ -570,7 +570,7 @@ pub fn expmod(b: &BigInt, e: &BigInt, m: &BigInt) -> BigInt {
     if e.clone().modulus(&BigInt::from(2)) != BigInt::zero() {
         t = BigInt::mod_mul(&t, b, m);
     }
-    return t;
+    t
 }
 
 #[cfg(feature = "ed25519")]

@@ -59,7 +59,7 @@ impl ProvePederesenBlind for PedersenBlindingProof {
             &r.to_big_int(),
         );
         let g: GE = ECPoint::generator();
-        let challenge = HSha256::create_hash(&vec![
+        let challenge = HSha256::create_hash(&[
             &g.bytes_compressed_to_big_int(),
             &h.bytes_compressed_to_big_int(),
             &com.bytes_compressed_to_big_int(),
@@ -83,7 +83,7 @@ impl ProvePederesenBlind for PedersenBlindingProof {
     fn verify(proof: &PedersenBlindingProof) -> Result<(), ProofError> {
         let g: GE = ECPoint::generator();
         let h = GE::base_point2();
-        let challenge = HSha256::create_hash(&vec![
+        let challenge = HSha256::create_hash(&[
             &g.bytes_compressed_to_big_int(),
             &h.bytes_compressed_to_big_int(),
             &proof.com.bytes_compressed_to_big_int(),

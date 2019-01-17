@@ -57,7 +57,7 @@ impl ProveDLog for DLogProof {
         let pk_t_rand_commitment = base_point * &sk_t_rand_commitment;
         let ec_point: GE = ECPoint::generator();
         let pk = ec_point.scalar_mul(&sk.get_element());
-        let challenge = HSha256::create_hash(&vec![
+        let challenge = HSha256::create_hash(&[
             &pk_t_rand_commitment.bytes_compressed_to_big_int(),
             &generator_x,
             &pk.bytes_compressed_to_big_int(),
@@ -75,7 +75,7 @@ impl ProveDLog for DLogProof {
 
     fn verify(proof: &DLogProof) -> Result<(), ProofError> {
         let ec_point: GE = ECPoint::generator();
-        let challenge = HSha256::create_hash(&vec![
+        let challenge = HSha256::create_hash(&[
             &proof.pk_t_rand_commitment.bytes_compressed_to_big_int(),
             &ec_point.bytes_compressed_to_big_int(),
             &proof.pk.bytes_compressed_to_big_int(),

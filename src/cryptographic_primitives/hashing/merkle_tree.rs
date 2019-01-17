@@ -28,23 +28,22 @@ pub struct MT256 {
 
 //impl <'a> MT256<'a>{
 impl MT256 {
-    pub fn create_tree(vec: &Vec<GE>) -> MT256 {
+    pub fn create_tree(vec: &[GE]) -> MT256 {
         let digest = Context::new(&SHA256);
         let tree = MerkleTree::from_vec(digest.algorithm, vec.to_vec());
         MT256 { tree }
     }
 
     pub fn gen_proof_for_ge(&self, value: &GE) -> Proof<GE> {
-        let proof = MerkleTree::gen_proof(&self.tree, value.clone()).expect("not found in tree");
-        return proof;
+        MerkleTree::gen_proof(&self.tree, value.clone()).expect("not found in tree")
     }
 
     pub fn get_root(&self) -> &Vec<u8> {
         MerkleTree::root_hash(&self.tree)
     }
 
-    pub fn validate_proof(proof: &Proof<GE>, root: &Vec<u8>) -> Result<(), ()> {
-        if Proof::validate(proof, root) == true {
+    pub fn validate_proof(proof: &Proof<GE>, root: &[u8]) -> Result<(), ()> {
+        if Proof::validate(proof, root) {
             Ok(())
         } else {
             Err(())

@@ -66,15 +66,14 @@ impl NISigmaProof<ECDDHProof, ECDDHWitness, ECDDHStatement> for ECDDHProof {
         let a1 = &delta.g1 * &s;
         let a2 = &delta.g2 * &s;
 
-        let e = HSha256::create_hash_from_ge(&vec![
-            &delta.g1, &delta.h1, &delta.g2, &delta.h2, &a1, &a2,
-        ]);
+        let e =
+            HSha256::create_hash_from_ge(&[&delta.g1, &delta.h1, &delta.g2, &delta.h2, &a1, &a2]);
         let z = s + e.clone() * &w.x;
         ECDDHProof { a1, a2, z }
     }
 
     fn verify(&self, delta: &ECDDHStatement) -> Result<(), ProofError> {
-        let e = HSha256::create_hash_from_ge(&vec![
+        let e = HSha256::create_hash_from_ge(&[
             &delta.g1, &delta.h1, &delta.g2, &delta.h2, &self.a1, &self.a2,
         ]);
         let z_g1 = &delta.g1 * &self.z;

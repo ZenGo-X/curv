@@ -61,11 +61,12 @@ impl HomoELGamalProof {
         let e = HSha256::create_hash_from_ge(&[
             &T, &A3, &delta.G, &delta.H, &delta.Y, &delta.D, &delta.E,
         ]);
-        let mut z1 = s1.clone();
         // dealing with zero field element
-        if w.x != FE::zero() {
-            z1 = s1.add(&e.mul(&w.x.get_element()).get_element());
-        }
+        let z1 = if w.x != FE::zero() {
+            s1.add(&e.mul(&w.x.get_element()).get_element())
+        } else {
+            s1.clone()
+        };
         let z2 = s2.add(&e.mul(&w.r.get_element()).get_element());
 
         HomoELGamalProof { T, A3, z1, z2 }

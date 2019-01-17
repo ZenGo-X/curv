@@ -132,21 +132,21 @@ impl ECScalar<SK> for RistrettoScalar {
     fn add(&self, other: &SK) -> RistrettoScalar {
         RistrettoScalar {
             purpose: "add",
-            fe: &self.get_element() + other,
+            fe: self.get_element() + other,
         }
     }
 
     fn mul(&self, other: &SK) -> RistrettoScalar {
         RistrettoScalar {
             purpose: "mul",
-            fe: &self.get_element() * other,
+            fe: self.get_element() * other,
         }
     }
 
     fn sub(&self, other: &SK) -> RistrettoScalar {
         RistrettoScalar {
             purpose: "sub",
-            fe: &self.get_element() - other,
+            fe: self.get_element() - other,
         }
     }
 
@@ -235,7 +235,7 @@ impl PartialEq for RistrettoCurvPoint {
 impl RistrettoCurvPoint {
     pub fn base_point2() -> RistrettoCurvPoint {
         let g: GE = ECPoint::generator();
-        let hash = HSha256::create_hash(&vec![&g.bytes_compressed_to_big_int()]);
+        let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
         let bytes = BigInt::to_vec(&hash);
         let h: GE = ECPoint::from_bytes(&bytes[..]).unwrap();
         RistrettoCurvPoint {
@@ -438,7 +438,7 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
 
         while let Some(key) = map.next_key::<&'de str>()? {
             let v = map.next_value::<&'de str>()?;
-            match key.as_ref() {
+            match key {
                 "bytes_str" => {
                     bytes_str = String::from(v);
                 }
