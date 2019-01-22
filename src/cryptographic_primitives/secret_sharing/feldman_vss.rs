@@ -191,16 +191,21 @@ impl VerifiableSS {
     }
 
     pub fn validate_share_public(&self, ss_point: &GE, index: &usize) -> Result<(), (ErrorSS)> {
-        let index_fe: FE = ECScalar::from(&BigInt::from(*index as u32));
-        let mut comm_iterator = self.commitments.iter().rev();
-        let head = comm_iterator.next().unwrap();
-        let tail = comm_iterator;
-        let comm_to_point = tail.fold(head.clone(), |acc, x: &GE| x.clone() + acc * &index_fe);
+        let comm_to_point = self.get_point_commitment(index);
         if ss_point.clone() == comm_to_point {
             Ok(())
         } else {
             Err(VerifyShareError)
         }
+    }
+
+    pub fn get_point_commitment(&self, index: &usize) -> GE {
+        let index_fe: FE = ECScalar::from(&BigInt::from(*index as u32));
+        let mut comm_iterator = self.commitments.iter().rev();
+        let head = comm_iterator.next().unwrap();
+        let tail = comm_iterator;
+        let comm_to_point = tail.fold(head.clone(), |acc, x: &GE| x.clone() + acc * &index_fe);
+        comm_to_point
     }
 
     //compute \lambda_{index,S}, a lagrangian coefficient that change the (t,n) scheme to (|S|,|S|)
