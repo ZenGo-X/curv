@@ -212,7 +212,7 @@ impl VerifiableSS {
     // used in http://stevengoldfeder.com/papers/GG18.pdf
     pub fn map_share_to_new_params(&self, index: &usize, s: &[usize]) -> FE {
         let s_len = s.len();
-        assert!(s_len > self.reconstruct_limit());
+        //     assert!(s_len > self.reconstruct_limit());
         // add one to indices to get points
         let points: Vec<FE> = (0..self.parameters.share_count)
             .map(|i| {
@@ -325,6 +325,77 @@ mod tests {
             + l3 * secret_shares[3].clone()
             + l4 * secret_shares[4].clone()
             + l6 * secret_shares[6].clone();
+        assert_eq!(w, secret_reconstructed);
+    }
+
+    #[test]
+    fn test_secret_sharing_1_out_of_2() {
+        let secret: FE = ECScalar::new_random();
+
+        let (vss_scheme, secret_shares) = VerifiableSS::share(1, 2, &secret);
+
+        let mut shares_vec = Vec::new();
+        shares_vec.push(secret_shares[0].clone());
+        shares_vec.push(secret_shares[1].clone());
+
+        //test reconstruction
+        let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 1], &shares_vec);
+        assert_eq!(secret, secret_reconstructed);
+
+        // test secret shares are verifiable
+        let valid2 = vss_scheme.validate_share(&secret_shares[1], &2);
+        let valid1 = vss_scheme.validate_share(&secret_shares[0], &1);
+        assert!(valid2.is_ok());
+        assert!(valid1.is_ok());
+
+        // test map (t,n) - (t',t')
+        let s = &vec![0, 1];
+        let l0 = vss_scheme.map_share_to_new_params(&0, &s);
+        let l1 = vss_scheme.map_share_to_new_params(&1, &s);
+
+        let w = l0 * secret_shares[0].clone() + l1 * secret_shares[1].clone();
+        assert_eq!(w, secret_reconstructed);
+    }
+
+    #[test]
+    fn test_secret_sharing_1_out_of_3() {
+        let secret: FE = ECScalar::new_random();
+
+        let (vss_scheme, secret_shares) = VerifiableSS::share(1, 3, &secret);
+
+        let mut shares_vec = Vec::new();
+        shares_vec.push(secret_shares[0].clone());
+        shares_vec.push(secret_shares[1].clone());
+
+        // test commitment to point and sum of commitments
+        let (vss_scheme2, secret_shares2) = VerifiableSS::share(1, 3, &secret);
+        let sum = secret_shares[0].clone() + secret_shares2[0].clone();
+        let point_comm1 = vss_scheme.get_point_commitment(&1);
+        let point_comm2 = vss_scheme.get_point_commitment(&2);
+        let g: GE = GE::generator();
+        let g_sum = g.clone() * &sum;
+        assert_eq!(g.clone() * secret_shares[0].clone(), point_comm1.clone());
+        assert_eq!(g.clone() * secret_shares[1].clone(), point_comm2.clone());
+        let point1_sum_com =
+            vss_scheme.get_point_commitment(&1) + vss_scheme2.get_point_commitment(&1);
+        assert_eq!(point1_sum_com, g_sum);
+
+        //test reconstruction
+        let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 1], &shares_vec);
+        assert_eq!(secret, secret_reconstructed);
+
+        // test secret shares are verifiable
+        let valid2 = vss_scheme.validate_share(&secret_shares[1], &2);
+        let valid1 = vss_scheme.validate_share(&secret_shares[0], &1);
+        assert!(valid2.is_ok());
+        assert!(valid1.is_ok());
+
+        // test map (t,n) - (t',t')
+        let s = &vec![0, 2];
+        let l0 = vss_scheme.map_share_to_new_params(&0, &s);
+        let l2 = vss_scheme.map_share_to_new_params(&2, &s);
+
+        let w = l0 * secret_shares[0].clone() + l2 * secret_shares[2].clone();
         assert_eq!(w, secret_reconstructed);
     }
 
