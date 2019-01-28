@@ -531,9 +531,10 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
 
         while let Some(ref key) = map.next_key::<String>()? {
             println!("curv: here in secp256k1 while let");
+            println!("curv: key #1 = {}", key);
             let v = map.next_value::<String>()?;
             println!("curv: v = {}", v);
-            println!("curv: key = {}", key);
+            println!("curv: key #2 = {}", key);
             if key == "x" {
                 println!("key == x");
                 x = String::from(v)
