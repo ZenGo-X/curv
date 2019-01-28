@@ -246,7 +246,9 @@ impl<'de> Visitor<'de> for Secp256k1ScalarVisitor {
     }
 
     fn visit_str<E: de::Error>(self, s: &str) -> Result<Secp256k1Scalar, E> {
+        println!("curv.visit_str: s #1 = {:?}", s);
         let v = BigInt::from_str_radix(s, 16).expect("Failed in serde");
+        println!("curv.visit_str: s #2 = {:?}", s);
         Ok(ECScalar::from(&v))
     }
 }
