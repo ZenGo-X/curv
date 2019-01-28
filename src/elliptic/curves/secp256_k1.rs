@@ -527,19 +527,25 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
     fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<Secp256k1Point, E::Error> {
         let mut x = String::new();
         let mut y = String::new();
-        println!("here in secp256k1");
+        println!("curv: here in secp256k1");
 
-        while let Some(key) = map.next_key::<&'de str>()? {
-            println!("here in secp256k1 while let");
-            let v = map.next_value::<&'de str>()?;
-            println!("v = {}", v);
-            match key {
-                "x" => x = String::from(v),
-                "y" => y = String::from(v),
-                _ => panic!("Serialization failed!"),
-            }
-        }
+//        while let Some(ref key) = map.next_key::<String>()? {
+//            println!("here in secp256k1 while let");
+//            let v = map.next_value::<&'de str>()?;
+//            println!("v = {}", v);
+//            match key {
+//                "x" => x = String::from(v),
+//                "y" => y = String::from(v),
+//                _ => panic!("Serialization failed!"),
+//            }
+//        }
 
+        let x = match map.next_key::<String>()? {
+            Some(ref k) if k == "x" => map.next_value()?,
+            _ => return Err(de::Error::missing_field("x"))
+        };
+
+        println!("curv: post while let");
         let bx = BigInt::from_hex(&x);
         let by = BigInt::from_hex(&y);
 
