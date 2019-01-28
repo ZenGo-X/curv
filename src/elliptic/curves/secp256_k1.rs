@@ -529,21 +529,18 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
         let mut y = String::new();
         println!("curv: here in secp256k1");
 
-//        while let Some(ref key) = map.next_key::<String>()? {
-//            println!("here in secp256k1 while let");
-//            let v = map.next_value::<&'de str>()?;
-//            println!("v = {}", v);
-//            match key {
-//                "x" => x = String::from(v),
-//                "y" => y = String::from(v),
-//                _ => panic!("Serialization failed!"),
-//            }
-//        }
-
-        let x = match map.next_key::<String>()? {
-            Some(ref k) if k == "x" => map.next_value()?,
-            _ => return Err(de::Error::missing_field("x"))
-        };
+        while let Some(ref key) = map.next_key::<String>()? {
+            println!("curv: here in secp256k1 while let");
+            let v = map.next_value::<&'de str>()?;
+            println!("v = {}", v);
+            if key == "x" {
+                x = String::from(v)
+            } else if key == "y" {
+                y = String::from(v)
+            } else {
+                panic!("Serialization failed!")
+            }
+        }
 
         println!("curv: post while let");
         let bx = BigInt::from_hex(&x);
