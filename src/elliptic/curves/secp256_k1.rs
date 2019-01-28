@@ -534,8 +534,10 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
             let v = map.next_value::<&'de str>()?;
             println!("v = {}", v);
             if key == "x" {
+                println!("key == x");
                 x = String::from(v)
             } else if key == "y" {
+                println!("key == y");
                 y = String::from(v)
             } else {
                 panic!("Serialization failed!")
