@@ -510,7 +510,7 @@ impl<'de> Deserialize<'de> for Secp256k1Point {
         D: Deserializer<'de>,
     {
         let fields = &["x", "y"];
-        deserializer.deserialize_struct("Secp256k1Point", fields,Secp256k1PointVisitor)
+        deserializer.deserialize_struct("Secp256k1Point", fields, Secp256k1PointVisitor)
     }
 }
 
