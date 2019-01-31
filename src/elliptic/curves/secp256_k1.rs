@@ -246,9 +246,7 @@ impl<'de> Visitor<'de> for Secp256k1ScalarVisitor {
     }
 
     fn visit_str<E: de::Error>(self, s: &str) -> Result<Secp256k1Scalar, E> {
-        println!("curv.visit_str: s #1 = {:?}", s);
         let v = BigInt::from_str_radix(s, 16).expect("Failed in serde");
-        println!("curv.visit_str: s #2 = {:?}", s);
         Ok(ECScalar::from(&v))
     }
 }
@@ -528,26 +526,18 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
     fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<Secp256k1Point, E::Error> {
         let mut x = String::new();
         let mut y = String::new();
-        println!("curv: here in secp256k1");
 
         while let Some(ref key) = map.next_key::<String>()? {
-            println!("curv: here in secp256k1 while let");
-            println!("curv: key #1 = {}", key);
             let v = map.next_value::<String>()?;
-            println!("curv: v = {}", v);
-            println!("curv: key #2 = {}", key);
             if key == "x" {
-                println!("key == x");
                 x = String::from(v)
             } else if key == "y" {
-                println!("key == y");
                 y = String::from(v)
             } else {
                 panic!("Serialization failed!")
             }
         }
 
-        println!("curv: post while let");
         let bx = BigInt::from_hex(&x);
         let by = BigInt::from_hex(&y);
 
