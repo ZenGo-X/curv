@@ -527,14 +527,12 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
         let mut x = String::new();
         let mut y = String::new();
 
-        while let Some(ref key) = map.next_key::<String>()? {
-            let v = map.next_value::<String>()?;
-            if key == "x" {
-                x = String::from(v)
-            } else if key == "y" {
-                y = String::from(v)
-            } else {
-                panic!("Serialization failed!")
+        while let Some(key) = map.next_key::<&'de str>()? {
+            let v = map.next_value::<&'de str>()?;
+            match key {
+                "x" => x = String::from(v),
+                "y" => y = String::from(v),
+                _ => panic!("Serialization failed!"),
             }
         }
 
