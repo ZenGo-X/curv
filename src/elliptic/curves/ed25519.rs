@@ -21,7 +21,6 @@ use std::fmt::Debug;
 use std::str;
 pub const SECRET_KEY_SIZE: usize = 32;
 use super::cryptoxide::curve25519::*;
-use super::rand::{thread_rng, Rng};
 use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::Converter;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
@@ -39,7 +38,7 @@ use BigInt;
 use ErrorKey::{self, InvalidPublicKey};
 pub type SK = Fe;
 pub type PK = GeP3;
-use arithmetic::traits::Modulo;
+use arithmetic::traits::{Modulo, Samplable};
 
 #[derive(Clone)]
 pub struct Ed25519Scalar {
@@ -58,12 +57,9 @@ impl ECScalar<SK> for Ed25519Scalar {
     // we chose to multiply by 8 all group elements to work in the prime order sub group.
     // each random fe is having its 3 first bits zeroed
     fn new_random() -> Ed25519Scalar {
-        let mut scalar_bytes = [0u8; 32];
-        let rng = &mut thread_rng();
-        rng.fill(&mut scalar_bytes);
-        let rnd_bn = BigInt::from(&scalar_bytes[..]);
-        let rnd_bn_mod_q = BigInt::mod_mul(&rnd_bn, &BigInt::from(8), &FE::q());
-        ECScalar::from(&rnd_bn_mod_q)
+        let rnd_bn = BigInt::sample_below(&FE::q());
+        let rnd_bn_mul_8 = BigInt::mod_mul(&rnd_bn, &BigInt::from(8), &FE::q());
+        ECScalar::from(&rnd_bn_mul_8)
     }
 
     fn zero() -> Ed25519Scalar {
