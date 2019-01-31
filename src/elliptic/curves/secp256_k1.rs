@@ -511,7 +511,8 @@ impl<'de> Deserialize<'de> for Secp256k1Point {
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_map(Secp256k1PointVisitor)
+        let fields = &["x", "y"];
+        deserializer.deserialize_struct("Secp256k1Point", fields,Secp256k1PointVisitor)
     }
 }
 
