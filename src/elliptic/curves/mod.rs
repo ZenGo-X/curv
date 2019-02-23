@@ -18,8 +18,11 @@ extern crate rand;
 
 extern crate cryptoxide;
 extern crate curve25519_dalek;
+extern crate pairing;
+extern crate sapling_crypto;
 extern crate secp256k1;
 
+pub mod curve_jubjub;
 pub mod curve_ristretto;
 pub mod ed25519;
 pub mod secp256_k1;

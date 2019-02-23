@@ -42,19 +42,23 @@ use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
 use std::fmt;
 use std::ops::{Add, Mul};
+use std::ptr;
+use std::sync::atomic;
+use zeroize::Zeroize;
 use BigInt;
 use ErrorKey;
+
 pub type SK = SecretKey;
 pub type PK = PublicKey;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy)]
 pub struct Secp256k1Scalar {
-    purpose: String, // it has to be a non constant string for serialization
+    purpose: &'static str,
     fe: SK,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy)]
 pub struct Secp256k1Point {
-    purpose: String, // it has to be a non constant string for serialization
+    purpose: &'static str,
     ge: PK,
 }
 pub type GE = Secp256k1Point;
@@ -68,7 +72,7 @@ impl Secp256k1Point {
         let mut arr = [0u8; 32];
         thread_rng().fill(&mut arr[..]);
         Secp256k1Point {
-            purpose: "random_point".to_string(),
+            purpose: "random_point",
             ge: pk.get_element(),
         }
     }
@@ -87,9 +91,17 @@ impl Secp256k1Point {
         let mut template: Vec<u8> = vec![2];
         template.append(&mut hash_vec);
         Secp256k1Point {
-            purpose: "random".to_string(),
+            purpose: "random",
             ge: PK::from_slice(&template).unwrap(),
         }
+    }
+}
+
+impl Zeroize for FE {
+    fn zeroize(&mut self) {
+        unsafe { ptr::write_volatile(self, FE::zero()) };
+        atomic::fence(atomic::Ordering::SeqCst);
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
     }
 }
 
@@ -98,17 +110,16 @@ impl ECScalar<SK> for Secp256k1Scalar {
         let mut arr = [0u8; 32];
         thread_rng().fill(&mut arr[..]);
         Secp256k1Scalar {
-            purpose: "random".to_string(),
+            purpose: "random",
             fe: SK::from_slice(&arr[0..arr.len()]).unwrap(),
         }
     }
 
-    // open discussion with Andrew Poelstra. ZERO_KEY was removed from last version so we used transmute
     fn zero() -> Secp256k1Scalar {
         let zero_arr = [0u8; 32];
         let zero = unsafe { std::mem::transmute::<[u8; 32], SecretKey>(zero_arr) };
         Secp256k1Scalar {
-            purpose: "zero".to_string(),
+            purpose: "zero",
             fe: zero,
         }
     }
@@ -133,7 +144,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
         }
 
         Secp256k1Scalar {
-            purpose: "from_big_int".to_string(),
+            purpose: "from_big_int",
             fe: SK::from_slice(&v).unwrap(),
         }
     }
@@ -155,7 +166,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
             &FE::q(),
         ));
         Secp256k1Scalar {
-            purpose: "add".to_string(),
+            purpose: "add",
             fe: res.get_element(),
         }
     }
@@ -169,7 +180,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
             &FE::q(),
         ));
         Secp256k1Scalar {
-            purpose: "mul".to_string(),
+            purpose: "mul",
             fe: res.get_element(),
         }
     }
@@ -183,7 +194,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
             &FE::q(),
         ));
         Secp256k1Scalar {
-            purpose: "mul".to_string(),
+            purpose: "sub",
             fe: res.get_element(),
         }
     }
@@ -267,13 +278,21 @@ impl PartialEq for Secp256k1Point {
     }
 }
 
+impl Zeroize for GE {
+    fn zeroize(&mut self) {
+        unsafe { ptr::write_volatile(self, GE::generator()) };
+        atomic::fence(atomic::Ordering::SeqCst);
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
+    }
+}
+
 impl ECPoint<PK, SK> for Secp256k1Point {
     fn generator() -> Secp256k1Point {
         let mut v = vec![4 as u8];
         v.extend(GENERATOR_X.as_ref());
         v.extend(GENERATOR_Y.as_ref());
         Secp256k1Point {
-            purpose: "base_fe".to_string(),
+            purpose: "base_fe",
             ge: PK::from_slice(&v).unwrap(),
         }
     }
@@ -319,7 +338,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                 bytes_array_65.copy_from_slice(&bytes_slice[0..65]);
                 let result = PK::from_slice(&bytes_array_65);
                 let test = result.map(|pk| Secp256k1Point {
-                    purpose: "random".to_string(),
+                    purpose: "random",
                     ge: pk,
                 });
                 test.map_err(|_err| ErrorKey::InvalidPublicKey)
@@ -336,7 +355,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                 bytes_array_33.copy_from_slice(&bytes_slice[0..33]);
                 let result = PK::from_slice(&bytes_array_33);
                 let test = result.map(|pk| Secp256k1Point {
-                    purpose: "random".to_string(),
+                    purpose: "random",
                     ge: pk,
                 });
                 test.map_err(|_err| ErrorKey::InvalidPublicKey)
@@ -351,7 +370,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                 bytes_array_65.copy_from_slice(&bytes_slice[0..65]);
                 let result = PK::from_slice(&bytes_array_65);
                 let test = result.map(|pk| Secp256k1Point {
-                    purpose: "random".to_string(),
+                    purpose: "random",
                     ge: pk,
                 });
                 test.map_err(|_err| ErrorKey::InvalidPublicKey)
@@ -367,7 +386,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
     }
 
     fn scalar_mul(&self, fe: &SK) -> Secp256k1Point {
-        let mut new_point = self.clone();
+        let mut new_point = *self;
         new_point
             .ge
             .mul_assign(&Secp256k1::new(), &fe[..])
@@ -377,14 +396,14 @@ impl ECPoint<PK, SK> for Secp256k1Point {
 
     fn add_point(&self, other: &PK) -> Secp256k1Point {
         Secp256k1Point {
-            purpose: "combine".to_string(),
+            purpose: "combine",
             ge: self.ge.combine(other).unwrap(),
         }
     }
 
     fn sub_point(&self, other: &PK) -> Secp256k1Point {
         let point = Secp256k1Point {
-            purpose: "sub_point".to_string(),
+            purpose: "sub_point",
             ge: *other,
         };
         let p: Vec<u8> = vec![
@@ -441,7 +460,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         v.extend(vec_y);
 
         Secp256k1Point {
-            purpose: "base_fe".to_string(),
+            purpose: "base_fe",
             ge: PK::from_slice(&v).unwrap(),
         }
     }
@@ -534,9 +553,9 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
         while let Some(ref key) = map.next_key::<String>()? {
             let v = map.next_value::<String>()?;
             if key == "x" {
-                x = String::from(v)
+                x = v
             } else if key == "y" {
-                y = String::from(v)
+                y = v
             } else {
                 panic!("Serialization failed!")
             }

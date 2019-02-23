@@ -39,13 +39,16 @@ use ErrorKey::{self, InvalidPublicKey};
 pub type SK = Fe;
 pub type PK = GeP3;
 use arithmetic::traits::{Modulo, Samplable};
+use std::ptr;
+use std::sync::atomic;
+use zeroize::Zeroize;
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Ed25519Scalar {
     purpose: &'static str,
     fe: SK,
 }
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Ed25519Point {
     purpose: &'static str,
     ge: PK,
@@ -53,8 +56,15 @@ pub struct Ed25519Point {
 pub type GE = Ed25519Point;
 pub type FE = Ed25519Scalar;
 
+impl Zeroize for FE {
+    fn zeroize(&mut self) {
+        unsafe { ptr::write_volatile(self, FE::zero()) };
+        atomic::fence(atomic::Ordering::SeqCst);
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
+    }
+}
 impl ECScalar<SK> for Ed25519Scalar {
-    // we chose to multiply by 8 all group elements to work in the prime order sub group.
+    // we chose to multiply by 8 (co-factor) all group elements to work in the prime order sub group.
     // each random fe is having its 3 first bits zeroed
     fn new_random() -> Ed25519Scalar {
         let rnd_bn = BigInt::sample_below(&FE::q());
@@ -78,7 +88,6 @@ impl ECScalar<SK> for Ed25519Scalar {
     }
 
     fn from(n: &BigInt) -> Ed25519Scalar {
-        //  let n_mod_q = n.modulus(&FE::q());
         let mut v = BigInt::to_vec(&n);
         let mut bytes_array_32: [u8; 32];
         if v.len() < SECRET_KEY_SIZE {
@@ -233,7 +242,7 @@ impl<'de> Visitor<'de> for Secp256k1ScalarVisitor {
     type Value = Ed25519Scalar;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("Secp256k1Scalar")
+        formatter.write_str("ed25519")
     }
 
     fn visit_str<E: de::Error>(self, s: &str) -> Result<Ed25519Scalar, E> {
@@ -259,6 +268,14 @@ impl PartialEq for Ed25519Point {
     }
 }
 
+impl Zeroize for GE {
+    fn zeroize(&mut self) {
+        unsafe { ptr::write_volatile(self, GE::generator()) };
+        atomic::fence(atomic::Ordering::SeqCst);
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
+    }
+}
+
 impl Ed25519Point {
     pub fn base_point2() -> Ed25519Point {
         let g: GE = ECPoint::generator();
@@ -266,9 +283,6 @@ impl Ed25519Point {
         let hash = HSha256::create_hash(&[&hash]);
         let bytes = BigInt::to_vec(&hash);
         let h: GE = ECPoint::from_bytes(&bytes[..]).unwrap();
-        let eight = BigInt::from(8);
-        let eight_fe: FE = ECScalar::from(&eight);
-        let h = h * eight_fe;
         Ed25519Point {
             purpose: "random",
             ge: h.get_element(),
@@ -518,7 +532,6 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
         }
         let bytes_bn = BigInt::from_hex(&bytes_str);
         let bytes = BigInt::to_vec(&bytes_bn);
-        // println!("bytes des {:?}", bytes.clone());
         Ok(Ed25519Point::from_bytes(&bytes[..]).expect("error deserializing point"))
     }
 }

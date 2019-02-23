@@ -17,3 +17,4 @@
 pub mod coin_flip_optimal_rounds;
 
 pub mod dh_key_exchange;
+pub mod dh_key_exchange_variant_with_pok_comm;

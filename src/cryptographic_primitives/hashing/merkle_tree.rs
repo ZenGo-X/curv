@@ -35,7 +35,7 @@ impl MT256 {
     }
 
     pub fn gen_proof_for_ge(&self, value: &GE) -> Proof<GE> {
-        MerkleTree::gen_proof(&self.tree, value.clone()).expect("not found in tree")
+        MerkleTree::gen_proof(&self.tree, *value).expect("not found in tree")
     }
 
     pub fn get_root(&self) -> &Vec<u8> {

@@ -32,7 +32,7 @@ impl Converter for Mpz {
         self.to_str_radix(super::HEX_RADIX)
     }
 
-    fn from_hex(value: &String) -> Mpz {
+    fn from_hex(value: &str) -> Mpz {
         BigInt::from_str_radix(value, super::HEX_RADIX).expect("Error in serialization")
     }
 }
@@ -51,11 +51,8 @@ impl Modulo for Mpz {
         let a_m = a.mod_floor(modulus);
         let b_m = b.mod_floor(modulus);
 
-        if a_m >= b_m {
-            (a_m - b_m).mod_floor(modulus)
-        } else {
-            (a + (-b + modulus)).mod_floor(modulus)
-        }
+        let sub_op = a_m - b_m + modulus;
+        sub_op.mod_floor(modulus)
     }
 
     fn mod_add(a: &Self, b: &Self, modulus: &Self) -> Self {
@@ -216,8 +213,8 @@ mod tests {
 
     #[test]
     fn test_to_hex() {
-        let a = Mpz::from(11);
-        assert_eq!(a.to_str_radix(16), a.to_hex());
+        let b = Mpz::from(11);
+        assert_eq!("b", b.to_hex());
     }
 
     #[test]

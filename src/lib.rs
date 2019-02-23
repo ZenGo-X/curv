@@ -19,6 +19,9 @@ extern crate merkle;
 extern crate ring;
 extern crate serde;
 extern crate serde_json;
+extern crate sha3;
+extern crate zeroize;
+
 pub mod elliptic;
 
 #[cfg(feature = "curvesecp256k1")]
@@ -53,6 +56,17 @@ mod ed25519instance {
 
 #[cfg(feature = "ed25519")]
 pub use self::ed25519instance::*;
+
+#[cfg(feature = "curvejubjub")]
+mod jubjubinstance {
+    pub use elliptic::curves::curve_jubjub::FE;
+    pub use elliptic::curves::curve_jubjub::GE;
+    pub use elliptic::curves::curve_jubjub::PK;
+    pub use elliptic::curves::curve_jubjub::SK;
+}
+
+#[cfg(feature = "curvejubjub")]
+pub use self::jubjubinstance::*;
 
 // TODO: When we will have more than one type of big num library, add as features
 pub mod arithmetic;
