@@ -70,7 +70,7 @@ This library has no default elliptic curve, therefore a feature must be specifie
 
 License
 -------
-Cryptography utilities is released under the terms of the GPL-3.0 license. See [LICENSE](LICENSE) for more information.
+Curv is released under the terms of the GPL-3.0 license. See [LICENSE](LICENSE) for more information.
 
 
 Development Process
