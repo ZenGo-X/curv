@@ -20,9 +20,7 @@ use std::str;
 pub const SECRET_KEY_SIZE: usize = 64;
 use super::pairing::bls12_381::Bls12;
 use super::sapling_crypto::jubjub::*;
-use super::sapling_crypto::jubjub::{
-    edwards, fs::Fs, JubjubBls12, JubjubEngine, PrimeOrder, Unknown,
-};
+use super::sapling_crypto::jubjub::{edwards, fs::Fs, JubjubBls12, PrimeOrder, Unknown};
 use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::Converter;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
@@ -43,11 +41,8 @@ pub type SK = Fs;
 pub type PK = edwards::Point<Bls12, PrimeOrder>; // specific type for element in the prime order sub group
 pub type PKu = edwards::Point<Bls12, Unknown>; // special type for general point
 use super::pairing::Field;
+use super::pairing::PrimeField;
 use super::pairing::PrimeFieldRepr;
-use super::pairing::{Engine, PrimeField, SqrtField};
-use super::rand::thread_rng;
-use super::rand::Rng;
-use super::sapling_crypto::jubjub::fs::FsRepr;
 use super::sapling_crypto::jubjub::JubjubParams;
 use super::sapling_crypto::jubjub::ToUniform;
 use arithmetic::traits::{Modulo, Samplable};
@@ -168,17 +163,18 @@ impl ECScalar<SK> for JubjubScalar {
     }
 
     fn sub(&self, other: &SK) -> JubjubScalar {
-        let mut sub_fe = JubjubScalar {
+        let mut other_neg = other.clone();
+        other_neg.negate();
+        let sub_fe = JubjubScalar {
             purpose: "other sub",
-            fe: *other,
+            fe: other_neg.clone(),
         };
-        sub_fe.fe.sub_assign(&self.fe);
-        sub_fe
+        self.add(&sub_fe.get_element())
     }
 
     fn invert(&self) -> JubjubScalar {
         let inv_sc = self.fe.inverse().unwrap();
-        let mut inv_fe = JubjubScalar {
+        let inv_fe = JubjubScalar {
             purpose: "inverse",
             fe: inv_sc,
         };
@@ -297,6 +293,14 @@ impl JubjubPoint {
     }
 }
 
+impl Zeroize for GE {
+    fn zeroize(&mut self) {
+        unsafe { ptr::write_volatile(self, GE::generator()) };
+        atomic::fence(atomic::Ordering::SeqCst);
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
+    }
+}
+
 impl ECPoint<PK, SK> for JubjubPoint {
     fn generator() -> JubjubPoint {
         let params = JubjubBls12::new();
@@ -333,8 +337,7 @@ impl ECPoint<PK, SK> for JubjubPoint {
     }
 
     fn bytes_compressed_to_big_int(&self) -> BigInt {
-        let params = &JubjubBls12::new();
-        let (x, y) = self.ge.into_xy();
+        let (x, _) = self.ge.into_xy();
         let sign = x.into_repr().is_odd();
         let y_coor = self.y_coor().unwrap();
         let point_compressed_bn = (BigInt::from(sign as u32) << 255) + y_coor;
@@ -353,6 +356,7 @@ impl ECPoint<PK, SK> for JubjubPoint {
                 let bytes_vec = template;
                 let bytes_slice = &bytes_vec[0..32];
                 bytes_array_32.copy_from_slice(&bytes_slice);
+                println!("bytes_array_32_u: {:?}", bytes_array_32);
                 let ge_from_bytes = PKu::read(&bytes_array_32[..], params);
                 match ge_from_bytes {
                     Ok(x) => {
@@ -363,12 +367,16 @@ impl ECPoint<PK, SK> for JubjubPoint {
                         Ok(new_point)
                     }
 
-                    Err(_) => Err(InvalidPublicKey),
+                    Err(e) => {
+                        println!("ERROR: {:?}", e);
+                        Err(InvalidPublicKey)
+                    }
                 }
             }
             _ => {
                 let bytes_slice = &bytes_vec[0..32];
                 bytes_array_32.copy_from_slice(&bytes_slice);
+                println!("bytes_array_32_d: {:?}", bytes_array_32);
                 let ge_from_bytes = PKu::read(&bytes_array_32[..], params);
                 match ge_from_bytes {
                     Ok(x) => {
@@ -387,8 +395,11 @@ impl ECPoint<PK, SK> for JubjubPoint {
 
     // in this case the opposite of from_bytes: takes compressed pk to 32 bytes.
     fn pk_to_key_slice(&self) -> Vec<u8> {
-        let point_compressed_bn = self.bytes_compressed_to_big_int();
-        BigInt::to_vec(&point_compressed_bn)
+        let mut v = vec![];
+        self.ge.write(&mut v).unwrap();
+        v
+        //    let point_compressed_bn = self.bytes_compressed_to_big_int();
+        //    BigInt::to_vec(&point_compressed_bn)
     }
 
     fn scalar_mul(&self, fe: &SK) -> JubjubPoint {
@@ -517,6 +528,8 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
         }
         let bytes_bn = BigInt::from_hex(&bytes_str);
         let bytes = BigInt::to_vec(&bytes_bn);
+        println!("bytes: {:?}", bytes);
+
         Ok(JubjubPoint::from_bytes(&bytes[..]).expect("error deserializing point"))
     }
 }
@@ -537,8 +550,8 @@ mod tests {
         let pk = GE::generator();
         let s = serde_json::to_string(&pk).expect("Failed in serialization");
         let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-        //  let eight = ECScalar::from(&BigInt::from(8));
-        //  assert_eq!(des_pk, pk * &eight);
+        let eight = ECScalar::from(&BigInt::from(8));
+        assert_eq!(des_pk, pk * &eight);
 
         let pk = GE::base_point2();
         let s = serde_json::to_string(&pk).expect("Failed in serialization");
@@ -553,7 +566,7 @@ mod tests {
         let pk = GE::generator();
         let s = serde_json::to_string(&pk).expect("Failed in serialization");
         // we make sure that the string encodes invalid point:
-        let s: String = s.replace("5866", "5867");
+        let s: String = s.replace("30", "20");
         let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
         let eight = ECScalar::from(&BigInt::from(8));
         assert_eq!(des_pk, pk * &eight);
@@ -573,6 +586,7 @@ mod tests {
         let b: FE = ECScalar::new_random();
         let a_minus_b_fe: FE = a.sub(&b.get_element());
         let base: GE = ECPoint::generator();
+
         let point_ab1 = &base * &a_minus_b_fe;
         let point_a = &base * &a;
         let point_b = &base * &b;
@@ -649,7 +663,7 @@ mod tests {
     #[test]
     fn test_from_bytes_2() {
         let test_vec = [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 1, 2, 3, 4, 5,
             6,
         ];
         let result = JubjubPoint::from_bytes(&test_vec);

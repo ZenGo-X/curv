@@ -69,8 +69,6 @@ impl Secp256k1Point {
         let random_scalar: Secp256k1Scalar = Secp256k1Scalar::new_random();
         let base_point = Secp256k1Point::generator();
         let pk = base_point.scalar_mul(&random_scalar.get_element());
-        let mut arr = [0u8; 32];
-        thread_rng().fill(&mut arr[..]);
         Secp256k1Point {
             purpose: "random_point",
             ge: pk.get_element(),
@@ -721,22 +719,20 @@ mod tests {
 
     #[test]
     fn test_minus_point() {
-        for _ in 0..100 {
-            let a: FE = ECScalar::new_random();
-            let b: FE = ECScalar::new_random();
-            let b_bn = b.to_big_int();
-            let order = FE::q();
-            let minus_b = BigInt::mod_sub(&order, &b_bn, &order);
-            let a_minus_b = BigInt::mod_add(&a.to_big_int(), &minus_b, &order);
-            let a_minus_b_fe: FE = ECScalar::from(&a_minus_b);
-            let base: GE = ECPoint::generator();
-            let point_ab1 = base.clone() * a_minus_b_fe;
+        let a: FE = ECScalar::new_random();
+        let b: FE = ECScalar::new_random();
+        let b_bn = b.to_big_int();
+        let order = FE::q();
+        let minus_b = BigInt::mod_sub(&order, &b_bn, &order);
+        let a_minus_b = BigInt::mod_add(&a.to_big_int(), &minus_b, &order);
+        let a_minus_b_fe: FE = ECScalar::from(&a_minus_b);
+        let base: GE = ECPoint::generator();
+        let point_ab1 = base.clone() * a_minus_b_fe;
 
-            let point_a = base.clone() * a;
-            let point_b = base.clone() * b;
-            let point_ab2 = point_a.sub_point(&point_b.get_element());
-            assert_eq!(point_ab1.get_element(), point_ab2.get_element());
-        }
+        let point_a = base.clone() * a;
+        let point_b = base.clone() * b;
+        let point_ab2 = point_a.sub_point(&point_b.get_element());
+        assert_eq!(point_ab1.get_element(), point_ab2.get_element());
     }
 
     #[test]

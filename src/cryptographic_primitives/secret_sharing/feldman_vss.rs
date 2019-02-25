@@ -101,7 +101,7 @@ impl VerifiableSS {
         assert_eq!(shares.len(), indices.len());
         assert!(shares.len() >= self.reconstruct_limit());
         // add one to indices to get points
-        let points: Vec<FE> = indices
+        let points = indices
             .iter()
             .map(|i| {
                 let index_bn = BigInt::from(*i as u32 + 1 as u32);
