@@ -1,5 +1,6 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Build Status](https://travis-ci.com/KZen-networks/curv.svg?branch=master)](https://travis-ci.com/KZen-networks/curv)
+[![Coverage Status](https://coveralls.io/repos/github/KZen-networks/curv/badge.svg?branch=master)](https://coveralls.io/github/KZen-networks/curv?branch=master)
 
 Curv
 =====================================
