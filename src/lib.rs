@@ -22,7 +22,6 @@ extern crate serde_json;
 extern crate sha3;
 extern crate zeroize;
 
-
 #[cfg(feature = "ecc")]
 pub mod elliptic;
 
@@ -73,7 +72,6 @@ pub use self::jubjubinstance::*;
 pub mod arithmetic;
 #[cfg(feature = "gmp")]
 pub use arithmetic::big_gmp::BigInt;
-
 
 #[cfg(feature = "ecc")]
 pub mod cryptographic_primitives;

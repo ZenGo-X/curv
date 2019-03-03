@@ -19,7 +19,9 @@
 use super::gmp::mpz::Mpz;
 use super::rand::rngs::OsRng;
 use super::rand::RngCore;
-use super::traits::{BitManipulation, Converter, Modulo, NumberTests, Samplable, EGCD, ConvertFrom};
+use super::traits::{
+    BitManipulation, ConvertFrom, Converter, Modulo, NumberTests, Samplable, EGCD,
+};
 
 use std::borrow::Borrow;
 
