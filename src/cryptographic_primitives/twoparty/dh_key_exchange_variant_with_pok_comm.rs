@@ -14,7 +14,6 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-
 use arithmetic::traits::Samplable;
 use cryptographic_primitives::commitments::hash_commitment::HashCommitment;
 use cryptographic_primitives::commitments::traits::Commitment;

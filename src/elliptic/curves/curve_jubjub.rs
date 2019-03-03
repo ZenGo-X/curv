@@ -55,7 +55,7 @@ pub struct JubjubScalar {
     purpose: &'static str,
     fe: SK,
 }
-#[derive(Clone,Copy)]
+#[derive(Clone, Copy)]
 pub struct JubjubPoint {
     purpose: &'static str,
     ge: PK,

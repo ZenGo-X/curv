@@ -38,28 +38,22 @@ pub trait Samplable {
     fn strict_sample(bit_size: usize) -> Self;
 }
 
-
 pub trait NumberTests {
     fn is_zero(&Self) -> bool;
     fn is_even(&Self) -> bool;
     fn is_negative(me: &Self) -> bool;
 }
 
-
 pub trait EGCD
-    where
-        Self: Sized,
+where
+    Self: Sized,
 {
     fn egcd(a: &Self, b: &Self) -> (Self, Self, Self);
 }
-
 
 pub trait BitManipulation {
     fn set_bit(self: &mut Self, bit: usize, bit_val: bool);
     fn test_bit(self: &Self, bit: usize) -> bool;
 }
 
-
 //use std::ops::{Add, Div, Mul, Neg, Rem, Shr, Sub};
-
-

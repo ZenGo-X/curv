@@ -14,7 +14,6 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-
 use cryptographic_primitives::proofs::sigma_valid_pedersen::PedersenProof;
 use cryptographic_primitives::proofs::sigma_valid_pedersen::ProvePederesen;
 use cryptographic_primitives::proofs::sigma_valid_pedersen_blind::PedersenBlindingProof;
