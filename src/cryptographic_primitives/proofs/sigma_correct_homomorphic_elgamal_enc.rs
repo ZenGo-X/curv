@@ -24,6 +24,7 @@ use super::ProofError;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
 use elliptic::curves::traits::*;
+use zeroize::Zeroize;
 use FE;
 use GE;
 
@@ -52,33 +53,32 @@ pub struct HomoElGamalStatement {
 
 impl HomoELGamalProof {
     pub fn prove(w: &HomoElGamalWitness, delta: &HomoElGamalStatement) -> HomoELGamalProof {
-        let s1: FE = ECScalar::new_random();
-        let s2: FE = ECScalar::new_random();
-        let A1 = &delta.H * &s1;
-        let A2 = &delta.Y * &s2;
-        let A3 = &delta.G * &s2;
+        let mut s1: FE = ECScalar::new_random();
+        let mut s2: FE = ECScalar::new_random();
+        let mut A1 = delta.H * s1;
+        let mut A2 = delta.Y * s2;
+        let A3 = delta.G * s2;
         let T = A1 + A2;
         let e = HSha256::create_hash_from_ge(&[
             &T, &A3, &delta.G, &delta.H, &delta.Y, &delta.D, &delta.E,
         ]);
         // dealing with zero field element
-        let z1 = if w.x != FE::zero() {
-            s1.add(&e.mul(&w.x.get_element()).get_element())
-        } else {
-            s1.clone()
-        };
-        let z2 = s2.add(&e.mul(&w.r.get_element()).get_element());
-
+        let z1 = if w.x != FE::zero() { s1 + w.x * e } else { s1 };
+        let z2 = s2 + w.r * e;
+        s1.zeroize();
+        s2.zeroize();
+        A1.zeroize();
+        A2.zeroize();
         HomoELGamalProof { T, A3, z1, z2 }
     }
     pub fn verify(&self, delta: &HomoElGamalStatement) -> Result<(), ProofError> {
         let e = HSha256::create_hash_from_ge(&[
             &self.T, &self.A3, &delta.G, &delta.H, &delta.Y, &delta.D, &delta.E,
         ]);
-        let z1H_plus_z2Y = &delta.H * &self.z1 + &delta.Y * &self.z2;
-        let T_plus_eD = self.T.clone() + delta.D.clone() * &e;
-        let z2G = delta.G.clone() * &self.z2;
-        let A3_plus_eE = self.A3.clone() + delta.E.clone() * &e;
+        let z1H_plus_z2Y = delta.H * self.z1 + delta.Y * self.z2;
+        let T_plus_eD = self.T + delta.D * e;
+        let z2G = delta.G * self.z2;
+        let A3_plus_eE = self.A3 + delta.E * e;
         if z1H_plus_z2Y == T_plus_eD && z2G == A3_plus_eE {
             Ok(())
         } else {
@@ -89,7 +89,7 @@ impl HomoELGamalProof {
 
 #[cfg(test)]
 mod tests {
-    use cryptographic_primitives::proofs::sigma_correct_homomrphic_elgamal_enc::*;
+    use cryptographic_primitives::proofs::sigma_correct_homomorphic_elgamal_enc::*;
     use {FE, GE};
 
     #[test]

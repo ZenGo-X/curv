@@ -31,6 +31,7 @@ use elliptic::curves::traits::*;
 
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
+use zeroize::Zeroize;
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct DLogProof {
@@ -49,7 +50,7 @@ impl ProveDLog for DLogProof {
     fn prove(sk: &FE) -> DLogProof {
         let base_point: GE = ECPoint::generator();
         let generator_x = base_point.bytes_compressed_to_big_int();
-        let sk_t_rand_commitment: FE = ECScalar::new_random();
+        let mut sk_t_rand_commitment: FE = ECScalar::new_random();
         let pk_t_rand_commitment = base_point.scalar_mul(&sk_t_rand_commitment.get_element());
         let ec_point: GE = ECPoint::generator();
         let pk = ec_point.scalar_mul(&sk.get_element());
@@ -61,6 +62,7 @@ impl ProveDLog for DLogProof {
         let challenge_fe: FE = ECScalar::from(&challenge);
         let challenge_mul_sk = challenge_fe.mul(&sk.get_element());
         let challenge_response = sk_t_rand_commitment.sub(&challenge_mul_sk.get_element());
+        sk_t_rand_commitment.zeroize();
         DLogProof {
             pk,
             pk_t_rand_commitment,
@@ -77,7 +79,7 @@ impl ProveDLog for DLogProof {
         ]);
 
         let sk_challenge: FE = ECScalar::from(&challenge);
-        let pk = proof.pk.clone();
+        let pk = proof.pk;
         let pk_challenge = pk.scalar_mul(&sk_challenge.get_element());
 
         let base_point: GE = ECPoint::generator();

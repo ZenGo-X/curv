@@ -31,6 +31,7 @@ use cryptographic_primitives::hashing::traits::Hash;
 ///
 /// verifier checks that zG1 = A1 + eH1, zG2 = A2 + eH2
 use elliptic::curves::traits::*;
+use zeroize::Zeroize;
 use {FE, GE};
 
 #[derive(Clone, PartialEq, Debug)]
@@ -62,13 +63,13 @@ pub trait NISigmaProof<T, W, S> {
 
 impl NISigmaProof<ECDDHProof, ECDDHWitness, ECDDHStatement> for ECDDHProof {
     fn prove(w: &ECDDHWitness, delta: &ECDDHStatement) -> ECDDHProof {
-        let s: FE = ECScalar::new_random();
-        let a1 = &delta.g1 * &s;
-        let a2 = &delta.g2 * &s;
-
+        let mut s: FE = ECScalar::new_random();
+        let a1 = delta.g1 * s;
+        let a2 = delta.g2 * s;
         let e =
             HSha256::create_hash_from_ge(&[&delta.g1, &delta.h1, &delta.g2, &delta.h2, &a1, &a2]);
-        let z = s + e.clone() * &w.x;
+        let z = s + e * w.x;
+        s.zeroize();
         ECDDHProof { a1, a2, z }
     }
 
@@ -76,10 +77,10 @@ impl NISigmaProof<ECDDHProof, ECDDHWitness, ECDDHStatement> for ECDDHProof {
         let e = HSha256::create_hash_from_ge(&[
             &delta.g1, &delta.h1, &delta.g2, &delta.h2, &self.a1, &self.a2,
         ]);
-        let z_g1 = &delta.g1 * &self.z;
-        let z_g2 = &delta.g2 * &self.z;
-        let a1_plus_e_h1 = self.a1.clone() + &delta.h1 * &e;
-        let a2_plus_e_h2 = self.a2.clone() + &delta.h2 * &e;
+        let z_g1 = delta.g1 * self.z;
+        let z_g2 = delta.g2 * self.z;
+        let a1_plus_e_h1 = self.a1 + delta.h1 * e;
+        let a2_plus_e_h2 = self.a2 + delta.h2 * e;
         if z_g1 == a1_plus_e_h1 && z_g2 == a2_plus_e_h2 {
             Ok(())
         } else {

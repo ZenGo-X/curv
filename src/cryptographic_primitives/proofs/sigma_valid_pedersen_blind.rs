@@ -14,7 +14,6 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-// TODO: abstract for use with elliptic curves other than secp256k1
 use super::ProofError;
 
 /// protocol for proving that Pedersen commitment c was constructed correctly which is the same as
@@ -34,7 +33,9 @@ use cryptographic_primitives::commitments::traits::Commitment;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
 
+use zeroize::Zeroize;
 use {FE, GE};
+
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct PedersenBlindingProof {
     e: FE,
@@ -52,7 +53,7 @@ impl ProvePederesenBlind for PedersenBlindingProof {
     //TODO: add self verification to prover proof
     fn prove(m: &FE, r: &FE) -> PedersenBlindingProof {
         let h = GE::base_point2();
-        let s: FE = ECScalar::new_random();
+        let mut s: FE = ECScalar::new_random();
         let a = h.scalar_mul(&s.get_element());
         let com = PedersenCommitment::create_commitment_with_user_defined_randomness(
             &m.to_big_int(),
@@ -70,10 +71,10 @@ impl ProvePederesenBlind for PedersenBlindingProof {
 
         let er = e.mul(&r.get_element());
         let z = s.add(&er.get_element());
-
+        s.zeroize();
         PedersenBlindingProof {
             e,
-            m: m.clone(),
+            m: *m,
             a,
             com,
             z,
@@ -97,7 +98,7 @@ impl ProvePederesenBlind for PedersenBlindingProof {
         let mg = g.scalar_mul(&proof.m.get_element());
         let emg = mg.scalar_mul(&e.get_element());
         let lhs = zh.add_point(&emg.get_element());
-        let com_clone = proof.com.clone();
+        let com_clone = proof.com;
         let ecom = com_clone.scalar_mul(&e.get_element());
         let rhs = ecom.add_point(&proof.a.get_element());
 

@@ -30,6 +30,7 @@ use cryptographic_primitives::hashing::traits::Hash;
 ///
 /// verifier checks that z1*G + z2*H  = A1 + A2 + ec
 use elliptic::curves::traits::*;
+use zeroize::Zeroize;
 use {FE, GE};
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -52,8 +53,8 @@ impl ProvePederesen for PedersenProof {
     fn prove(m: &FE, r: &FE) -> PedersenProof {
         let g: GE = ECPoint::generator();
         let h = GE::base_point2();
-        let s1: FE = ECScalar::new_random();
-        let s2: FE = ECScalar::new_random();
+        let mut s1: FE = ECScalar::new_random();
+        let mut s2: FE = ECScalar::new_random();
         let a1 = g.scalar_mul(&s1.get_element());
         let a2 = h.scalar_mul(&s2.get_element());
         let com = PedersenCommitment::create_commitment_with_user_defined_randomness(
@@ -75,6 +76,9 @@ impl ProvePederesen for PedersenProof {
         let z1 = s1.add(&em.get_element());
         let er = e.mul(&r.get_element());
         let z2 = s2.add(&er.get_element());
+        s1.zeroize();
+        s2.zeroize();
+
         PedersenProof {
             e,
             a1,
@@ -101,7 +105,7 @@ impl ProvePederesen for PedersenProof {
         let z2h = h.scalar_mul(&proof.z2.get_element());
         let lhs = z1g.add_point(&z2h.get_element());
         let rhs = proof.a1.add_point(&proof.a2.get_element());
-        let com_clone = proof.com.clone();
+        let com_clone = proof.com;
         let ecom = com_clone.scalar_mul(&e.get_element());
         let rhs = rhs.add_point(&ecom.get_element());
 

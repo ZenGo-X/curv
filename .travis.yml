@@ -4,9 +4,10 @@ rust:
   - nightly
 
 env:
-  - CURVE=curvesecp256k1
-  - CURVE=ed25519
-  - CURVE=curveristretto
+  - CURVE=ec_secp256k1
+  - CURVE=ec_ed25519
+  - CURVE=ec_ristretto
+  - CURVE=ec_jubjub
 
 before_script:
   - rustup component add rustfmt-preview

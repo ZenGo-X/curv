@@ -1,5 +1,7 @@
+#![cfg(feature="gmp")]
+
 /*
-    Cryptography utilities
+    Curv
 
     Copyright 2018 by Kzen Networks
 
@@ -11,15 +13,18 @@
     License as published by the Free Software Foundation, either
     version 3 of the License, or (at your option) any later version.
 
-    @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
+    @license GPL-3.0+ <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
 use super::gmp::mpz::Mpz;
 use super::rand::rngs::OsRng;
 use super::rand::RngCore;
-use super::traits::{Converter, Modulo, Samplable};
+use super::traits::{
+    BitManipulation, ConvertFrom, Converter, Modulo, NumberTests, Samplable, EGCD,
+};
 
 use std::borrow::Borrow;
+
 pub type BigInt = Mpz;
 
 impl Converter for Mpz {
@@ -32,7 +37,7 @@ impl Converter for Mpz {
         self.to_str_radix(super::HEX_RADIX)
     }
 
-    fn from_hex(value: &String) -> Mpz {
+    fn from_hex(value: &str) -> Mpz {
         BigInt::from_str_radix(value, super::HEX_RADIX).expect("Error in serialization")
     }
 }
@@ -51,15 +56,16 @@ impl Modulo for Mpz {
         let a_m = a.mod_floor(modulus);
         let b_m = b.mod_floor(modulus);
 
-        if a_m >= b_m {
-            (a_m - b_m).mod_floor(modulus)
-        } else {
-            (a + (-b + modulus)).mod_floor(modulus)
-        }
+        let sub_op = a_m - b_m + modulus;
+        sub_op.mod_floor(modulus)
     }
 
     fn mod_add(a: &Self, b: &Self, modulus: &Self) -> Self {
         (a.mod_floor(modulus) + b.mod_floor(modulus)).mod_floor(modulus)
+    }
+
+    fn mod_inv(a: &Self, modulus: &Self) -> Self {
+        a.invert(modulus).unwrap()
     }
 }
 
@@ -106,6 +112,45 @@ impl Samplable for Mpz {
                 return n;
             }
         }
+    }
+}
+
+impl NumberTests for Mpz {
+    fn is_zero(me: &Self) -> bool {
+        me.is_zero()
+    }
+    fn is_even(me: &Self) -> bool {
+        me.is_multiple_of(&Mpz::from(2))
+    }
+    fn is_negative(me: &Self) -> bool {
+        me < &Mpz::from(0)
+    }
+}
+
+impl EGCD for Mpz {
+    fn egcd(a: &Self, b: &Self) -> (Self, Self, Self) {
+        a.gcdext(b)
+    }
+}
+
+impl BitManipulation for Mpz {
+    fn set_bit(self: &mut Self, bit: usize, bit_val: bool) {
+        if bit_val {
+            self.setbit(bit);
+        } else {
+            self.clrbit(bit);
+        }
+    }
+
+    fn test_bit(self: &Self, bit: usize) -> bool {
+        self.tstbit(bit)
+    }
+}
+
+impl ConvertFrom<Mpz> for u64 {
+    fn _from(x: &Mpz) -> u64 {
+        let foo: Option<u64> = x.into();
+        foo.unwrap()
     }
 }
 
@@ -216,8 +261,8 @@ mod tests {
 
     #[test]
     fn test_to_hex() {
-        let a = Mpz::from(11);
-        assert_eq!(a.to_str_radix(16), a.to_hex());
+        let b = Mpz::from(11);
+        assert_eq!("b", b.to_hex());
     }
 
     #[test]

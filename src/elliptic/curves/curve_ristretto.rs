@@ -38,21 +38,33 @@ pub const COOR_BYTE_SIZE: usize = 32;
 pub const NUM_OF_COORDINATES: usize = 4;
 use merkle::Hashable;
 use ring::digest::Context;
+use std::ptr;
+use std::sync::atomic;
+use zeroize::Zeroize;
+
 pub type SK = Scalar;
 pub type PK = CompressedRistretto;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy)]
 pub struct RistrettoScalar {
     purpose: &'static str,
     fe: SK,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy)]
 pub struct RistrettoCurvPoint {
     purpose: &'static str,
     ge: PK,
 }
 pub type GE = RistrettoCurvPoint;
 pub type FE = RistrettoScalar;
+
+impl Zeroize for FE {
+    fn zeroize(&mut self) {
+        unsafe { ptr::write_volatile(self, FE::zero()) };
+        atomic::fence(atomic::Ordering::SeqCst);
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
+    }
+}
 
 impl ECScalar<SK> for RistrettoScalar {
     fn new_random() -> RistrettoScalar {
@@ -211,7 +223,7 @@ impl<'de> Visitor<'de> for Secp256k1ScalarVisitor {
     type Value = RistrettoScalar;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("Secp256k1Scalar")
+        formatter.write_str("ristretto")
     }
 
     fn visit_str<E: de::Error>(self, s: &str) -> Result<RistrettoScalar, E> {
@@ -244,6 +256,15 @@ impl RistrettoCurvPoint {
         }
     }
 }
+
+impl Zeroize for GE {
+    fn zeroize(&mut self) {
+        unsafe { ptr::write_volatile(self, GE::generator()) };
+        atomic::fence(atomic::Ordering::SeqCst);
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
+    }
+}
+
 impl ECPoint<PK, SK> for RistrettoCurvPoint {
     fn generator() -> RistrettoCurvPoint {
         RistrettoCurvPoint {
@@ -257,16 +278,13 @@ impl ECPoint<PK, SK> for RistrettoCurvPoint {
     }
 
     fn x_coor(&self) -> Option<BigInt> {
-        //TODO:
-        // let y = self.y_coor();
-        // xrecover(y)
-        None
+        unimplemented!();
     }
 
     fn y_coor(&self) -> Option<BigInt> {
         let y_fe = SK::from_bytes_mod_order(self.ge.to_bytes());
         let y_fe = RistrettoScalar {
-            purpose: "base_fe",
+            purpose: "y_coor",
             fe: y_fe,
         };
         Some(y_fe.to_big_int())
@@ -447,7 +465,7 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
         }
         let bytes_bn = BigInt::from_hex(&bytes_str);
         let bytes = BigInt::to_vec(&bytes_bn);
-        // println!("bytes des {:?}", bytes.clone());
+
         Ok(RistrettoCurvPoint::from_bytes(&bytes[..]).expect("error deserializing point"))
     }
 }
@@ -528,9 +546,9 @@ mod tests {
         let a_minus_b = BigInt::mod_add(&a.to_big_int(), &minus_b, &order);
         let a_minus_b_fe: FE = ECScalar::from(&a_minus_b);
         let base: GE = ECPoint::generator();
-        let point_ab1 = base.clone() * a_minus_b_fe;
-        let point_a = base.clone() * a;
-        let point_b = base.clone() * b;
+        let point_ab1 = base * a_minus_b_fe;
+        let point_a = base * a;
+        let point_b = base * b;
         let point_ab2 = point_a.sub_point(&point_b.get_element());
         assert_eq!(point_ab1, point_ab2);
     }

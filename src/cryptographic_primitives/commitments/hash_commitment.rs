@@ -18,7 +18,7 @@ use BigInt;
 use super::traits::Commitment;
 use super::SECURITY_BITS;
 use arithmetic::traits::Samplable;
-use ring::digest::{Context, SHA256};
+use sha3::{Digest, Sha3_256};
 //TODO: (open issue) use this struct to represent the commitment HashCommitment{comm: BigInt, r: BigInt, m: BigInt}
 pub struct HashCommitment;
 
@@ -28,14 +28,15 @@ impl Commitment<BigInt> for HashCommitment {
         message: &BigInt,
         blinding_factor: &BigInt,
     ) -> BigInt {
-        let mut digest = Context::new(&SHA256);
+        let mut digest = Sha3_256::new();
         let bytes_message: Vec<u8> = message.into();
-        digest.update(&bytes_message);
-
+        digest.input(&bytes_message);
+        println!("digest {:?}", digest.clone());
         let bytes_blinding_factor: Vec<u8> = blinding_factor.into();
-        digest.update(&bytes_blinding_factor);
+        digest.input(&bytes_blinding_factor);
+        println!("digest 2 {:?}", digest.clone());
 
-        BigInt::from(digest.finish().as_ref())
+        BigInt::from(digest.result().as_ref())
     }
 
     fn create_commitment(message: &BigInt) -> (BigInt, BigInt) {
@@ -54,6 +55,7 @@ mod tests {
     use super::HashCommitment;
     use super::SECURITY_BITS;
     use arithmetic::traits::Samplable;
+    use sha3::{Digest, Sha3_256};
     use BigInt;
 
     #[test]
@@ -101,17 +103,17 @@ mod tests {
 
     #[test]
     fn test_hashing_create_commitment_with_user_defined_randomness() {
-        let mut digest = super::Context::new(&super::SHA256);
+        let mut digest = Sha3_256::new();
         let message = BigInt::one();
         let commitment = HashCommitment::create_commitment_with_user_defined_randomness(
             &message,
             &BigInt::zero(),
         );
         let message2: Vec<u8> = (&message).into();
-        digest.update(&message2);
+        digest.input(&message2);
         let bytes_blinding_factor: Vec<u8> = (&BigInt::zero()).into();
-        digest.update(&bytes_blinding_factor);
-        let hash_result = BigInt::from(digest.finish().as_ref());
+        digest.input(&bytes_blinding_factor);
+        let hash_result = BigInt::from(digest.result().as_ref());
         assert_eq!(&commitment, &hash_result);
     }
 

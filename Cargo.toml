@@ -7,10 +7,17 @@ version = "0.1.0"
 crate-type = ["lib"]
 
 [features]
+default = ["gmp"]
+ec_secp256k1 = ["gmp" ,"ecc", "curvesecp256k1"]
+ec_ristretto = ["gmp", "ecc" , "curveristretto"]
+ec_ed25519 = ["gmp", "ecc" , "ed25519"]
+ec_jubjub = ["gmp", "ecc" , "curvejubjub"]
 curvesecp256k1 = []
 curveristretto = []
 ed25519 = []
-
+curvejubjub = []
+gmp = []
+ecc = []
 
 [dependencies]
 rand = "0.6"
@@ -19,6 +26,26 @@ serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
 merkle = "1.10.0"
+zeroize = "0.5.2"
+sha3 = "0.8.1"
+
+
+#[dependencies.sapling-crypto]
+#git = "https://github.com/zcash/librustzcash.git"
+#rev = "06da3b9ac8f278e5d4ae13088cf0a4c03d2c13f5"
+
+#[dependencies.pairing]
+#git = "https://github.com/zcash/librustzcash.git"
+#rev = "06da3b9ac8f278e5d4ae13088cf0a4c03d2c13f5"
+
+[dependencies.sapling-crypto]
+git = "https://github.com/omershlo/librustzcash.git"
+rev = "3e667406323430813f6dbae2a60b5a83046fa20a"
+
+[dependencies.pairing]
+git = "https://github.com/omershlo/librustzcash.git"
+rev = "3e667406323430813f6dbae2a60b5a83046fa20a"
+
 
 [dependencies.rust-gmp]
 version = "0.5.0"
@@ -34,3 +61,4 @@ version = "1.0.1"
 
 [dependencies.cryptoxide]
 version = "0.1.0"
+
