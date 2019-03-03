@@ -14,6 +14,8 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
+use std::marker::Sized;
+
 pub trait Converter {
     fn to_vec(n: &Self) -> Vec<u8>;
     fn to_hex(&self) -> String;
@@ -25,6 +27,7 @@ pub trait Modulo {
     fn mod_mul(a: &Self, b: &Self, modulus: &Self) -> Self;
     fn mod_sub(a: &Self, b: &Self, modulus: &Self) -> Self;
     fn mod_add(a: &Self, b: &Self, modulus: &Self) -> Self;
+    fn mod_inv(a: &Self, modulus: &Self) -> Self;
 }
 
 pub trait Samplable {
@@ -34,3 +37,29 @@ pub trait Samplable {
     fn sample(bitsize: usize) -> Self;
     fn strict_sample(bit_size: usize) -> Self;
 }
+
+
+pub trait NumberTests {
+    fn is_zero(&Self) -> bool;
+    fn is_even(&Self) -> bool;
+    fn is_negative(me: &Self) -> bool;
+}
+
+
+pub trait EGCD
+    where
+        Self: Sized,
+{
+    fn egcd(a: &Self, b: &Self) -> (Self, Self, Self);
+}
+
+
+pub trait BitManipulation {
+    fn set_bit(self: &mut Self, bit: usize, bit_val: bool);
+    fn test_bit(self: &Self, bit: usize) -> bool;
+}
+
+
+//use std::ops::{Add, Div, Mul, Neg, Rem, Shr, Sub};
+
+

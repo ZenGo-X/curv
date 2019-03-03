@@ -17,9 +17,10 @@
 use super::gmp::mpz::Mpz;
 use super::rand::rngs::OsRng;
 use super::rand::RngCore;
-use super::traits::{Converter, Modulo, Samplable};
+use super::traits::{Converter, Modulo, Samplable,NumberTests,EGCD, BitManipulation};
 
 use std::borrow::Borrow;
+
 pub type BigInt = Mpz;
 
 impl Converter for Mpz {
@@ -57,6 +58,10 @@ impl Modulo for Mpz {
 
     fn mod_add(a: &Self, b: &Self, modulus: &Self) -> Self {
         (a.mod_floor(modulus) + b.mod_floor(modulus)).mod_floor(modulus)
+    }
+
+    fn mod_inv(a: &Self, modulus: &Self) -> Self {
+        a.invert(modulus).unwrap()
     }
 }
 
@@ -103,6 +108,38 @@ impl Samplable for Mpz {
                 return n;
             }
         }
+    }
+}
+
+impl NumberTests for Mpz {
+    fn is_zero(me: &Self) -> bool {
+        me.is_zero()
+    }
+    fn is_even(me: &Self) -> bool {
+        me.is_multiple_of(&Mpz::from(2))
+    }
+    fn is_negative(me: &Self) -> bool {
+        me < &Mpz::from(0)
+    }
+}
+
+impl EGCD for Mpz {
+    fn egcd(a: &Self, b: &Self) -> (Self, Self, Self) {
+        a.gcdext(b)
+    }
+}
+
+impl BitManipulation for Mpz {
+    fn set_bit(self: &mut Self, bit: usize, bit_val: bool) {
+        if bit_val {
+            self.setbit(bit);
+        } else {
+            self.clrbit(bit);
+        }
+    }
+
+    fn test_bit(self: &Self, bit: usize) -> bool {
+        self.tstbit(bit)
     }
 }
 

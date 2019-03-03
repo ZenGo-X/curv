@@ -14,16 +14,7 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-//This is an implementation of a Diffie Hellman Key Exchange.
-// Party1 private key is "x",
-// Party2 private key is "y",
-//protocol:
-// party1 sends a commitmemt to P1 = xG a commitment to a proof of knowledge of x
-// party2 sends P2 and a proof of knowledge of y
-// party1 verifies party2 proof decommit to P1 and  to the PoK
-// party2 verifies party1 proof
-// the shared secret is Q = xyG
-// reference can be found in protocol 3.1 step 1 - 3(b) in the paper https://eprint.iacr.org/2017/552.pdf
+
 
 use elliptic::curves::traits::*;
 use FE;

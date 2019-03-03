@@ -23,13 +23,23 @@ merkle = "1.10.0"
 zeroize = "0.5.2"
 sha3 = "0.8.1"
 
+
+#[dependencies.sapling-crypto]
+#git = "https://github.com/zcash/librustzcash.git"
+#rev = "06da3b9ac8f278e5d4ae13088cf0a4c03d2c13f5"
+
+#[dependencies.pairing]
+#git = "https://github.com/zcash/librustzcash.git"
+#rev = "06da3b9ac8f278e5d4ae13088cf0a4c03d2c13f5"
+
 [dependencies.sapling-crypto]
-git = "https://github.com/zcash/librustzcash.git"
-rev = "06da3b9ac8f278e5d4ae13088cf0a4c03d2c13f5"
+git = "https://github.com/omershlo/librustzcash.git"
+rev = "3e667406323430813f6dbae2a60b5a83046fa20a"
 
 [dependencies.pairing]
-git = "https://github.com/zcash/librustzcash.git"
-rev = "06da3b9ac8f278e5d4ae13088cf0a4c03d2c13f5"
+git = "https://github.com/omershlo/librustzcash.git"
+rev = "3e667406323430813f6dbae2a60b5a83046fa20a"
+
 
 [dependencies.rust-gmp]
 version = "0.5.0"

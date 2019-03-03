@@ -14,10 +14,7 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-// This is an implementation of string coin tossing of a string, to generate a random string between
-//two non-trusting parties. Based on the
-// the protocol and proof analysis  in "How To Simulate It – A Tutorial on the Simulation
-// Proof Technique∗" (https://eprint.iacr.org/2016/046.pdf)
+
 use cryptographic_primitives::proofs::sigma_valid_pedersen::PedersenProof;
 use cryptographic_primitives::proofs::sigma_valid_pedersen::ProvePederesen;
 use cryptographic_primitives::proofs::sigma_valid_pedersen_blind::PedersenBlindingProof;
