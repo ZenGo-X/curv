@@ -22,6 +22,8 @@ extern crate serde_json;
 extern crate sha3;
 extern crate zeroize;
 
+
+#[cfg(feature = "ecc")]
 pub mod elliptic;
 
 #[cfg(feature = "curvesecp256k1")]
@@ -68,10 +70,12 @@ mod jubjubinstance {
 #[cfg(feature = "curvejubjub")]
 pub use self::jubjubinstance::*;
 
-// TODO: When we will have more than one type of big num library, add as features
 pub mod arithmetic;
+#[cfg(feature = "gmp")]
 pub use arithmetic::big_gmp::BigInt;
 
+
+#[cfg(feature = "ecc")]
 pub mod cryptographic_primitives;
 
 #[derive(Copy, PartialEq, Eq, Clone, Debug)]

@@ -7,11 +7,17 @@ version = "0.1.0"
 crate-type = ["lib"]
 
 [features]
+default = ["gmp"]
+ec_secp256k1 = ["gmp" ,"ecc", "curvesecp256k1"]
+ec_ristretto = ["gmp", "ecc" , "curveristretto"]
+ec_ed25519 = ["gmp", "ecc" , "ed25519"]
+ec_jubjub = ["gmp", "ecc" , "curvejubjub"]
 curvesecp256k1 = []
 curveristretto = []
 ed25519 = []
 curvejubjub = []
-
+gmp = []
+ecc = []
 
 [dependencies]
 rand = "0.6"
