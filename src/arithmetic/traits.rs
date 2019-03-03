@@ -56,4 +56,7 @@ pub trait BitManipulation {
     fn test_bit(self: &Self, bit: usize) -> bool;
 }
 
+pub trait ConvertFrom<T> {
+    fn _from(&T) -> Self;
+}
 //use std::ops::{Add, Div, Mul, Neg, Rem, Shr, Sub};

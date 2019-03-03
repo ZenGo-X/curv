@@ -17,7 +17,7 @@
 use super::gmp::mpz::Mpz;
 use super::rand::rngs::OsRng;
 use super::rand::RngCore;
-use super::traits::{BitManipulation, Converter, Modulo, NumberTests, Samplable, EGCD};
+use super::traits::{BitManipulation, Converter, Modulo, NumberTests, Samplable, EGCD, ConvertFrom};
 
 use std::borrow::Borrow;
 
@@ -140,6 +140,13 @@ impl BitManipulation for Mpz {
 
     fn test_bit(self: &Self, bit: usize) -> bool {
         self.tstbit(bit)
+    }
+}
+
+impl ConvertFrom<Mpz> for u64 {
+    fn _from(x: &Mpz) -> u64 {
+        let foo: Option<u64> = x.into();
+        foo.unwrap()
     }
 }
 
