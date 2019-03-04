@@ -14,8 +14,6 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-use super::ProofError;
-
 /// protocol for proving that Pedersen commitment c was constructed correctly which is the same as
 /// proof of knowledge of (r) such that c = mG + rH.
 /// witness: (r), statement: (c,m), The Relation R outputs 1 if c = mG + rH. The protocol:
@@ -23,15 +21,13 @@ use super::ProofError;
 /// prover calculates challenge e = H(G,H,c,A,m)
 /// prover calculates z  = s + er,
 /// prover sends pi = {e, m,A,c, z}
-///
-
 /// verifier checks that emG + zH  = A + ec
-use elliptic::curves::traits::*;
-
+use super::ProofError;
 use cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
 use cryptographic_primitives::commitments::traits::Commitment;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
+use elliptic::curves::traits::*;
 
 use zeroize::Zeroize;
 use {FE, GE};

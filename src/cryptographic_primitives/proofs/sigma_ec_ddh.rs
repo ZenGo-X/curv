@@ -15,9 +15,6 @@
 
 */
 
-use super::ProofError;
-use cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptographic_primitives::hashing::traits::Hash;
 /// This protocol is the elliptic curve form of the protocol from :
 ///  D. Chaum, T. P. Pedersen. Transferred cash grows in size. In Advances in Cryptology, EUROCRYPT , volume 658 of Lecture Notes in Computer Science, pages 390 - 407, 1993.
 ///  This is a proof of membership of DDH: (G, xG, yG, xyG)
@@ -30,6 +27,9 @@ use cryptographic_primitives::hashing::traits::Hash;
 /// prover sends pi = {e, A1,A2,z}
 ///
 /// verifier checks that zG1 = A1 + eH1, zG2 = A2 + eH2
+use super::ProofError;
+use cryptographic_primitives::hashing::hash_sha256::HSha256;
+use cryptographic_primitives::hashing::traits::Hash;
 use elliptic::curves::traits::*;
 use zeroize::Zeroize;
 use {FE, GE};

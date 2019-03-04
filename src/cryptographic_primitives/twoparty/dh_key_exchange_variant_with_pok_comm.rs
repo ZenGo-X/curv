@@ -14,6 +14,14 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
+/// in ECDH Alice chooses at random a secret "a" and sends Bob public key A = aG
+/// Bob chooses at random a secret "b" and sends to Alice B = bG.
+/// Both parties can compute a joint secret: C =aB = bA = abG which cannot be computed by
+/// a man in the middle attacker.
+///
+/// The variant below is to protect not only from man in the middle but also from malicious
+/// Alice or Bob that can bias the result. The details of the protocol can be found in
+/// https://eprint.iacr.org/2017/552.pdf protocol 3.1 first 3 steps.
 use arithmetic::traits::Samplable;
 use cryptographic_primitives::commitments::hash_commitment::HashCommitment;
 use cryptographic_primitives::commitments::traits::Commitment;

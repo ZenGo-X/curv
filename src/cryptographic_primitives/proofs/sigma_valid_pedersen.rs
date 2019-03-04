@@ -15,11 +15,6 @@
 
 */
 
-use super::ProofError;
-use cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
-use cryptographic_primitives::commitments::traits::Commitment;
-use cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptographic_primitives::hashing::traits::Hash;
 /// protocol for proving that Pedersen commitment c was constructed correctly which is the same as
 /// proof of knowledge of (m,r) such that c = mG + rH.
 /// witness: (m,r), statement: c, The Relation R outputs 1 if c = mG + rH. The protocol:
@@ -29,6 +24,11 @@ use cryptographic_primitives::hashing::traits::Hash;
 /// prover sends pi = {e, A1,A2,c, z1,z2}
 ///
 /// verifier checks that z1*G + z2*H  = A1 + A2 + ec
+use super::ProofError;
+use cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
+use cryptographic_primitives::commitments::traits::Commitment;
+use cryptographic_primitives::hashing::hash_sha256::HSha256;
+use cryptographic_primitives::hashing::traits::Hash;
 use elliptic::curves::traits::*;
 use zeroize::Zeroize;
 use {FE, GE};

@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 /*
-    Cryptography utilities
+    Curv
 
     Copyright 2018 by Kzen Networks
 
@@ -12,7 +12,7 @@
     License as published by the Free Software Foundation, either
     version 3 of the License, or (at your option) any later version.
 
-    @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
+    @license GPL-3.0+ <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
 /// Feldman VSS, based on  Paul Feldman. 1987. A practical scheme for non-interactive verifiable secret sharing.

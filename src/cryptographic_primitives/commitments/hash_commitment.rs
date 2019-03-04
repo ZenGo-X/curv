@@ -13,6 +13,9 @@
 
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
+
+/// calculate commitment c = H(m,r) using SHA3 CRHF.
+/// r is 256bit blinding factor, m is the commited value
 use BigInt;
 
 use super::traits::Commitment;

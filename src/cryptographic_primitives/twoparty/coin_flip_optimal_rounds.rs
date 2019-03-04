@@ -14,6 +14,9 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
+/// based on How To Simulate It – A Tutorial on the Simulation
+/// Proof Technique. protocol 7.3: Multiple coin tossing. which provide simulatble constant round
+/// coin toss
 use cryptographic_primitives::proofs::sigma_valid_pedersen::PedersenProof;
 use cryptographic_primitives::proofs::sigma_valid_pedersen::ProvePederesen;
 use cryptographic_primitives::proofs::sigma_valid_pedersen_blind::PedersenBlindingProof;
