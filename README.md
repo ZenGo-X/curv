@@ -6,6 +6,8 @@ Curv
 Curv contains an extremly simple interface to onboard new elliptic curves. 
 Use this library for general purpose elliptic curve cryptography. 
 
+The library has a built in support for some useful operations/primitives such as verifiable secret sharing, commitment schemes, zero knowledge proofs, and simple two party protocols such as ECDH and coin flip. The library comes with serialize/deserialize support to be used in higher level code to implement networking. 
+
 ### Currently Supported Elliptic Curves  
 
 |        Curve         |   low level library    |    curve description       |    blockchain usage examples       |  
@@ -39,7 +41,7 @@ In general security of the library is strongly dependent on the security of the 
 The library is not immune to side channel attacks but considerable effort was given to try and catch as many such attacks as possible (see audit report). 
 
 ### Build
-By default `cargo build` will build the library only for `BigInt`. To add opertions for one of the elliptic curves 
+By default `cargo build` will build the library only for `BigInt` (used for example in [rust-paillier](https://github.com/KZen-networks/rust-paillier)). To add opertions for one of the elliptic curves 
 a feature must be specified:
 - `cargo build --features=ec_secp256k1` for secp256k1
 - `cargo build --features=ec_ed25519` for ed25519
