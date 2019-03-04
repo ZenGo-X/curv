@@ -15,12 +15,11 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-// Feldman VSS, based on  Paul Feldman. 1987. A practical scheme for non-interactive verifiable secret sharing.
-// In Foundations of Computer Science, 1987., 28th Annual Symposium on.IEEE, 427–43
+/// Feldman VSS, based on  Paul Feldman. 1987. A practical scheme for non-interactive verifiable secret sharing.
+/// In Foundations of Computer Science, 1987., 28th Annual Symposium on.IEEE, 427–43
 
-// implementation details: The code is using FE and GE. Each party is given an index from 1,..,n and a secret share of type FE.
-// The index of the party is also the point on the polynomial where we treat this number as u32 but converting it to FE internally.
-
+/// implementation details: The code is using FE and GE. Each party is given an index from 1,..,n and a secret share of type FE.
+/// The index of the party is also the point on the polynomial where we treat this number as u32 but converting it to FE internally.
 use elliptic::curves::traits::*;
 use BigInt;
 use ErrorSS::{self, VerifyShareError};

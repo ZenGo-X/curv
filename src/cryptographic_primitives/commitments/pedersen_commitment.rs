@@ -20,6 +20,9 @@ use arithmetic::traits::Samplable;
 use elliptic::curves::traits::*;
 use {BigInt, FE, GE};
 
+/// compute c = mG + rH
+/// where m is the commited value, G is the group generator,
+/// H is a random point and r is a blinding value.
 pub struct PedersenCommitment;
 impl Commitment<GE> for PedersenCommitment {
     fn create_commitment_with_user_defined_randomness(
