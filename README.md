@@ -17,20 +17,6 @@ The library has a built in support for some useful operations/primitives such as
 |    **Jubjub**    |        [librustzcash](https://github.com/zcash/librustzcash)            |      [what is jubjub](https://z.cash/technology/jubjub/)          |      Zcash           |
 |    **Ristretto**    |        [curve25519-dalek](https://github.com/dalek-cryptography/curve25519-dalek)            |     [ristretto group](https://ristretto.group/)           |      not yet ;)           |
 
-
-### Currently Supported Operations 
-* **Hash Functions**: SHA256, SHA512, HMAC-SHA512, Merkle-Tree
-* **Commitment Schemes**: Hash based, Pedersen
-* **Secret Sharing**: Feldman VSS
-* **Sigma Protocols:** 
-  * Proof of knowledge of EC-DLog
-  * Proof of membership of EC-DDH
-  * Proof of correct Pedersen
-  * Proof of correct Homomorphic ElGamal
-* **Two Party Protocols:**
-  * DH key exchange
-  * Coin Flip
-
 ### Security  
 The library was audited by [Kudelski security](https://www.kudelskisecurity.com/) on Feb19. The report can be found [here](https://github.com/KZen-networks/curv/tree/master/audit). No critical issue was found and all issues found were fixed.
 
