@@ -14,12 +14,7 @@
 
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
-/// This is a proof of knowledge that a pair of group elements {D, E}
-/// form a valid homomorphic ElGamal encryption (”in the exponent”) using public key Y .
-/// (HEG is defined in B. Schoenmakers and P. Tuyls. Practical Two-Party Computation Based on the Conditional Gate)
-/// Specifically, the witness is ω = (x, r), the statement is δ = (G, H, Y, D, E).
-/// The relation R outputs 1 if D = xH+rY , E = rG (for the case of G=H this is ElGamal)
-///
+
 use super::ProofError;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
@@ -28,6 +23,12 @@ use zeroize::Zeroize;
 use FE;
 use GE;
 
+/// This is a proof of knowledge that a pair of group elements {D, E}
+/// form a valid homomorphic ElGamal encryption (”in the exponent”) using public key Y .
+/// (HEG is defined in B. Schoenmakers and P. Tuyls. Practical Two-Party Computation Based on the Conditional Gate)
+/// Specifically, the witness is ω = (x, r), the statement is δ = (G, H, Y, D, E).
+/// The relation R outputs 1 if D = xH+rY , E = rG (for the case of G=H this is ElGamal)
+///
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct HomoELGamalProof {
     pub T: GE,

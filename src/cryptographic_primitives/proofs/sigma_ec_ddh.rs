@@ -15,6 +15,13 @@
 
 */
 
+use super::ProofError;
+use cryptographic_primitives::hashing::hash_sha256::HSha256;
+use cryptographic_primitives::hashing::traits::Hash;
+use elliptic::curves::traits::*;
+use zeroize::Zeroize;
+use {FE, GE};
+
 /// This protocol is the elliptic curve form of the protocol from :
 ///  D. Chaum, T. P. Pedersen. Transferred cash grows in size. In Advances in Cryptology, EUROCRYPT , volume 658 of Lecture Notes in Computer Science, pages 390 - 407, 1993.
 ///  This is a proof of membership of DDH: (G, xG, yG, xyG)
@@ -27,12 +34,12 @@
 /// prover sends pi = {e, A1,A2,z}
 ///
 /// verifier checks that zG1 = A1 + eH1, zG2 = A2 + eH2
-use super::ProofError;
-use cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptographic_primitives::hashing::traits::Hash;
-use elliptic::curves::traits::*;
-use zeroize::Zeroize;
-use {FE, GE};
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct ECDDHProof {
+    pub a1: GE,
+    pub a2: GE,
+    pub z: FE,
+}
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct ECDDHStatement {
@@ -45,13 +52,6 @@ pub struct ECDDHStatement {
 #[derive(Clone, PartialEq, Debug)]
 pub struct ECDDHWitness {
     pub x: FE,
-}
-
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct ECDDHProof {
-    pub a1: GE,
-    pub a2: GE,
-    pub z: FE,
 }
 
 // TODO: move to super and use in other sigma protocols

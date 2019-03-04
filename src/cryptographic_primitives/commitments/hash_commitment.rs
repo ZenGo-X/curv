@@ -14,17 +14,17 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
+//TODO: (open issue) use this struct to represent the commitment HashCommitment{comm: BigInt, r: BigInt, m: BigInt}
 /// calculate commitment c = H(m,r) using SHA3 CRHF.
 /// r is 256bit blinding factor, m is the commited value
+pub struct HashCommitment;
+
 use BigInt;
 
 use super::traits::Commitment;
 use super::SECURITY_BITS;
 use arithmetic::traits::Samplable;
 use sha3::{Digest, Sha3_256};
-//TODO: (open issue) use this struct to represent the commitment HashCommitment{comm: BigInt, r: BigInt, m: BigInt}
-pub struct HashCommitment;
-
 //TODO:  using the function with BigInt's as input instead of string's makes it impossible to commit to empty message or use empty randomness
 impl Commitment<BigInt> for HashCommitment {
     fn create_commitment_with_user_defined_randomness(

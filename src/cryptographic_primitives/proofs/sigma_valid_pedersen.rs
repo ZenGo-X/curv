@@ -15,15 +15,6 @@
 
 */
 
-/// protocol for proving that Pedersen commitment c was constructed correctly which is the same as
-/// proof of knowledge of (m,r) such that c = mG + rH.
-/// witness: (m,r), statement: c, The Relation R outputs 1 if c = mG + rH. The protocol:
-/// 1: Prover chooses A1 = s1*G , A2 = s2*H for random s1,s2
-/// prover calculates challenge e = H(G,H,c,A1,A2)
-/// prover calculates z1  = s1 + em, z2 = s2 + er
-/// prover sends pi = {e, A1,A2,c, z1,z2}
-///
-/// verifier checks that z1*G + z2*H  = A1 + A2 + ec
 use super::ProofError;
 use cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
 use cryptographic_primitives::commitments::traits::Commitment;
@@ -33,6 +24,15 @@ use elliptic::curves::traits::*;
 use zeroize::Zeroize;
 use {FE, GE};
 
+/// protocol for proving that Pedersen commitment c was constructed correctly which is the same as
+/// proof of knowledge of (m,r) such that c = mG + rH.
+/// witness: (m,r), statement: c, The Relation R outputs 1 if c = mG + rH. The protocol:
+/// 1: Prover chooses A1 = s1*G , A2 = s2*H for random s1,s2
+/// prover calculates challenge e = H(G,H,c,A1,A2)
+/// prover calculates z1  = s1 + em, z2 = s2 + er
+/// prover sends pi = {e, A1,A2,c, z1,z2}
+///
+/// verifier checks that z1*G + z2*H  = A1 + A2 + ec
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct PedersenProof {
     e: FE,
