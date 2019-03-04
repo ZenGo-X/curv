@@ -64,6 +64,33 @@ impl VerifiableSS {
         )
     }
 
+    // generate VerifiableSS from a secret and user defined x values (in case user wants to distribute point f(1), f(4), f(6) and not f(1),f(2),f(3))
+    pub fn share_at_indices(
+        t: usize,
+        n: usize,
+        secret: &FE,
+        index_vec: &[usize],
+    ) -> (VerifiableSS, Vec<FE>) {
+        assert_eq!(n, index_vec.len());
+        let poly = VerifiableSS::sample_polynomial(t, secret);
+        let secret_shares = VerifiableSS::evaluate_polynomial(&poly, index_vec);
+
+        let G: GE = ECPoint::generator();
+        let commitments = (0..poly.len())
+            .map(|i| G.clone() * &poly[i])
+            .collect::<Vec<GE>>();
+        (
+            VerifiableSS {
+                parameters: ShamirSecretSharing {
+                    threshold: t,
+                    share_count: n,
+                },
+                commitments,
+            },
+            secret_shares,
+        )
+    }
+
     // returns vector of coefficients
     pub fn sample_polynomial(t: usize, coef0: &FE) -> Vec<FE> {
         let mut coefficients = vec![*coef0];
@@ -223,6 +250,23 @@ impl VerifiableSS {
 mod tests {
     use cryptographic_primitives::secret_sharing::feldman_vss::*;
     use {FE, GE};
+
+    #[test]
+    fn test_secret_sharing_3_out_of_5_at_indices() {
+        let secret: FE = ECScalar::new_random();
+        let parties = [1, 2, 4, 5, 6];
+        let (vss_scheme, secret_shares) = VerifiableSS::share_at_indices(3, 5, &secret, &parties);
+
+        let mut shares_vec = Vec::new();
+        shares_vec.push(secret_shares[0].clone());
+        shares_vec.push(secret_shares[1].clone());
+        shares_vec.push(secret_shares[3].clone());
+        shares_vec.push(secret_shares[4].clone());
+        //test reconstruction
+
+        let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 1, 4, 5], &shares_vec);
+        assert_eq!(secret, secret_reconstructed);
+    }
 
     #[test]
     fn test_secret_sharing_3_out_of_5() {

@@ -31,11 +31,8 @@ impl Commitment<BigInt> for HashCommitment {
         let mut digest = Sha3_256::new();
         let bytes_message: Vec<u8> = message.into();
         digest.input(&bytes_message);
-        println!("digest {:?}", digest.clone());
         let bytes_blinding_factor: Vec<u8> = blinding_factor.into();
         digest.input(&bytes_blinding_factor);
-        println!("digest 2 {:?}", digest.clone());
-
         BigInt::from(digest.result().as_ref())
     }
 
