@@ -18,7 +18,7 @@ The library has a built in support for some useful operations/primitives such as
 |    **Ristretto**    |        [curve25519-dalek](https://github.com/dalek-cryptography/curve25519-dalek)            |     [ristretto group](https://ristretto.group/)           |      not yet ;)           |
 
 ### Security  
-The library was audited by [Kudelski security](https://www.kudelskisecurity.com/) on Feb19. The report can be found [here](https://github.com/KZen-networks/curv/tree/master/audit). No critical issue was found and all issues found were fixed.
+The library was audited by [Kudelski security](https://www.kudelskisecurity.com/) on Feb19. The report can be found [here](https://github.com/KZen-networks/curv/tree/master/audit). No critical issue were found and all issues found were fixed.
 
 The code was reviewed independently by few other cryptographers. Special thanks goes to [Claudio Orlandi](http://cs.au.dk/~orlandi/) from Aarhus University. 
 
