@@ -5,8 +5,8 @@
 
 Curv
 =====================================
-
-the library implements cryptographic primitives over elliptic curves. Curv contains an extremly simple interface to onboard new elliptic curves. 
+Curv contains an extremly simple interface to onboard new elliptic curves. 
+Use this library for general purpose elliptic curve cryptography. 
 
 ### Currently Supported Elliptic Curves  
 
@@ -57,7 +57,7 @@ for example: `cargo run --example proof_of_knowledge_of_dlog --features ec_jubju
 Docs are built per elliptic curve, use `cargo doc --no-deps --features CURVE_NAME`.
 for example: `cargo doc --no-deps --features ec_ed25519`
 
-### Adding An Elliptic Curve
+### Adding New Elliptic Curve
 To add support for new elliptic curve simply fill in the `ECScalar` and `ECPoint` [traits](https://github.com/KZen-networks/curv/blob/master/src/elliptic/curves/traits.rs). 
 
 ### License
