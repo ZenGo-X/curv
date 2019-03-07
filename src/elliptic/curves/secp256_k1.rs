@@ -299,6 +299,10 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         self.ge
     }
 
+    /// to return from BigInt to PK use from_bytes:
+    /// 1) convert BigInt::to_vec
+    /// 2) remove first byte [1..33]
+    /// 3) call from_bytes
     fn bytes_compressed_to_big_int(&self) -> BigInt {
         let serial = self.ge.serialize();
         BigInt::from(&serial[0..33])
