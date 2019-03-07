@@ -1,85 +1,57 @@
-[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Build Status](https://travis-ci.com/KZen-networks/curv.svg?branch=master)](https://travis-ci.com/KZen-networks/curv)
-[![Coverage Status](https://coveralls.io/repos/github/KZen-networks/curv/badge.svg?branch=master)](https://coveralls.io/github/KZen-networks/curv?branch=master)
-
 
 Curv
 =====================================
+Curv contains an extremly simple interface to onboard new elliptic curves. 
+Use this library for general purpose elliptic curve cryptography. 
 
-This project implements basic cryptographic primitives over elliptic curves. The API code is Rust native while the used elliptic curve libraries can be binding to other languages. 
+The library has a built in support for some useful operations/primitives such as verifiable secret sharing, commitment schemes, zero knowledge proofs, and simple two party protocols such as ECDH and coin flip. The library comes with serialize/deserialize support to be used in higher level code to implement networking. 
 
-__Supported Curves__: 
+### Currently Supported Elliptic Curves  
 
-* [_secp256k1_](https://github.com/rust-bitcoin/rust-secp256k1)
-* [_ed25519_ ](https://github.com/typed-io/cryptoxide/blob/master/src/curve25519.rs)
-* [_ristretto_](https://github.com/dalek-cryptography/curve25519-dalek)
+|        Curve         |   low level library    |    curve description       |    blockchain usage examples       |  
+|-------------------------------|------------------------|------------------------|------------------------|
+|    **Secp256k1**    |        [rust-secp256k1](https://github.com/rust-bitcoin/rust-secp256k1)            |      [bitcoin wiki](https://en.bitcoin.it/wiki/Secp256k1)           |      Bitcoin, Ethereum           |
+|    **Ed25519**    |        [cryptoxide](https://github.com/typed-io/cryptoxide/blob/master/src/curve25519.rs)            |      [BDLSY11](https://ed25519.cr.yp.to/ed25519-20110926.pdf)           |      Ripple, Tezos, Cardano           |
+|    **Jubjub**    |        [librustzcash](https://github.com/zcash/librustzcash)            |      [what is jubjub](https://z.cash/technology/jubjub/)          |      Zcash           |
+|    **Ristretto**    |        [curve25519-dalek](https://github.com/dalek-cryptography/curve25519-dalek)            |     [ristretto group](https://ristretto.group/)           |      not yet ;)           |
 
-__Supported Primitives__: 
+### Security  
+The library was audited by [Kudelski security](https://www.kudelskisecurity.com/) on Feb19. The report can be found [here](https://github.com/KZen-networks/curv/tree/master/audit). No critical issue were found and all issues found were fixed.
 
-* **Hash Functions**: SHA256, SHA512, HMAC-SHA512, Merkle-Tree
-* **Commitment Schemes**: Hash based, Pedersen
-* **Secret Sharing**: Feldman VSS
-* **Sigma Protocols:** 
-  * Proof of knowledge of EC-DLog
-  * Proof of membership of EC-DDH
-  * Proof of correct Pedersen
-  * Proof of correct Homomorphic ElGamal
-* **Two Party Protocols:**
-  * DH key exchange
-  * Coin Flip
- 
-### Adding An Elliptic Curve
-To add support of this primitives to new elliptic curve the following interfaces (trait) needs to be fulfilled for field element and group element: 
-```Rust
-pub trait ECScalar<SK> {
-    fn new_random() -> Self;
-    fn zero() -> Self;
-    fn get_element(&self) -> SK;
-    fn set_element(&mut self, element: SK);
-    fn from(n: &BigInt) -> Self;
-    fn to_big_int(&self) -> BigInt;
-    fn q() -> BigInt;
-    fn add(&self, other: &SK) -> Self;
-    fn mul(&self, other: &SK) -> Self;
-    fn sub(&self, other: &SK) -> Self;
-    fn invert(&self) -> Self;
-}
+The code was reviewed independently by few other cryptographers. Special thanks goes to [Claudio Orlandi](http://cs.au.dk/~orlandi/) from Aarhus University. 
 
+In general security of the library is strongly dependent on the security of the low level libraries used. We chose only libraries that are used as part of other big projects and went through heavy audit/review. 
 
-pub trait ECPoint<PK, SK>
-where
-    Self: Sized,
-{
-    fn generator() -> Self;
-    fn get_element(&self) -> PK;
-    fn x_coor(&self) -> Option<BigInt>;
-    fn y_coor(&self) -> Option<BigInt>;
-    fn bytes_compressed_to_big_int(&self) -> BigInt;
-    fn from_bytes(bytes: &[u8]) -> Result<Self, ErrorKey>;
-    fn pk_to_key_slice(&self) -> Vec<u8>;
-    fn scalar_mul(&self, fe: &SK) -> Self;
-    fn add_point(&self, other: &PK) -> Self;
-    fn sub_point(&self, other: &PK) -> Self;
-    fn from_coor(x: &BigInt, y: &BigInt) -> Self;
-}
-```
+The library is not immune to side channel attacks but considerable effort was given to try and catch as many such attacks as possible (see audit report). 
 
-###  Build
+### Build
+By default `cargo build` will build the library only for `BigInt` (used for example in [rust-paillier](https://github.com/KZen-networks/rust-paillier)). To add opertions for one of the elliptic curves 
+a feature must be specified:
+- `cargo build --features=ec_secp256k1` for secp256k1
+- `cargo build --features=ec_ed25519` for ed25519
+- `cargo build --features=ec_jubjub` for jubjub
+- `cargo build --features=ec_ristretto` for ristretto
 
-This library has no default elliptic curve, therefore a feature must be specified in order to choose one:
-- `cargo build --features=curvesecp256k1` for secp256k1
-- `cargo build --features=ed25519` for ed25519
-- `cargo build --features=curveristretto` for ristretto
+### Examples
+The library includes some basic examples to get you going. To run them: 
+`cargo run --example EXAMPLE_NAME --features CURVE_NAME`
+for example: `cargo run --example proof_of_knowledge_of_dlog --features ec_jubjub`
 
-License
--------
-Curv is released under the terms of the GPL-3.0 license. See [LICENSE](LICENSE) for more information.
+### Docs 
+Docs are built per elliptic curve, use `cargo doc --no-deps --features CURVE_NAME`.
+for example: `cargo doc --no-deps --features ec_ed25519`
+
+### Adding New Elliptic Curve
+To add support for new elliptic curve simply fill in the `ECScalar` and `ECPoint` [traits](https://github.com/KZen-networks/curv/blob/master/src/elliptic/curves/traits.rs). 
+
+### License
+Curv is released under the terms of the MIT license. See [LICENSE](LICENSE) for more information.
 
 
-Development Process
--------------------
+### Development Process
 The contribution workflow is described in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Contact
--------------------
+### Contact
 For any questions, feel free to [email us](mailto:github@kzencorp.com).
