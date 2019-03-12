@@ -1,19 +1,11 @@
 #![allow(non_snake_case)]
 /*
-    Curv
-
+    This file is part of Curv library
     Copyright 2018 by Kzen Networks
-
-    This file is part of curv library
     (https://github.com/KZen-networks/curv)
-
-    Cryptography utilities is free software: you can redistribute
-    it and/or modify it under the terms of the GNU General Public
-    License as published by the Free Software Foundation, either
-    version 3 of the License, or (at your option) any later version.
-
-    @license GPL-3.0+ <https://github.com/KZen-networks/curv/blob/master/LICENSE>
+    License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
+
 // Secp256k1 elliptic curve utility functions (se: https://en.bitcoin.it/wiki/Secp256k1).
 //
 // In Cryptography utilities, we need to manipulate low level elliptic curve members as Point
