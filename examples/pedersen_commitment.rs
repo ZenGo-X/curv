@@ -29,9 +29,9 @@ pub fn ped_com(message: &BigInt) {
 }
 
 fn main() {
-    #[cfg(feature = "ecc")]
     let message = "commit me!";
     let message_bytes = message.as_bytes();
     let message_bn = BigInt::from(message_bytes);
+    #[cfg(feature = "ecc")]
     ped_com(&message_bn);
 }
