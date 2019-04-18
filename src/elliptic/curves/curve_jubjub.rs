@@ -347,7 +347,6 @@ impl ECPoint<PK, SK> for JubjubPoint {
                 let bytes_vec = template;
                 let bytes_slice = &bytes_vec[0..32];
                 bytes_array_32.copy_from_slice(&bytes_slice);
-                println!("bytes_array_32_u: {:?}", bytes_array_32);
                 let ge_from_bytes = PKu::read(&bytes_array_32[..], params);
                 match ge_from_bytes {
                     Ok(x) => {
@@ -367,7 +366,6 @@ impl ECPoint<PK, SK> for JubjubPoint {
             _ => {
                 let bytes_slice = &bytes_vec[0..32];
                 bytes_array_32.copy_from_slice(&bytes_slice);
-                println!("bytes_array_32_d: {:?}", bytes_array_32);
                 let ge_from_bytes = PKu::read(&bytes_array_32[..], params);
                 match ge_from_bytes {
                     Ok(x) => {
@@ -519,7 +517,6 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
         }
         let bytes_bn = BigInt::from_hex(&bytes_str);
         let bytes = BigInt::to_vec(&bytes_bn);
-        println!("bytes: {:?}", bytes);
 
         Ok(JubjubPoint::from_bytes(&bytes[..]).expect("error deserializing point"))
     }
