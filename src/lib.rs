@@ -7,6 +7,7 @@
 
 #[macro_use]
 extern crate serde_derive;
+extern crate blake2_rfc;
 extern crate merkle;
 extern crate ring;
 extern crate serde;

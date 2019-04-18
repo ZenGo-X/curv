@@ -46,6 +46,10 @@ rev = "3e667406323430813f6dbae2a60b5a83046fa20a"
 git = "https://github.com/omershlo/librustzcash.git"
 rev = "3e667406323430813f6dbae2a60b5a83046fa20a"
 
+[dependencies.blake2-rfc]
+git = "https://github.com/gtank/blake2-rfc"
+rev = "7a5b5fc99ae483a0043db7547fb79a6fa44b88a9"
+
 
 [dependencies.rust-gmp]
 version = "0.5.0"

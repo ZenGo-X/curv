@@ -342,7 +342,10 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                 let mut template = vec![0; 32 - bytes_vec.len()];
                 template.extend_from_slice(&bytes);
                 let bytes_vec = template;
-                let mut template: Vec<u8> = vec![2];
+                let mut rng = rand::thread_rng();
+                let bit: bool = rng.gen();
+                println!("rand {:?}", 2 + bit as u8);
+                let mut template: Vec<u8> = vec![2 + bit as u8];
                 template.append(&mut bytes_vec.clone());
                 let mut bytes_slice = &template[..];
 
