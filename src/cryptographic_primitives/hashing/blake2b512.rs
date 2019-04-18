@@ -7,9 +7,7 @@
 
 use arithmetic::traits::Converter;
 use blake2_rfc::blake2b::Blake2b;
-use elliptic::curves::traits::{ECPoint, ECScalar};
 use BigInt;
-use {FE, GE};
 
 pub struct Blake;
 
