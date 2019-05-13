@@ -675,17 +675,6 @@ mod tests {
     }
 
     #[test]
-    fn test_from_bytes_2() {
-        let g: Secp256k1Point = ECPoint::generator();
-        let hash = HSha256::create_hash(&vec![&g.bytes_compressed_to_big_int()]);
-        let hash = HSha256::create_hash(&vec![&hash]);
-        let hash = HSha256::create_hash(&vec![&hash]);
-        let hash_vec = BigInt::to_vec(&hash);
-        let result = Secp256k1Point::from_bytes(&hash_vec);
-        let ground_truth = Secp256k1Point::base_point2();
-        assert_eq!(result.unwrap(), ground_truth);
-    }
-    #[test]
     fn test_from_bytes_3() {
         let test_vec = [
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
