@@ -22,7 +22,7 @@ impl Blake {
         BigInt::from(digest.finalize().as_ref())
     }
 
-    fn create_hash_from_ge(ge_vec: &[&GE], persona: &[u8]) -> FE {
+    pub fn create_hash_from_ge(ge_vec: &[&GE], persona: &[u8]) -> FE {
         let mut digest = Blake2b::with_params(64, &[], &[], persona);
 
         for value in ge_vec {
