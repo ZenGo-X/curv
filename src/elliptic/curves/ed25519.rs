@@ -84,7 +84,7 @@ impl ECScalar<SK> for Ed25519Scalar {
             v = v[0..TWO_TIMES_SECRET_KEY_SIZE].to_vec();
         }
 
-        let mut template = vec![0; 64 - v.len()];
+        let mut template = vec![0; TWO_TIMES_SECRET_KEY_SIZE - v.len()];
         template.extend_from_slice(&v);
         v = template;
         v.reverse();
