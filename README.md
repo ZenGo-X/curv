@@ -12,7 +12,7 @@ The library has a built in support for some useful operations/primitives such as
 
 |        Curve         |   low level library    |    curve description       |    blockchain usage examples       |  
 |-------------------------------|------------------------|------------------------|------------------------|
-|    **Secp256k1**    |        [rust-secp256k1](https://github.com/rust-bitcoin/rust-secp256k1)            |      [bitcoin wiki](https://en.bitcoin.it/wiki/Secp256k1)           |      Bitcoin, Ethereum           |
+|    **Secp256k1**    |        [libsecp256k1-rs](https://github.com/tari-labs/libsecp256k1)            |      [bitcoin wiki](https://en.bitcoin.it/wiki/Secp256k1)           |      Bitcoin, Ethereum           |
 |    **Ed25519**    |        [cryptoxide](https://github.com/typed-io/cryptoxide/blob/master/src/curve25519.rs)            |      [BDLSY11](https://ed25519.cr.yp.to/ed25519-20110926.pdf)           |      Ripple, Tezos, Cardano           |
 |    **Jubjub**    |        [librustzcash](https://github.com/zcash/librustzcash)            |      [what is jubjub](https://z.cash/technology/jubjub/)          |      Zcash           |
 |    **Ristretto**    |        [curve25519-dalek](https://github.com/dalek-cryptography/curve25519-dalek)            |     [ristretto group](https://ristretto.group/)           |      not yet ;)           |
