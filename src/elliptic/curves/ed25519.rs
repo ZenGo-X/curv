@@ -504,23 +504,24 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
     type Value = Ed25519Point;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("ed25519CurvPoint")
+        formatter.write_str("Ed25519Point")
     }
 
     fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<Ed25519Point, E::Error> {
-        let mut bytes_str: String = "".to_string();
+        let mut bytes_str: String = String::new();
 
-        while let Some(key) = map.next_key::<&'de str>()? {
-            let v = map.next_value::<&'de str>()?;
-            match key {
-                "bytes_str" => {
-                    bytes_str = String::from(v);
-                }
-                _ => panic!("deSerialization failed!"),
+        while let Some(ref key) = map.next_key::<String>()? {
+            let v = map.next_value::<String>()?;
+            if key == "x" {
+                bytes_str = v
+            } else {
+                panic!("Serialization failed!")
             }
         }
+
         let bytes_bn = BigInt::from_hex(&bytes_str);
         let bytes = BigInt::to_vec(&bytes_bn);
+
         Ok(Ed25519Point::from_bytes(&bytes[..]).expect("error deserializing point"))
     }
 }
