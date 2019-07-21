@@ -512,7 +512,7 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
 
         while let Some(ref key) = map.next_key::<String>()? {
             let v = map.next_value::<String>()?;
-            if key == "x" {
+            if key == "bytes_str" {
                 bytes_str = v
             } else {
                 panic!("Serialization failed!")
