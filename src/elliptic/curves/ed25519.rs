@@ -224,9 +224,9 @@ impl<'de> Deserialize<'de> for Ed25519Scalar {
     }
 }
 
-struct Secp256k1ScalarVisitor;
+struct Ed25519ScalarVisitor;
 
-impl<'de> Visitor<'de> for Secp256k1ScalarVisitor {
+impl<'de> Visitor<'de> for Ed25519ScalarVisitor {
     type Value = Ed25519Scalar;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -493,7 +493,8 @@ impl<'de> Deserialize<'de> for Ed25519Point {
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_map(RistrettoCurvPointVisitor)
+        let fields = &["x", "y"];
+        deserializer.deserialize_struct("Ed25519Point", fields, RistrettoCurvPointVisitor)
     }
 }
 
