@@ -493,7 +493,7 @@ impl<'de> Deserialize<'de> for Ed25519Point {
     where
         D: Deserializer<'de>,
     {
-        let fields = &["x", "y"];
+        let fields = &["bytes_str"];
         deserializer.deserialize_struct("Ed25519Point", fields, RistrettoCurvPointVisitor)
     }
 }
