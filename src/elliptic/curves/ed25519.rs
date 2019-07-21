@@ -220,7 +220,7 @@ impl<'de> Deserialize<'de> for Ed25519Scalar {
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_str(Secp256k1ScalarVisitor)
+        deserializer.deserialize_str(Ed25519ScalarVisitor)
     }
 }
 
