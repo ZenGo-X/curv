@@ -532,7 +532,7 @@ mod tests {
     use arithmetic::traits::Modulo;
     use elliptic::curves::traits::ECPoint;
     use elliptic::curves::traits::ECScalar;
-    use serde_json;
+    extern crate serde_json;
     use BigInt;
     use {FE, GE};
 

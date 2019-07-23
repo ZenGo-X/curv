@@ -582,7 +582,7 @@ mod tests {
     use cryptographic_primitives::hashing::traits::Hash;
     use elliptic::curves::traits::ECPoint;
     use elliptic::curves::traits::ECScalar;
-    use serde_json;
+    extern crate serde_json;
 
     #[test]
     fn serialize_sk() {
