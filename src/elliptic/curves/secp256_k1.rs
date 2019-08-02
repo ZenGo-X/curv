@@ -20,7 +20,7 @@ use super::rand::{thread_rng, Rng};
 use super::secp256k1::constants::{
     CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
-use super::secp256k1::{PublicKey, Secp256k1, SecretKey};
+use super::secp256k1::{PublicKey, Secp256k1, SecretKey, VerifyOnly};
 use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::{Converter, Modulo};
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
@@ -35,7 +35,7 @@ use serde::{Deserialize, Deserializer};
 use std::fmt;
 use std::ops::{Add, Mul};
 use std::ptr;
-use std::sync::atomic;
+use std::sync::{atomic, Once};
 use zeroize::Zeroize;
 use BigInt;
 use ErrorKey;
@@ -383,7 +383,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         let mut new_point = *self;
         new_point
             .ge
-            .mul_assign(&Secp256k1::new(), &fe[..])
+            .mul_assign(get_context(), &fe[..])
             .expect("Assignment expected");
         new_point
     }
@@ -458,6 +458,15 @@ impl ECPoint<PK, SK> for Secp256k1Point {
             ge: PK::from_slice(&v).unwrap(),
         }
     }
+}
+
+static mut CONTEXT: Option<Secp256k1<VerifyOnly>> = None;
+pub fn get_context() -> &'static Secp256k1<VerifyOnly> {
+    static INIT_CONTEXT: Once = Once::new();
+    INIT_CONTEXT.call_once(|| unsafe {
+        CONTEXT = Some(Secp256k1::verification_only());
+    });
+    unsafe { CONTEXT.as_ref().unwrap() }
 }
 
 impl Hashable for Secp256k1Point {
@@ -573,7 +582,7 @@ mod tests {
     use cryptographic_primitives::hashing::traits::Hash;
     use elliptic::curves::traits::ECPoint;
     use elliptic::curves::traits::ECScalar;
-    use serde_json;
+    extern crate serde_json;
 
     #[test]
     fn serialize_sk() {
