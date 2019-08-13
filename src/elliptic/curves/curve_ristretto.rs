@@ -50,7 +50,7 @@ pub struct RistrettoCurvPoint {
 pub type GE = RistrettoCurvPoint;
 pub type FE = RistrettoScalar;
 
-impl Zeroize for FE {
+impl Zeroize for RistrettoScalar {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, FE::zero()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -249,7 +249,7 @@ impl RistrettoCurvPoint {
     }
 }
 
-impl Zeroize for GE {
+impl Zeroize for RistrettoCurvPoint {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, GE::generator()) };
         atomic::fence(atomic::Ordering::SeqCst);

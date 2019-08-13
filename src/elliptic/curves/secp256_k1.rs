@@ -87,7 +87,7 @@ impl Secp256k1Point {
     }
 }
 
-impl Zeroize for FE {
+impl Zeroize for Secp256k1Scalar {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, FE::zero()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -268,7 +268,7 @@ impl PartialEq for Secp256k1Point {
     }
 }
 
-impl Zeroize for GE {
+impl Zeroize for Secp256k1Point {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, GE::generator()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -327,7 +327,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                 let bytes_vec = template;
                 let mut template: Vec<u8> = vec![4];
                 template.append(&mut bytes_vec.clone());
-                let mut bytes_slice = &template[..];
+                let bytes_slice = &template[..];
 
                 bytes_array_65.copy_from_slice(&bytes_slice[0..65]);
                 let result = PK::from_slice(&bytes_array_65);
@@ -344,7 +344,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                 let bytes_vec = template;
                 let mut template: Vec<u8> = vec![2];
                 template.append(&mut bytes_vec.clone());
-                let mut bytes_slice = &template[..];
+                let bytes_slice = &template[..];
 
                 bytes_array_33.copy_from_slice(&bytes_slice[0..33]);
                 let result = PK::from_slice(&bytes_array_33);
@@ -359,7 +359,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                 let bytes_vec = bytes_slice.to_vec();
                 let mut template: Vec<u8> = vec![4];
                 template.append(&mut bytes_vec.clone());
-                let mut bytes_slice = &template[..];
+                let bytes_slice = &template[..];
 
                 bytes_array_65.copy_from_slice(&bytes_slice[0..65]);
                 let result = PK::from_slice(&bytes_array_65);

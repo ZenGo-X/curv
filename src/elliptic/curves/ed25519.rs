@@ -47,7 +47,7 @@ pub struct Ed25519Point {
 pub type GE = Ed25519Point;
 pub type FE = Ed25519Scalar;
 
-impl Zeroize for FE {
+impl Zeroize for Ed25519Scalar {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, FE::zero()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -256,7 +256,7 @@ impl PartialEq for Ed25519Point {
     }
 }
 
-impl Zeroize for GE {
+impl Zeroize for Ed25519Point {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, GE::generator()) };
         atomic::fence(atomic::Ordering::SeqCst);

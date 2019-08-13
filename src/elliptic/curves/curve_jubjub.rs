@@ -54,7 +54,7 @@ pub struct JubjubPoint {
 pub type GE = JubjubPoint;
 pub type FE = JubjubScalar;
 
-impl Zeroize for FE {
+impl Zeroize for JubjubScalar {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, FE::zero()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -284,7 +284,7 @@ impl JubjubPoint {
     }
 }
 
-impl Zeroize for GE {
+impl Zeroize for JubjubPoint {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, GE::generator()) };
         atomic::fence(atomic::Ordering::SeqCst);
