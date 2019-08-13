@@ -323,7 +323,7 @@ impl ECPoint<PK, SK> for Ed25519Point {
         let mut bytes_array_32 = [0u8; 32];
         let byte_len = bytes_vec.len();
         match byte_len {
-            0...32 => {
+            0..=32 => {
                 let mut template = vec![0; 32 - byte_len];
                 template.extend_from_slice(&bytes);
                 let bytes_vec = template;

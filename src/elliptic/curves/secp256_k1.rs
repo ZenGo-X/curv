@@ -321,7 +321,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
 
         let byte_len = bytes_vec.len();
         match byte_len {
-            33...63 => {
+            33..=63 => {
                 let mut template = vec![0; 64 - bytes_vec.len()];
                 template.extend_from_slice(&bytes);
                 let bytes_vec = template;
@@ -338,7 +338,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                 test.map_err(|_err| ErrorKey::InvalidPublicKey)
             }
 
-            0...32 => {
+            0..=32 => {
                 let mut template = vec![0; 32 - bytes_vec.len()];
                 template.extend_from_slice(&bytes);
                 let bytes_vec = template;
