@@ -16,6 +16,9 @@
 
 use std::marker::Sized;
 
+pub trait Zeroize {
+    fn zeroize(&mut self);
+}
 pub trait Converter {
     fn to_vec(n: &Self) -> Vec<u8>;
     fn to_hex(&self) -> String;
