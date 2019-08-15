@@ -5,8 +5,8 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
-use BigInt;
-use {FE, GE};
+use crate::BigInt;
+use crate::{FE, GE};
 
 pub trait Hash {
     fn create_hash(big_ints: &[&BigInt]) -> BigInt;

@@ -6,15 +6,17 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-use super::curve25519_dalek::constants::BASEPOINT_ORDER;
-use super::curve25519_dalek::constants::RISTRETTO_BASEPOINT_COMPRESSED;
-use super::curve25519_dalek::ristretto::CompressedRistretto;
-use super::curve25519_dalek::scalar::Scalar;
-use super::rand::thread_rng;
 use super::traits::{ECPoint, ECScalar};
-use arithmetic::traits::Converter;
-use cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptographic_primitives::hashing::traits::Hash;
+use crate::arithmetic::traits::Converter;
+use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
+use crate::cryptographic_primitives::hashing::traits::Hash;
+use crate::BigInt;
+use crate::ErrorKey::{self, InvalidPublicKey};
+use curve25519_dalek::constants::BASEPOINT_ORDER;
+use curve25519_dalek::constants::RISTRETTO_BASEPOINT_COMPRESSED;
+use curve25519_dalek::ristretto::CompressedRistretto;
+use curve25519_dalek::scalar::Scalar;
+use rand::thread_rng;
 use serde::de;
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeStruct;
@@ -23,8 +25,6 @@ use serde::{Deserialize, Deserializer};
 use std::fmt;
 use std::ops::{Add, Mul};
 use std::str;
-use BigInt;
-use ErrorKey::{self, InvalidPublicKey};
 pub const SECRET_KEY_SIZE: usize = 32;
 pub const COOR_BYTE_SIZE: usize = 32;
 pub const NUM_OF_COORDINATES: usize = 4;
@@ -468,13 +468,13 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
 mod tests {
 
     use super::RistrettoCurvPoint;
-    use arithmetic::traits::Converter;
-    use arithmetic::traits::Modulo;
-    use elliptic::curves::traits::ECPoint;
-    use elliptic::curves::traits::ECScalar;
-    extern crate serde_json;
-    use BigInt;
-    use {FE, GE};
+    use crate::arithmetic::traits::Converter;
+    use crate::arithmetic::traits::Modulo;
+    use crate::elliptic::curves::traits::ECPoint;
+    use crate::elliptic::curves::traits::ECScalar;
+    use crate::BigInt;
+    use crate::{FE, GE};
+    use serde_json;
 
     #[test]
     fn test_serdes_pk() {

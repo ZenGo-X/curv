@@ -1,5 +1,3 @@
-extern crate curv;
-
 /// secret_sharing_3_out_of_5
 /// Feldman VSS, based on  Paul Feldman. 1987. A practical scheme for non-interactive verifiable secret sharing.
 /// In Foundations of Computer Science, 1987., 28th Annual Symposium on.IEEE, 427–43

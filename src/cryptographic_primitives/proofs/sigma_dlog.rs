@@ -6,13 +6,13 @@
 */
 
 use super::ProofError;
-use FE;
-use GE;
+use crate::FE;
+use crate::GE;
 
-use elliptic::curves::traits::*;
+use crate::elliptic::curves::traits::*;
 
-use cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptographic_primitives::hashing::traits::Hash;
+use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
+use crate::cryptographic_primitives::hashing::traits::Hash;
 use zeroize::Zeroize;
 
 /// This is implementation of Schnorr's identification protocol for elliptic curve groups or a
@@ -90,8 +90,8 @@ impl ProveDLog for DLogProof {
 
 #[cfg(test)]
 mod tests {
-    use cryptographic_primitives::proofs::sigma_dlog::*;
-    use FE;
+    use crate::cryptographic_primitives::proofs::sigma_dlog::*;
+    use crate::FE;
 
     #[test]
     fn test_dlog_proof() {

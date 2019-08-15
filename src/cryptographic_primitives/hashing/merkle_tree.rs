@@ -8,8 +8,8 @@
 use crypto::sha3::Sha3;
 use merkle::{MerkleTree, Proof};
 
-use elliptic::curves::traits::ECPoint;
-use GE;
+use crate::elliptic::curves::traits::ECPoint;
+use crate::GE;
 /*
 pub struct MT256<'a> {
     tree: MerkleTree<GE>,
@@ -58,9 +58,9 @@ impl MT256 {
 
 #[cfg(test)]
 mod tests {
-    use cryptographic_primitives::hashing::merkle_tree::MT256;
-    use elliptic::curves::traits::ECPoint;
-    use GE;
+    use crate::cryptographic_primitives::hashing::merkle_tree::MT256;
+    use crate::elliptic::curves::traits::ECPoint;
+    use crate::GE;
     #[test]
     fn test_mt_functionality_four_leaves() {
         let ge1: GE = ECPoint::generator();

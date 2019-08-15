@@ -9,16 +9,16 @@
 use std::fmt::Debug;
 use std::str;
 pub const SECRET_KEY_SIZE: usize = 64;
-use super::pairing::bls12_381::Bls12;
-use super::sapling_crypto::jubjub::*;
-use super::sapling_crypto::jubjub::{edwards, fs::Fs, JubjubBls12, PrimeOrder, Unknown};
 use super::traits::{ECPoint, ECScalar};
-use arithmetic::traits::Converter;
+use crate::arithmetic::traits::Converter;
+use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
+use crate::cryptographic_primitives::hashing::traits::Hash;
 use crypto::digest::Digest;
 use crypto::sha3::Sha3;
-use cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptographic_primitives::hashing::traits::Hash;
 use merkle::Hashable;
+use pairing::bls12_381::Bls12;
+use sapling_crypto::jubjub::*;
+use sapling_crypto::jubjub::{edwards, fs::Fs, JubjubBls12, PrimeOrder, Unknown};
 
 use serde::de;
 use serde::de::{MapAccess, Visitor};
@@ -27,18 +27,18 @@ use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
 use std::fmt;
 use std::ops::{Add, Mul};
-use BigInt;
-use ErrorKey::{self, InvalidPublicKey};
 pub type SK = Fs;
 // we will take advantage of the fact that jubjub lib provides a uninque type for prime order sub group
 pub type PK = edwards::Point<Bls12, PrimeOrder>; // specific type for element in the prime order sub group
 pub type PKu = edwards::Point<Bls12, Unknown>; // special type for general point
-use super::pairing::Field;
-use super::pairing::PrimeField;
-use super::pairing::PrimeFieldRepr;
-use super::sapling_crypto::jubjub::JubjubParams;
-use super::sapling_crypto::jubjub::ToUniform;
-use arithmetic::traits::{Modulo, Samplable};
+use crate::arithmetic::traits::{Modulo, Samplable};
+use crate::BigInt;
+use crate::ErrorKey::{self, InvalidPublicKey};
+use pairing::Field;
+use pairing::PrimeField;
+use pairing::PrimeFieldRepr;
+use sapling_crypto::jubjub::JubjubParams;
+use sapling_crypto::jubjub::ToUniform;
 use std::ptr;
 use std::sync::atomic;
 use zeroize::Zeroize;
@@ -527,12 +527,12 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
 #[cfg(test)]
 mod tests {
     use super::JubjubPoint;
-    use arithmetic::traits::Modulo;
-    use elliptic::curves::traits::ECPoint;
-    use elliptic::curves::traits::ECScalar;
-    extern crate serde_json;
-    use BigInt;
-    use {FE, GE};
+    use crate::arithmetic::traits::Modulo;
+    use crate::elliptic::curves::traits::ECPoint;
+    use crate::elliptic::curves::traits::ECScalar;
+    use crate::BigInt;
+    use crate::{FE, GE};
+    use serde_json;
 
     #[test]
     fn test_serdes_pk() {

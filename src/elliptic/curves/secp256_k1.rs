@@ -16,18 +16,20 @@
 // The Public Key codec: Point <> SecretKey
 //
 
-use super::rand::{thread_rng, Rng};
-use super::secp256k1::constants::{
-    CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
-};
-use super::secp256k1::{PublicKey, Secp256k1, SecretKey, VerifyOnly};
 use super::traits::{ECPoint, ECScalar};
-use arithmetic::traits::{Converter, Modulo};
+use crate::arithmetic::traits::{Converter, Modulo};
+use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
+use crate::cryptographic_primitives::hashing::traits::Hash;
+use crate::BigInt;
+use crate::ErrorKey;
 use crypto::digest::Digest;
 use crypto::sha3::Sha3;
-use cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptographic_primitives::hashing::traits::Hash;
 use merkle::Hashable;
+use rand::{thread_rng, Rng};
+use secp256k1::constants::{
+    CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
+};
+use secp256k1::{PublicKey, Secp256k1, SecretKey, VerifyOnly};
 use serde::de;
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeStruct;
@@ -38,8 +40,6 @@ use std::ops::{Add, Mul};
 use std::ptr;
 use std::sync::{atomic, Once};
 use zeroize::Zeroize;
-use BigInt;
-use ErrorKey;
 
 pub type SK = SecretKey;
 pub type PK = PublicKey;
@@ -580,13 +580,13 @@ mod tests {
     use super::BigInt;
     use super::Secp256k1Point;
     use super::Secp256k1Scalar;
-    use arithmetic::traits::Converter;
-    use arithmetic::traits::Modulo;
-    use cryptographic_primitives::hashing::hash_sha256::HSha256;
-    use cryptographic_primitives::hashing::traits::Hash;
-    use elliptic::curves::traits::ECPoint;
-    use elliptic::curves::traits::ECScalar;
-    extern crate serde_json;
+    use crate::arithmetic::traits::Converter;
+    use crate::arithmetic::traits::Modulo;
+    use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
+    use crate::cryptographic_primitives::hashing::traits::Hash;
+    use crate::elliptic::curves::traits::ECPoint;
+    use crate::elliptic::curves::traits::ECScalar;
+    use serde_json;
 
     #[test]
     fn serialize_sk() {
@@ -648,8 +648,8 @@ mod tests {
         assert_eq!(des_pk.ge, pk.ge);
     }
 
-    use elliptic::curves::secp256_k1::{FE, GE};
-    use ErrorKey;
+    use crate::elliptic::curves::secp256_k1::{FE, GE};
+    use crate::ErrorKey;
 
     #[test]
     fn test_serdes_pk() {

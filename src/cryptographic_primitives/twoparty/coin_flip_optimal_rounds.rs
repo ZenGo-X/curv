@@ -5,12 +5,12 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-use cryptographic_primitives::proofs::sigma_valid_pedersen::PedersenProof;
-use cryptographic_primitives::proofs::sigma_valid_pedersen::ProvePederesen;
-use cryptographic_primitives::proofs::sigma_valid_pedersen_blind::PedersenBlindingProof;
-use cryptographic_primitives::proofs::sigma_valid_pedersen_blind::ProvePederesenBlind;
-use elliptic::curves::traits::*;
-use {FE, GE};
+use crate::cryptographic_primitives::proofs::sigma_valid_pedersen::PedersenProof;
+use crate::cryptographic_primitives::proofs::sigma_valid_pedersen::ProvePederesen;
+use crate::cryptographic_primitives::proofs::sigma_valid_pedersen_blind::PedersenBlindingProof;
+use crate::cryptographic_primitives::proofs::sigma_valid_pedersen_blind::ProvePederesenBlind;
+use crate::elliptic::curves::traits::*;
+use crate::{FE, GE};
 
 /// based on How To Simulate It – A Tutorial on the Simulation
 /// Proof Technique. protocol 7.3: Multiple coin tossing. which provide simulatble constant round
@@ -72,7 +72,7 @@ pub fn finalize(proof: &PedersenBlindingProof, party2seed: &FE, party1comm: &GE)
 
 #[cfg(test)]
 mod tests {
-    use cryptographic_primitives::twoparty::coin_flip_optimal_rounds::*;
+    use crate::cryptographic_primitives::twoparty::coin_flip_optimal_rounds::*;
     #[test]
     pub fn test_coin_toss() {
         let (party1_first_message, m1, r1) = Party1FirstMessage::commit();

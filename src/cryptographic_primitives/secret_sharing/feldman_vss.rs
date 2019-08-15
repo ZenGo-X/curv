@@ -6,11 +6,11 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-use elliptic::curves::traits::*;
-use BigInt;
-use ErrorSS::{self, VerifyShareError};
-use FE;
-use GE;
+use crate::elliptic::curves::traits::*;
+use crate::BigInt;
+use crate::ErrorSS::{self, VerifyShareError};
+use crate::FE;
+use crate::GE;
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct ShamirSecretSharing {
@@ -238,8 +238,8 @@ impl VerifiableSS {
 
 #[cfg(test)]
 mod tests {
-    use cryptographic_primitives::secret_sharing::feldman_vss::*;
-    use {FE, GE};
+    use crate::cryptographic_primitives::secret_sharing::feldman_vss::*;
+    use crate::{FE, GE};
 
     #[test]
     fn test_secret_sharing_3_out_of_5_at_indices() {

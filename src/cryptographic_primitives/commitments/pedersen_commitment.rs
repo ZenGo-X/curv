@@ -7,10 +7,10 @@
 
 use super::traits::Commitment;
 use super::SECURITY_BITS;
-use arithmetic::traits::Samplable;
+use crate::arithmetic::traits::Samplable;
 
-use elliptic::curves::traits::*;
-use {BigInt, FE, GE};
+use crate::elliptic::curves::traits::*;
+use crate::{BigInt, FE, GE};
 
 /// compute c = mG + rH
 /// where m is the commited value, G is the group generator,

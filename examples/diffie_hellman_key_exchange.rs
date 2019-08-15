@@ -1,5 +1,3 @@
-extern crate curv;
-
 /// Diffie Hellman Key Exchange:
 /// TO RUN:
 /// cargo run --example diffie_hellman_key_exchange --features CURVE_NAME
