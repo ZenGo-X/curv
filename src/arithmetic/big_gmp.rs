@@ -1,4 +1,4 @@
-#![cfg(feature="gmp")]
+#![cfg(feature="rust-gmp")]
 
 /*
     Curv

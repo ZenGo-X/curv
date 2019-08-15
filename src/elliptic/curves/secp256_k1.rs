@@ -570,7 +570,7 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
         Ok(Secp256k1Point::from_coor(&bx, &by))
     }
 }
-#[cfg(feature = "curvesecp256k1")]
+
 #[cfg(test)]
 mod tests {
     use super::BigInt;

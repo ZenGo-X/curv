@@ -16,7 +16,7 @@ extern crate zeroize;
 #[cfg(feature = "ecc")]
 pub mod elliptic;
 
-#[cfg(feature = "curvesecp256k1")]
+#[cfg(feature = "ec_secp256k1")]
 mod secp256k1instance {
     pub use elliptic::curves::secp256_k1::FE;
     pub use elliptic::curves::secp256_k1::GE;
@@ -24,10 +24,10 @@ mod secp256k1instance {
     pub use elliptic::curves::secp256_k1::SK;
 }
 
-#[cfg(feature = "curvesecp256k1")]
+#[cfg(feature = "ec_secp256k1")]
 pub use self::secp256k1instance::*;
 
-#[cfg(feature = "curveristretto")]
+#[cfg(feature = "ec_ristretto")]
 mod curveristrettoinstance {
     pub use elliptic::curves::curve_ristretto::FE;
     pub use elliptic::curves::curve_ristretto::GE;
@@ -35,10 +35,10 @@ mod curveristrettoinstance {
     pub use elliptic::curves::curve_ristretto::SK;
 }
 
-#[cfg(feature = "curveristretto")]
+#[cfg(feature = "ec_ristretto")]
 pub use self::curveristrettoinstance::*;
 
-#[cfg(feature = "ed25519")]
+#[cfg(feature = "ec_ed25519")]
 mod ed25519instance {
     pub use elliptic::curves::ed25519::FE;
     pub use elliptic::curves::ed25519::GE;
@@ -46,10 +46,10 @@ mod ed25519instance {
     pub use elliptic::curves::ed25519::SK;
 }
 
-#[cfg(feature = "ed25519")]
+#[cfg(feature = "ec_ed25519")]
 pub use self::ed25519instance::*;
 
-#[cfg(feature = "curvejubjub")]
+#[cfg(feature = "ec_jubjub")]
 mod jubjubinstance {
     pub use elliptic::curves::curve_jubjub::FE;
     pub use elliptic::curves::curve_jubjub::GE;
@@ -57,12 +57,12 @@ mod jubjubinstance {
     pub use elliptic::curves::curve_jubjub::SK;
 }
 
-#[cfg(feature = "curvejubjub")]
+#[cfg(feature = "ec_jubjub")]
 pub use self::jubjubinstance::*;
 
-#[cfg(feature = "gmp")]
+#[cfg(feature = "rust-gmp")]
 pub mod arithmetic;
-#[cfg(feature = "gmp")]
+#[cfg(feature = "rust-gmp")]
 pub use arithmetic::big_gmp::BigInt;
 
 #[cfg(feature = "ecc")]
