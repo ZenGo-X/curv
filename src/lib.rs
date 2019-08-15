@@ -60,6 +60,7 @@ mod jubjubinstance {
 #[cfg(feature = "curvejubjub")]
 pub use self::jubjubinstance::*;
 
+#[cfg(feature = "gmp")]
 pub mod arithmetic;
 #[cfg(feature = "gmp")]
 pub use arithmetic::big_gmp::BigInt;

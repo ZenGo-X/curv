@@ -76,5 +76,4 @@ mod tests {
         let root = mt256.get_root();
         assert!(MT256::validate_proof(&proof1, root).is_ok());
     }
-
 }
