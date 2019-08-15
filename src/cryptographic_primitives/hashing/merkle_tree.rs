@@ -22,7 +22,7 @@ pub struct MT256 {
 impl MT256 {
     pub fn create_tree(vec: &[GE]) -> MT256 {
         let digest = Context::new(&SHA256);
-        let tree = MerkleTree::from_vec(digest.algorithm, vec.to_vec());
+        let tree = MerkleTree::from_vec(digest.algorithm(), vec.to_vec());
         MT256 { tree }
     }
 

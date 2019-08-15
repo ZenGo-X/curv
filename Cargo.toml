@@ -21,7 +21,7 @@ ecc = []
 
 [dependencies]
 rand = "0.6"
-ring = "0.13.5"
+ring = "0.16"
 serde = "1.0"
 serde_derive = "1.0"
 merkle = "1.10.0"
@@ -54,7 +54,7 @@ git = "https://github.com/KZen-networks/rust-gmp"
 optional = true
 
 [dependencies.secp256k1]
-version = "0.14.0"
+version = "0.15.0"
 features = ["serde"]
 optional = true
 

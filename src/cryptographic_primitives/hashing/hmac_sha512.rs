@@ -9,15 +9,14 @@ use BigInt;
 
 use super::traits::KeyedHash;
 use arithmetic::traits::Converter;
-use ring::{digest, hmac};
+use ring::hmac;
 use zeroize::Zeroize;
 pub struct HMacSha512;
 
 impl KeyedHash for HMacSha512 {
     fn create_hmac(key: &BigInt, data: &[&BigInt]) -> BigInt {
         let mut key_bytes: Vec<u8> = key.into();
-        let mut s_ctx =
-            hmac::SigningContext::with_key(&hmac::SigningKey::new(&digest::SHA512, &key_bytes));
+        let mut s_ctx = hmac::Context::with_key(&hmac::Key::new(hmac::HMAC_SHA512, &key_bytes));
 
         for value in data {
             s_ctx.update(&BigInt::to_vec(value));
