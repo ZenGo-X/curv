@@ -525,7 +525,6 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
     }
 }
 
-#[cfg(feature = "curvejubjub")]
 #[cfg(test)]
 mod tests {
     use super::JubjubPoint;
