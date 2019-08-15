@@ -564,5 +564,4 @@ mod tests {
         let result = RistrettoCurvPoint::from_bytes(&test_vec);
         assert!(result.is_ok())
     }
-
 }

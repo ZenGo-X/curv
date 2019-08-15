@@ -110,5 +110,4 @@ mod tests {
         let _verified =
             PedersenBlindingProof::verify(&pedersen_proof).expect("error pedersen blind");
     }
-
 }
