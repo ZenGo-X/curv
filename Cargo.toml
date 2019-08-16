@@ -15,14 +15,13 @@ ec_jubjub = ["rust-gmp", "ecc" , "pairing", "sapling-crypto"]
 ecc = []
 
 [dependencies]
-rand = "0.7"
+rand = "0.6"
 ring = "0.16"
 serde = "1.0"
 serde_derive = "1.0"
 merkle = "1.11.0"
 zeroize = "0.9.3"
 sha3 = "0.8.2"
-
 
 #[dependencies.sapling-crypto]
 #git = "https://github.com/zcash/librustzcash.git"
@@ -60,7 +59,6 @@ optional = true
 [dependencies.cryptoxide]
 version = "0.1.2"
 optional = true
-
 
 [dev-dependencies]
 serde_json = "1.0"

@@ -108,7 +108,7 @@ impl Samplable for Mpz {
     }
 
     fn sample(bit_size: usize) -> Self {
-        let mut rng = OsRng;
+        let mut rng = OsRng::new().unwrap();
         let bytes = (bit_size - 1) / 8 + 1;
         let mut buf: Vec<u8> = vec![0; bytes];
         rng.fill_bytes(&mut buf);
