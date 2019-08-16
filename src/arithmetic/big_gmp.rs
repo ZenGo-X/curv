@@ -81,7 +81,7 @@ impl Modulo for Mpz {
 
 impl Samplable for Mpz {
     fn sample_below(upper: &Self) -> Self {
-        assert!(upper > &Mpz::zero());
+        assert!(*upper > Mpz::zero());
 
         let bits = upper.bit_length();
         loop {
@@ -133,7 +133,7 @@ impl NumberTests for Mpz {
         me.is_multiple_of(&Mpz::from(2))
     }
     fn is_negative(me: &Self) -> bool {
-        me < &Mpz::from(0)
+        *me < Mpz::from(0)
     }
 }
 
