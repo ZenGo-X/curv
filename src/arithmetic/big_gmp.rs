@@ -1,4 +1,4 @@
-#![cfg(feature="rust-gmp")]
+#![cfg(feature = "rust-gmp")]
 
 /*
     Curv
@@ -108,7 +108,7 @@ impl Samplable for Mpz {
     }
 
     fn sample(bit_size: usize) -> Self {
-        let mut rng = OsRng::new().unwrap();
+        let mut rng = OsRng;
         let bytes = (bit_size - 1) / 8 + 1;
         let mut buf: Vec<u8> = vec![0; bytes];
         rng.fill_bytes(&mut buf);
@@ -159,8 +159,8 @@ impl BitManipulation for Mpz {
 
 impl ConvertFrom<Mpz> for u64 {
     fn _from(x: &Mpz) -> u64 {
-        let foo: Option<u64> = x.into();
-        foo.unwrap()
+        let opt_x: Option<u64> = x.into();
+        opt_x.unwrap()
     }
 }
 
