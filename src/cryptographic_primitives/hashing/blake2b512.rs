@@ -62,5 +62,4 @@ mod tests {
             Blake::create_hash_from_ge(&vec![&GE::generator(), &point], b"Zcash_RedJubjubH");
         assert_eq!(result2, result3);
     }
-
 }
