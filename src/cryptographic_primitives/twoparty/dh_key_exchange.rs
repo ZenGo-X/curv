@@ -138,5 +138,4 @@ mod tests {
             g * secret_party_2
         );
     }
-
 }

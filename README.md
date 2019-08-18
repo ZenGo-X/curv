@@ -51,7 +51,7 @@ Curv is released under the terms of the MIT license. See [LICENSE](LICENSE) for 
 
 
 ### Development Process
-The contribution workflow is described in [CONTRIBUTING.md](CONTRIBUTING.md).
+We use several methods to communicate: You can open an issue, [reach out](mailto:github@kzencorp.com) by mail or join the KZen Research [Telegram]( https://t.me/kzen_research) for discussions on code and research. Changes are to be submitted as pull requests.
 
 ### Contact
 For any questions, feel free to [email us](mailto:github@kzencorp.com).

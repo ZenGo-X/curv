@@ -54,7 +54,7 @@ pub struct JubjubPoint {
 pub type GE = JubjubPoint;
 pub type FE = JubjubScalar;
 
-impl Zeroize for FE {
+impl Zeroize for JubjubScalar {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, FE::zero()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -284,7 +284,7 @@ impl JubjubPoint {
     }
 }
 
-impl Zeroize for GE {
+impl Zeroize for JubjubPoint {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, GE::generator()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -341,7 +341,7 @@ impl ECPoint<PK, SK> for JubjubPoint {
         let mut bytes_array_32 = [0u8; 32];
         let byte_len = bytes_vec.len();
         match byte_len {
-            0...32 => {
+            0..=32 => {
                 let mut template = vec![0; 32 - byte_len];
                 template.extend_from_slice(&bytes);
                 let bytes_vec = template;
@@ -522,14 +522,13 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
     }
 }
 
-#[cfg(feature = "curvejubjub")]
 #[cfg(test)]
 mod tests {
     use super::JubjubPoint;
     use arithmetic::traits::Modulo;
     use elliptic::curves::traits::ECPoint;
     use elliptic::curves::traits::ECScalar;
-    use serde_json;
+    extern crate serde_json;
     use BigInt;
     use {FE, GE};
 
@@ -683,5 +682,4 @@ mod tests {
         let s_b: FE = ECScalar::from(&s_bn);
         assert_eq!(s_a, s_b);
     }
-
 }

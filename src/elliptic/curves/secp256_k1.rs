@@ -20,7 +20,7 @@ use super::rand::{thread_rng, Rng};
 use super::secp256k1::constants::{
     CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
-use super::secp256k1::{PublicKey, Secp256k1, SecretKey};
+use super::secp256k1::{PublicKey, Secp256k1, SecretKey, VerifyOnly};
 use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::{Converter, Modulo};
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
@@ -35,7 +35,7 @@ use serde::{Deserialize, Deserializer};
 use std::fmt;
 use std::ops::{Add, Mul};
 use std::ptr;
-use std::sync::atomic;
+use std::sync::{atomic, Once};
 use zeroize::Zeroize;
 use BigInt;
 use ErrorKey;
@@ -87,7 +87,7 @@ impl Secp256k1Point {
     }
 }
 
-impl Zeroize for FE {
+impl Zeroize for Secp256k1Scalar {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, FE::zero()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -268,7 +268,7 @@ impl PartialEq for Secp256k1Point {
     }
 }
 
-impl Zeroize for GE {
+impl Zeroize for Secp256k1Point {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, GE::generator()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -321,13 +321,13 @@ impl ECPoint<PK, SK> for Secp256k1Point {
 
         let byte_len = bytes_vec.len();
         match byte_len {
-            33...63 => {
+            33..=63 => {
                 let mut template = vec![0; 64 - bytes_vec.len()];
                 template.extend_from_slice(&bytes);
                 let bytes_vec = template;
                 let mut template: Vec<u8> = vec![4];
                 template.append(&mut bytes_vec.clone());
-                let mut bytes_slice = &template[..];
+                let bytes_slice = &template[..];
 
                 bytes_array_65.copy_from_slice(&bytes_slice[0..65]);
                 let result = PK::from_slice(&bytes_array_65);
@@ -338,7 +338,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                 test.map_err(|_err| ErrorKey::InvalidPublicKey)
             }
 
-            0...32 => {
+            0..=32 => {
                 let mut template = vec![0; 32 - bytes_vec.len()];
                 template.extend_from_slice(&bytes);
                 let bytes_vec = template;
@@ -347,7 +347,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                 println!("rand {:?}", 2 + bit as u8);
                 let mut template: Vec<u8> = vec![2 + bit as u8];
                 template.append(&mut bytes_vec.clone());
-                let mut bytes_slice = &template[..];
+                let bytes_slice = &template[..];
 
                 bytes_array_33.copy_from_slice(&bytes_slice[0..33]);
                 let result = PK::from_slice(&bytes_array_33);
@@ -362,7 +362,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                 let bytes_vec = bytes_slice.to_vec();
                 let mut template: Vec<u8> = vec![4];
                 template.append(&mut bytes_vec.clone());
-                let mut bytes_slice = &template[..];
+                let bytes_slice = &template[..];
 
                 bytes_array_65.copy_from_slice(&bytes_slice[0..65]);
                 let result = PK::from_slice(&bytes_array_65);
@@ -386,7 +386,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         let mut new_point = *self;
         new_point
             .ge
-            .mul_assign(&Secp256k1::new(), &fe[..])
+            .mul_assign(get_context(), &fe[..])
             .expect("Assignment expected");
         new_point
     }
@@ -461,6 +461,15 @@ impl ECPoint<PK, SK> for Secp256k1Point {
             ge: PK::from_slice(&v).unwrap(),
         }
     }
+}
+
+static mut CONTEXT: Option<Secp256k1<VerifyOnly>> = None;
+pub fn get_context() -> &'static Secp256k1<VerifyOnly> {
+    static INIT_CONTEXT: Once = Once::new();
+    INIT_CONTEXT.call_once(|| unsafe {
+        CONTEXT = Some(Secp256k1::verification_only());
+    });
+    unsafe { CONTEXT.as_ref().unwrap() }
 }
 
 impl Hashable for Secp256k1Point {
@@ -564,7 +573,7 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
         Ok(Secp256k1Point::from_coor(&bx, &by))
     }
 }
-#[cfg(feature = "curvesecp256k1")]
+
 #[cfg(test)]
 mod tests {
     use super::BigInt;
@@ -576,7 +585,7 @@ mod tests {
     use cryptographic_primitives::hashing::traits::Hash;
     use elliptic::curves::traits::ECPoint;
     use elliptic::curves::traits::ECScalar;
-    use serde_json;
+    extern crate serde_json;
 
     #[test]
     fn serialize_sk() {
@@ -741,5 +750,4 @@ mod tests {
         let c2 = a * b;
         assert_eq!(c1.get_element(), c2.get_element());
     }
-
 }

@@ -107,5 +107,4 @@ mod tests {
         let hash_result = BigInt::from(digest.result().as_ref());
         assert_eq!(&commitment, &hash_result);
     }
-
 }

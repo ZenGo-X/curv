@@ -50,7 +50,7 @@ pub struct RistrettoCurvPoint {
 pub type GE = RistrettoCurvPoint;
 pub type FE = RistrettoScalar;
 
-impl Zeroize for FE {
+impl Zeroize for RistrettoScalar {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, FE::zero()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -249,7 +249,7 @@ impl RistrettoCurvPoint {
     }
 }
 
-impl Zeroize for GE {
+impl Zeroize for RistrettoCurvPoint {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, GE::generator()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -290,7 +290,7 @@ impl ECPoint<PK, SK> for RistrettoCurvPoint {
         let mut bytes_array_32 = [0u8; 32];
         let byte_len = bytes_vec.len();
         match byte_len {
-            0...32 => {
+            0..=32 => {
                 let mut template = vec![0; 32 - bytes_vec.len()];
                 template.extend_from_slice(&bytes);
                 let bytes_vec = template;
@@ -471,7 +471,7 @@ mod tests {
     use arithmetic::traits::Modulo;
     use elliptic::curves::traits::ECPoint;
     use elliptic::curves::traits::ECScalar;
-    use serde_json;
+    extern crate serde_json;
     use BigInt;
     use {FE, GE};
 
@@ -564,5 +564,4 @@ mod tests {
         let result = RistrettoCurvPoint::from_bytes(&test_vec);
         assert!(result.is_ok())
     }
-
 }

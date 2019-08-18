@@ -1,4 +1,4 @@
-#![cfg(feature="gmp")]
+#![cfg(feature="rust-gmp")]
 
 /*
     Curv
@@ -20,12 +20,22 @@ use super::gmp::mpz::Mpz;
 use super::rand::rngs::OsRng;
 use super::rand::RngCore;
 use super::traits::{
-    BitManipulation, ConvertFrom, Converter, Modulo, NumberTests, Samplable, EGCD,
+    BitManipulation, ConvertFrom, Converter, Modulo, NumberTests, Samplable, ZeroizeBN, EGCD,
 };
 
 use std::borrow::Borrow;
+use std::ptr;
+use std::sync::atomic;
 
 pub type BigInt = Mpz;
+
+impl ZeroizeBN for Mpz {
+    fn zeroize_bn(&mut self) {
+        unsafe { ptr::write_volatile(self, BigInt::zero()) };
+        atomic::fence(atomic::Ordering::SeqCst);
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
+    }
+}
 
 impl Converter for Mpz {
     fn to_vec(value: &Mpz) -> Vec<u8> {

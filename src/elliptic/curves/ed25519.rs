@@ -10,7 +10,7 @@
 // https://cr.yp.to/ecdh/curve25519-20060209.pdf
 use std::fmt::Debug;
 use std::str;
-pub const SECRET_KEY_SIZE: usize = 32;
+pub const TWO_TIMES_SECRET_KEY_SIZE: usize = 64;
 use super::cryptoxide::curve25519::*;
 use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::Converter;
@@ -47,7 +47,7 @@ pub struct Ed25519Point {
 pub type GE = Ed25519Point;
 pub type FE = Ed25519Scalar;
 
-impl Zeroize for FE {
+impl Zeroize for Ed25519Scalar {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, FE::zero()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -80,21 +80,18 @@ impl ECScalar<SK> for Ed25519Scalar {
 
     fn from(n: &BigInt) -> Ed25519Scalar {
         let mut v = BigInt::to_vec(&n);
-        let mut bytes_array_32: [u8; 32];
-        if v.len() < SECRET_KEY_SIZE {
-            let mut template = vec![0; SECRET_KEY_SIZE - v.len()];
-            template.extend_from_slice(&v);
-            v = template;
+        if v.len() > TWO_TIMES_SECRET_KEY_SIZE {
+            v = v[0..TWO_TIMES_SECRET_KEY_SIZE].to_vec();
         }
-        bytes_array_32 = [0; SECRET_KEY_SIZE];
-        let bytes = &v[..SECRET_KEY_SIZE];
-        bytes_array_32.copy_from_slice(&bytes);
 
-        bytes_array_32.reverse();
-
+        let mut template = vec![0; TWO_TIMES_SECRET_KEY_SIZE - v.len()];
+        template.extend_from_slice(&v);
+        v = template;
+        v.reverse();
+        sc_reduce(&mut v[..]);
         Ed25519Scalar {
             purpose: "from_big_int",
-            fe: SK::from_bytes(&bytes_array_32),
+            fe: SK::from_bytes(&v[..]),
         }
     }
 
@@ -259,7 +256,7 @@ impl PartialEq for Ed25519Point {
     }
 }
 
-impl Zeroize for GE {
+impl Zeroize for Ed25519Point {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, GE::generator()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -326,7 +323,7 @@ impl ECPoint<PK, SK> for Ed25519Point {
         let mut bytes_array_32 = [0u8; 32];
         let byte_len = bytes_vec.len();
         match byte_len {
-            0...32 => {
+            0..=32 => {
                 let mut template = vec![0; 32 - byte_len];
                 template.extend_from_slice(&bytes);
                 let bytes_vec = template;
@@ -580,7 +577,7 @@ mod tests {
     use arithmetic::traits::Modulo;
     use elliptic::curves::traits::ECPoint;
     use elliptic::curves::traits::ECScalar;
-    use serde_json;
+    extern crate serde_json;
     use BigInt;
     use {FE, GE};
 
@@ -759,5 +756,4 @@ mod tests {
             "15112221349535400772501151409588531511454012693041857206046113283949847762202"
         );
     }
-
 }
