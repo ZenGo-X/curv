@@ -9,19 +9,24 @@ crate-type = ["lib"]
 [features]
 default = ["rust-gmp"]
 ec_secp256k1 = ["rust-gmp" ,"ecc", "secp256k1"]
-ec_ristretto = ["rust-gmp", "ecc" , "curve25519-dalek", "blake2-rfc"]
+ec_ristretto = ["rust-gmp", "ecc" , "curve25519-dalek"]
 ec_ed25519 = ["rust-gmp", "ecc" , "cryptoxide"]
 ec_jubjub = ["rust-gmp", "ecc" , "pairing", "sapling-crypto"]
 ecc = []
 
 [dependencies]
 rand = "0.6"
-ring = "0.13.5"
 serde = "1.0"
 serde_derive = "1.0"
-merkle = "1.10.0"
 zeroize = "0.5.2"
 sha3 = "0.8.1"
+rust-crypto = "^0.2"
+hex = "^0.3"
+merkle-sha3 = "^0.1"
+
+[dependencies.blake2-rfc]
+git = "https://github.com/gtank/blake2-rfc"
+rev = "7a5b5fc99ae483a0043db7547fb79a6fa44b88a9"
 
 
 #[dependencies.sapling-crypto]
@@ -40,11 +45,6 @@ optional = true
 [dependencies.pairing]
 git = "https://github.com/omershlo/librustzcash.git"
 rev = "3e667406323430813f6dbae2a60b5a83046fa20a"
-optional = true
-
-[dependencies.blake2-rfc]
-git = "https://github.com/gtank/blake2-rfc"
-rev = "7a5b5fc99ae483a0043db7547fb79a6fa44b88a9"
 optional = true
 
 

@@ -4,7 +4,6 @@
     (https://github.com/KZen-networks/curv)
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
-
 use arithmetic::traits::Converter;
 use blake2_rfc::blake2b::Blake2b;
 use elliptic::curves::traits::{ECPoint, ECScalar};

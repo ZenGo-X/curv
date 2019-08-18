@@ -23,10 +23,11 @@ use super::secp256k1::constants::{
 use super::secp256k1::{PublicKey, Secp256k1, SecretKey, VerifyOnly};
 use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::{Converter, Modulo};
+use crypto::digest::Digest;
+use crypto::sha3::Sha3;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
 use merkle::Hashable;
-use ring::digest::Context;
 use serde::de;
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeStruct;
@@ -473,9 +474,9 @@ pub fn get_context() -> &'static Secp256k1<VerifyOnly> {
 }
 
 impl Hashable for Secp256k1Point {
-    fn update_context(&self, context: &mut Context) {
+    fn update_context(&self, context: &mut Sha3) {
         let bytes: Vec<u8> = self.pk_to_key_slice();
-        context.update(&bytes);
+        context.input(&bytes[..]);
     }
 }
 

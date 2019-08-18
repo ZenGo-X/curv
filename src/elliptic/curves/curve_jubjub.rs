@@ -14,10 +14,12 @@ use super::sapling_crypto::jubjub::*;
 use super::sapling_crypto::jubjub::{edwards, fs::Fs, JubjubBls12, PrimeOrder, Unknown};
 use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::Converter;
+use crypto::digest::Digest;
+use crypto::sha3::Sha3;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
 use merkle::Hashable;
-use ring::digest::Context;
+
 use serde::de;
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeStruct;
@@ -466,9 +468,9 @@ impl<'o> Add<&'o JubjubPoint> for &'o JubjubPoint {
 }
 
 impl Hashable for JubjubPoint {
-    fn update_context(&self, context: &mut Context) {
+    fn update_context(&self, context: &mut Sha3) {
         let bytes: Vec<u8> = self.pk_to_key_slice();
-        context.update(&bytes);
+        context.input(&bytes[..]);
     }
 }
 
