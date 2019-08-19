@@ -16,13 +16,14 @@ ecc = []
 
 [dependencies]
 rand = "0.6"
-ring = "0.13.5"
 serde = "1.0"
 serde_derive = "1.0"
-merkle = "1.10.0"
 zeroize = "0.5.2"
 sha3 = "0.8.1"
-
+rust-crypto = "^0.2"
+hex = "^0.3"
+merkle-sha3 = "^0.1"
+blake2b_simd = "0.5.6"
 
 #[dependencies.sapling-crypto]
 #git = "https://github.com/zcash/librustzcash.git"
@@ -41,6 +42,7 @@ optional = true
 git = "https://github.com/omershlo/librustzcash.git"
 rev = "3e667406323430813f6dbae2a60b5a83046fa20a"
 optional = true
+
 
 [dependencies.rust-gmp]
 version = "0.5.0"

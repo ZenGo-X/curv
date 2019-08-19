@@ -7,8 +7,10 @@
 
 #[macro_use]
 extern crate serde_derive;
+extern crate blake2b_simd;
+extern crate crypto;
+extern crate hex;
 extern crate merkle;
-extern crate ring;
 extern crate serde;
 extern crate sha3;
 extern crate zeroize;
