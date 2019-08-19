@@ -47,14 +47,6 @@ mod tests {
     use GE;
 
     #[test]
-    fn create_hash_test() {
-        HSha512::create_hash(&vec![]);
-
-        let result = HSha512::create_hash(&vec![&BigInt::one(), &BigInt::zero()]);
-        assert!(result > BigInt::zero());
-    }
-
-    #[test]
     // Test Vectors taken from:
     // https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/secure-hashing#shavs
     fn hash_vector_test() {
@@ -63,6 +55,24 @@ mod tests {
         assert_eq!(
             result.to_str_radix(16),
             "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"
+        );
+
+        // 2x256 bit message
+        let result: BigInt = HSha512::create_hash(&vec![
+            &BigInt::from_str_radix(
+                "c1ca70ae1279ba0b918157558b4920d6b7fba8a06be515170f202fafd36fb7f7",
+                16,
+            )
+            .unwrap(),
+            &BigInt::from_str_radix(
+                "9d69fad745dba6150568db1e2b728504113eeac34f527fc82f2200b462ecbf5d",
+                16,
+            )
+            .unwrap(),
+        ]);
+        assert_eq!(
+            result.to_str_radix(16),
+            "46e46623912b3932b8d662ab42583423843206301b58bf20ab6d76fd47f1cbbcf421df536ecd7e56db5354e7e0f98822d2129c197f6f0f222b8ec5231f3967d"
         );
 
         // 512 bit message
