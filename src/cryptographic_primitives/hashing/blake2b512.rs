@@ -5,7 +5,7 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 use arithmetic::traits::Converter;
-use blake2_rfc::blake2b::Blake2b;
+use blake2b_simd::Params;
 use elliptic::curves::traits::{ECPoint, ECScalar};
 use {BigInt, FE, GE};
 
@@ -13,7 +13,8 @@ pub struct Blake;
 
 impl Blake {
     pub fn create_hash(big_ints: &[&BigInt], persona: &[u8]) -> BigInt {
-        let mut digest = Blake2b::with_params(64, &[], &[], persona);
+        let mut digest = Params::new().hash_length(64).personal(persona).to_state();
+        // let mut digest = Blake2b::with_params(64, &[], &[], persona);
         for value in big_ints {
             digest.update(&BigInt::to_vec(value));
         }
@@ -22,7 +23,8 @@ impl Blake {
     }
 
     pub fn create_hash_from_ge(ge_vec: &[&GE], persona: &[u8]) -> FE {
-        let mut digest = Blake2b::with_params(64, &[], &[], persona);
+        let mut digest = Params::new().hash_length(64).personal(persona).to_state();
+        //  let mut digest = Blake2b::with_params(64, &[], &[], persona);
 
         for value in ge_vec {
             digest.update(&value.pk_to_key_slice());
