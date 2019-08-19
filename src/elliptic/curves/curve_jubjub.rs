@@ -14,10 +14,12 @@ use super::sapling_crypto::jubjub::*;
 use super::sapling_crypto::jubjub::{edwards, fs::Fs, JubjubBls12, PrimeOrder, Unknown};
 use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::Converter;
+use crypto::digest::Digest;
+use crypto::sha3::Sha3;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
 use merkle::Hashable;
-use ring::digest::Context;
+
 use serde::de;
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeStruct;
@@ -347,7 +349,6 @@ impl ECPoint<PK, SK> for JubjubPoint {
                 let bytes_vec = template;
                 let bytes_slice = &bytes_vec[0..32];
                 bytes_array_32.copy_from_slice(&bytes_slice);
-                println!("bytes_array_32_u: {:?}", bytes_array_32);
                 let ge_from_bytes = PKu::read(&bytes_array_32[..], params);
                 match ge_from_bytes {
                     Ok(x) => {
@@ -367,7 +368,6 @@ impl ECPoint<PK, SK> for JubjubPoint {
             _ => {
                 let bytes_slice = &bytes_vec[0..32];
                 bytes_array_32.copy_from_slice(&bytes_slice);
-                println!("bytes_array_32_d: {:?}", bytes_array_32);
                 let ge_from_bytes = PKu::read(&bytes_array_32[..], params);
                 match ge_from_bytes {
                     Ok(x) => {
@@ -468,9 +468,9 @@ impl<'o> Add<&'o JubjubPoint> for &'o JubjubPoint {
 }
 
 impl Hashable for JubjubPoint {
-    fn update_context(&self, context: &mut Context) {
+    fn update_context(&self, context: &mut Sha3) {
         let bytes: Vec<u8> = self.pk_to_key_slice();
-        context.update(&bytes);
+        context.input(&bytes[..]);
     }
 }
 
@@ -519,7 +519,6 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
         }
         let bytes_bn = BigInt::from_hex(&bytes_str);
         let bytes = BigInt::to_vec(&bytes_bn);
-        println!("bytes: {:?}", bytes);
 
         Ok(JubjubPoint::from_bytes(&bytes[..]).expect("error deserializing point"))
     }

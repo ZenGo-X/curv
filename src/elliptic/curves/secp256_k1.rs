@@ -23,10 +23,11 @@ use super::secp256k1::constants::{
 use super::secp256k1::{PublicKey, Secp256k1, SecretKey, VerifyOnly};
 use super::traits::{ECPoint, ECScalar};
 use arithmetic::traits::{Converter, Modulo};
+use crypto::digest::Digest;
+use crypto::sha3::Sha3;
 use cryptographic_primitives::hashing::hash_sha256::HSha256;
 use cryptographic_primitives::hashing::traits::Hash;
 use merkle::Hashable;
-use ring::digest::Context;
 use serde::de;
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeStruct;
@@ -342,7 +343,10 @@ impl ECPoint<PK, SK> for Secp256k1Point {
                 let mut template = vec![0; 32 - bytes_vec.len()];
                 template.extend_from_slice(&bytes);
                 let bytes_vec = template;
-                let mut template: Vec<u8> = vec![2];
+                let mut rng = rand::thread_rng();
+                let bit: bool = rng.gen();
+                println!("rand {:?}", 2 + bit as u8);
+                let mut template: Vec<u8> = vec![2 + bit as u8];
                 template.append(&mut bytes_vec.clone());
                 let bytes_slice = &template[..];
 
@@ -470,9 +474,9 @@ pub fn get_context() -> &'static Secp256k1<VerifyOnly> {
 }
 
 impl Hashable for Secp256k1Point {
-    fn update_context(&self, context: &mut Context) {
+    fn update_context(&self, context: &mut Sha3) {
         let bytes: Vec<u8> = self.pk_to_key_slice();
-        context.update(&bytes);
+        context.input(&bytes[..]);
     }
 }
 
@@ -680,17 +684,6 @@ mod tests {
         assert_eq!(result.unwrap_err(), ErrorKey::InvalidPublicKey)
     }
 
-    #[test]
-    fn test_from_bytes_2() {
-        let g: Secp256k1Point = ECPoint::generator();
-        let hash = HSha256::create_hash(&vec![&g.bytes_compressed_to_big_int()]);
-        let hash = HSha256::create_hash(&vec![&hash]);
-        let hash = HSha256::create_hash(&vec![&hash]);
-        let hash_vec = BigInt::to_vec(&hash);
-        let result = Secp256k1Point::from_bytes(&hash_vec);
-        let ground_truth = Secp256k1Point::base_point2();
-        assert_eq!(result.unwrap(), ground_truth);
-    }
     #[test]
     fn test_from_bytes_3() {
         let test_vec = [

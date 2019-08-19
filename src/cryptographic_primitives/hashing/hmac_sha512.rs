@@ -9,21 +9,27 @@ use BigInt;
 
 use super::traits::KeyedHash;
 use arithmetic::traits::Converter;
-use ring::{digest, hmac};
+
+use crypto::hmac::Hmac;
+use crypto::mac::Mac;
+use crypto::sha2::Sha512;
 use zeroize::Zeroize;
+
 pub struct HMacSha512;
 
 impl KeyedHash for HMacSha512 {
     fn create_hmac(key: &BigInt, data: &[&BigInt]) -> BigInt {
         let mut key_bytes: Vec<u8> = key.into();
-        let mut s_ctx =
-            hmac::SigningContext::with_key(&hmac::SigningKey::new(&digest::SHA512, &key_bytes));
+        let mut hmac = Hmac::new(Sha512::new(), &key_bytes);
 
         for value in data {
-            s_ctx.update(&BigInt::to_vec(value));
+            hmac.input(&BigInt::to_vec(value));
         }
         key_bytes.zeroize();
-        BigInt::from(s_ctx.sign().as_ref())
+        let result = hmac.result();
+        let code = result.code();
+
+        BigInt::from(code)
     }
 }
 

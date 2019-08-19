@@ -7,8 +7,11 @@
 
 use super::traits::Hash;
 use arithmetic::traits::Converter;
+use crypto::digest::Digest;
+use crypto::sha2::Sha512;
 use elliptic::curves::traits::{ECPoint, ECScalar};
-use ring::digest::{Context, SHA512};
+use hex::decode;
+
 use BigInt;
 use {FE, GE};
 
@@ -16,23 +19,28 @@ pub struct HSha512;
 
 impl Hash for HSha512 {
     fn create_hash(big_ints: &[&BigInt]) -> BigInt {
-        let mut digest = Context::new(&SHA512);
+        let mut hasher = Sha512::new();
 
         for value in big_ints {
-            digest.update(&BigInt::to_vec(value));
+            hasher.input(&BigInt::to_vec(value));
         }
 
-        BigInt::from(digest.finish().as_ref())
+        let result_string = hasher.result_str();
+
+        let result_bytes = decode(result_string).unwrap();
+
+        BigInt::from(&result_bytes[..])
     }
 
     fn create_hash_from_ge(ge_vec: &[&GE]) -> FE {
-        let mut digest = Context::new(&SHA512);
-
+        let mut hasher = Sha512::new();
         for value in ge_vec {
-            digest.update(&value.pk_to_key_slice());
+            hasher.input(&value.pk_to_key_slice());
         }
 
-        let result = BigInt::from(digest.finish().as_ref());
+        let result_string = hasher.result_str();
+        let result_bytes = decode(result_string).unwrap();
+        let result = BigInt::from(&result_bytes[..]);
         ECScalar::from(&result)
     }
 }
@@ -49,7 +57,7 @@ mod tests {
     #[test]
     // Test Vectors taken from:
     // https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/secure-hashing#shavs
-    fn hash_vector_test() {
+    fn vector_sha512_test() {
         // Empty message
         let result: BigInt = HSha512::create_hash(&vec![]);
         assert_eq!(
@@ -95,7 +103,7 @@ mod tests {
     }
 
     #[test]
-    fn create_hash_from_ge_test() {
+    fn create_sha512_from_ge_test() {
         let point = GE::base_point2();
         let result1 = HSha512::create_hash_from_ge(&vec![&point, &GE::generator()]);
         assert!(result1.to_big_int().to_str_radix(2).len() > 240);
