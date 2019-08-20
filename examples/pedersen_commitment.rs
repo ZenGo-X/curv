@@ -1,5 +1,3 @@
-extern crate curv;
-
 use curv::BigInt;
 
 /// Pedesen Commitment:

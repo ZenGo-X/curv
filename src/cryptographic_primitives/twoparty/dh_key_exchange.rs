@@ -9,9 +9,9 @@
 /// Bob chooses at random a secret "b" and sends to Alice B = bG.
 /// Both parties can compute a joint secret: C =aB = bA = abG which cannot be computed by
 /// a man in the middle attacker.
-use elliptic::curves::traits::*;
-use FE;
-use GE;
+use crate::elliptic::curves::traits::*;
+use crate::FE;
+use crate::GE;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct EcKeyPair {
@@ -87,10 +87,10 @@ pub fn compute_pubkey(local_share: &EcKeyPair, other_share_public_share: &GE) ->
 
 #[cfg(test)]
 mod tests {
-    use cryptographic_primitives::twoparty::dh_key_exchange::*;
-    use elliptic::curves::traits::ECScalar;
-    use BigInt;
-    use {FE, GE};
+    use crate::cryptographic_primitives::twoparty::dh_key_exchange::*;
+    use crate::elliptic::curves::traits::ECScalar;
+    use crate::BigInt;
+    use crate::{FE, GE};
 
     #[test]
     fn test_dh_key_exchange_random_shares() {

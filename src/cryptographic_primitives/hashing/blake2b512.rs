@@ -4,10 +4,10 @@
     (https://github.com/KZen-networks/curv)
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
-use arithmetic::traits::Converter;
+use crate::arithmetic::traits::Converter;
+use crate::elliptic::curves::traits::{ECPoint, ECScalar};
+use crate::{BigInt, FE, GE};
 use blake2b_simd::Params;
-use elliptic::curves::traits::{ECPoint, ECScalar};
-use {BigInt, FE, GE};
 
 pub struct Blake;
 
@@ -38,10 +38,10 @@ impl Blake {
 #[cfg(test)]
 mod tests {
     use super::Blake;
-    use elliptic::curves::traits::ECPoint;
-    use elliptic::curves::traits::ECScalar;
-    use BigInt;
-    use GE;
+    use crate::elliptic::curves::traits::ECPoint;
+    use crate::elliptic::curves::traits::ECScalar;
+    use crate::BigInt;
+    use crate::GE;
 
     #[test]
     // Very basic test here, TODO: suggest better testing

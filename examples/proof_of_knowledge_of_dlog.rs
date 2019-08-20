@@ -1,5 +1,3 @@
-extern crate curv;
-
 /// Sigma protocol for proof of knowledge of discrete log
 /// TO RUN:
 /// cargo run --example proof_of_knowledge_of_dlog --features CURVE_NAME

@@ -6,11 +6,11 @@
 */
 
 use super::ProofError;
-use cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptographic_primitives::hashing::traits::Hash;
-use elliptic::curves::traits::*;
+use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
+use crate::cryptographic_primitives::hashing::traits::Hash;
+use crate::elliptic::curves::traits::*;
+use crate::{FE, GE};
 use zeroize::Zeroize;
-use {FE, GE};
 
 /// This protocol is the elliptic curve form of the protocol from :
 ///  D. Chaum, T. P. Pedersen. Transferred cash grows in size. In Advances in Cryptology, EUROCRYPT , volume 658 of Lecture Notes in Computer Science, pages 390 - 407, 1993.
@@ -81,9 +81,9 @@ impl NISigmaProof<ECDDHProof, ECDDHWitness, ECDDHStatement> for ECDDHProof {
 
 #[cfg(test)]
 mod tests {
-    use cryptographic_primitives::proofs::sigma_ec_ddh::*;
-    use elliptic::curves::traits::{ECPoint, ECScalar};
-    use {FE, GE};
+    use crate::cryptographic_primitives::proofs::sigma_ec_ddh::*;
+    use crate::elliptic::curves::traits::{ECPoint, ECScalar};
+    use crate::{FE, GE};
 
     #[test]
     fn test_ecddh_proof() {

@@ -5,10 +5,10 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
-use BigInt;
+use crate::BigInt;
 
 use super::traits::KeyedHash;
-use arithmetic::traits::Converter;
+use crate::arithmetic::traits::Converter;
 
 use crypto::hmac::Hmac;
 use crypto::mac::Mac;
@@ -37,9 +37,9 @@ impl KeyedHash for HMacSha512 {
 mod tests {
 
     use super::HMacSha512;
-    use arithmetic::traits::Samplable;
-    use cryptographic_primitives::hashing::traits::KeyedHash;
-    use BigInt;
+    use crate::arithmetic::traits::Samplable;
+    use crate::cryptographic_primitives::hashing::traits::KeyedHash;
+    use crate::BigInt;
 
     #[test]
     fn create_hmac_test() {

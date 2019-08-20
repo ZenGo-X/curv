@@ -6,14 +6,14 @@
 */
 
 use super::traits::Hash;
-use arithmetic::traits::Converter;
+use crate::arithmetic::traits::Converter;
+use crate::elliptic::curves::traits::{ECPoint, ECScalar};
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
-use elliptic::curves::traits::{ECPoint, ECScalar};
 use hex::decode;
 
-use BigInt;
-use {FE, GE};
+use crate::BigInt;
+use crate::{FE, GE};
 
 pub struct HSha256;
 
@@ -49,10 +49,10 @@ impl Hash for HSha256 {
 mod tests {
     use super::HSha256;
     use super::Hash;
-    use elliptic::curves::traits::ECPoint;
-    use elliptic::curves::traits::ECScalar;
-    use BigInt;
-    use GE;
+    use crate::elliptic::curves::traits::ECPoint;
+    use crate::elliptic::curves::traits::ECScalar;
+    use crate::BigInt;
+    use crate::GE;
 
     #[test]
     // Test Vectors taken from:

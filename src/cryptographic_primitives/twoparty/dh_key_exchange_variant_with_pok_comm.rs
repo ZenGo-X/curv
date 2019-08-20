@@ -13,15 +13,15 @@
 /// The variant below is to protect not only from man in the middle but also from malicious
 /// Alice or Bob that can bias the result. The details of the protocol can be found in
 /// https://eprint.iacr.org/2017/552.pdf protocol 3.1 first 3 steps.
-use arithmetic::traits::Samplable;
-use cryptographic_primitives::commitments::hash_commitment::HashCommitment;
-use cryptographic_primitives::commitments::traits::Commitment;
-use cryptographic_primitives::proofs::sigma_dlog::*;
-use cryptographic_primitives::proofs::ProofError;
-use elliptic::curves::traits::*;
-use BigInt;
-use FE;
-use GE;
+use crate::arithmetic::traits::Samplable;
+use crate::cryptographic_primitives::commitments::hash_commitment::HashCommitment;
+use crate::cryptographic_primitives::commitments::traits::Commitment;
+use crate::cryptographic_primitives::proofs::sigma_dlog::*;
+use crate::cryptographic_primitives::proofs::ProofError;
+use crate::elliptic::curves::traits::*;
+use crate::BigInt;
+use crate::FE;
+use crate::GE;
 
 const SECURITY_BITS: usize = 256;
 
@@ -234,7 +234,7 @@ pub fn compute_pubkey(local_share: &EcKeyPair, other_share_public_share: &GE) ->
 
 #[cfg(test)]
 mod tests {
-    use cryptographic_primitives::twoparty::dh_key_exchange_variant_with_pok_comm::*;
+    use crate::cryptographic_primitives::twoparty::dh_key_exchange_variant_with_pok_comm::*;
 
     #[test]
     fn test_dh_key_exchange() {

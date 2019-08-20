@@ -6,13 +6,13 @@
 */
 
 use super::ProofError;
-use cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
-use cryptographic_primitives::commitments::traits::Commitment;
-use cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptographic_primitives::hashing::traits::Hash;
-use elliptic::curves::traits::*;
+use crate::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
+use crate::cryptographic_primitives::commitments::traits::Commitment;
+use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
+use crate::cryptographic_primitives::hashing::traits::Hash;
+use crate::elliptic::curves::traits::*;
+use crate::{FE, GE};
 use zeroize::Zeroize;
-use {FE, GE};
 
 /// protocol for proving that Pedersen commitment c was constructed correctly which is the same as
 /// proof of knowledge of (m,r) such that c = mG + rH.
@@ -109,8 +109,8 @@ impl ProvePederesen for PedersenProof {
 
 #[cfg(test)]
 mod tests {
-    use cryptographic_primitives::proofs::sigma_valid_pedersen::*;
-    use FE;
+    use crate::cryptographic_primitives::proofs::sigma_valid_pedersen::*;
+    use crate::FE;
 
     #[test]
     fn test_pedersen_proof() {

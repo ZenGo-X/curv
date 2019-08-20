@@ -11,13 +11,12 @@
 use std::fmt::Debug;
 use std::str;
 pub const TWO_TIMES_SECRET_KEY_SIZE: usize = 64;
-use super::cryptoxide::curve25519::*;
 use super::traits::{ECPoint, ECScalar};
-use arithmetic::traits::Converter;
+use crate::arithmetic::traits::Converter;
+use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
+use crate::cryptographic_primitives::hashing::traits::Hash;
 use crypto::digest::Digest;
 use crypto::sha3::Sha3;
-use cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptographic_primitives::hashing::traits::Hash;
 use merkle::Hashable;
 use serde::de;
 use serde::de::{MapAccess, Visitor};
@@ -26,11 +25,12 @@ use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
 use std::fmt;
 use std::ops::{Add, Mul};
-use BigInt;
-use ErrorKey::{self, InvalidPublicKey};
 pub type SK = Fe;
 pub type PK = GeP3;
-use arithmetic::traits::{Modulo, Samplable};
+use crate::arithmetic::traits::{Modulo, Samplable};
+use crate::BigInt;
+use crate::ErrorKey::{self, InvalidPublicKey};
+use cryptoxide::curve25519::*;
 use std::ptr;
 use std::sync::atomic;
 use zeroize::Zeroize;
@@ -575,12 +575,12 @@ pub fn expmod(b: &BigInt, e: &BigInt, m: &BigInt) -> BigInt {
 #[cfg(test)]
 mod tests {
     use super::Ed25519Point;
-    use arithmetic::traits::Modulo;
-    use elliptic::curves::traits::ECPoint;
-    use elliptic::curves::traits::ECScalar;
-    extern crate serde_json;
-    use BigInt;
-    use {FE, GE};
+    use crate::arithmetic::traits::Modulo;
+    use crate::elliptic::curves::traits::ECPoint;
+    use crate::elliptic::curves::traits::ECScalar;
+    use crate::BigInt;
+    use crate::{FE, GE};
+    use serde_json;
 
     #[test]
     fn test_serdes_pk() {
