@@ -19,21 +19,12 @@ ecc = []
 rand = "0.6"
 serde = "1.0"
 serde_derive = "1.0"
-zeroize = "0.5.2"
-sha3 = "0.8.1"
+zeroize = "0.10"
+sha3 = "0.8.2"
 rust-crypto = "^0.2"
 hex = "^0.3"
 merkle-sha3 = "^0.1"
-blake2b_simd = "0.5.6"
-
-
-#[dependencies.sapling-crypto]
-#git = "https://github.com/zcash/librustzcash.git"
-#rev = "06da3b9ac8f278e5d4ae13088cf0a4c03d2c13f5"
-
-#[dependencies.pairing]
-#git = "https://github.com/zcash/librustzcash.git"
-#rev = "06da3b9ac8f278e5d4ae13088cf0a4c03d2c13f5"
+blake2b_simd = "0.5.7"
 
 [dependencies.sapling-crypto]
 git = "https://github.com/omershlo/librustzcash.git"
@@ -45,7 +36,6 @@ git = "https://github.com/omershlo/librustzcash.git"
 rev = "3e667406323430813f6dbae2a60b5a83046fa20a"
 optional = true
 
-
 [dependencies.rust-gmp]
 version = "0.5.0"
 features = ["serde_support"]
@@ -53,7 +43,7 @@ git = "https://github.com/KZen-networks/rust-gmp"
 optional = true
 
 [dependencies.secp256k1]
-version = "0.15.2"
+version = "0.15.3"
 features = ["serde"]
 optional = true
 
