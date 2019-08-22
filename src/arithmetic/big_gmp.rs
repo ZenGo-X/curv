@@ -1,5 +1,3 @@
-#![cfg(feature = "rust-gmp")]
-
 /*
     Curv
 
@@ -16,12 +14,12 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-use super::gmp::mpz::Mpz;
 use super::rand::rngs::OsRng;
 use super::rand::RngCore;
 use super::traits::{
     BitManipulation, ConvertFrom, Converter, Modulo, NumberTests, Samplable, ZeroizeBN, EGCD,
 };
+use gmp::mpz::Mpz;
 
 use std::borrow::Borrow;
 use std::ptr;

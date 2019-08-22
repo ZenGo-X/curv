@@ -7,12 +7,12 @@
 */
 
 use super::ProofError;
-use cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptographic_primitives::hashing::traits::Hash;
-use elliptic::curves::traits::*;
+use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
+use crate::cryptographic_primitives::hashing::traits::Hash;
+use crate::elliptic::curves::traits::*;
+use crate::FE;
+use crate::GE;
 use zeroize::Zeroize;
-use FE;
-use GE;
 
 /// This is a proof of knowledge that a pair of group elements {D, E}
 /// form a valid homomorphic ElGamal encryption (”in the exponent”) using public key Y .
@@ -84,8 +84,8 @@ impl HomoELGamalDlogProof {
 
 #[cfg(test)]
 mod tests {
-    use cryptographic_primitives::proofs::sigma_correct_homomorphic_elgamal_encryption_of_dlog::*;
-    use {FE, GE};
+    use crate::cryptographic_primitives::proofs::sigma_correct_homomorphic_elgamal_encryption_of_dlog::*;
+    use crate::{FE, GE};
 
     #[test]
     fn test_correct_homo_elgamal() {
