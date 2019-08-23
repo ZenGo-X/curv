@@ -33,6 +33,7 @@ impl MT256 {
             })
             .collect::<Vec<[u8; 32]>>();
         let tree = MerkleTree::from_vec::<[u8; 32]>(digest, vec_bytes);
+
         MT256 { tree }
     }
 
