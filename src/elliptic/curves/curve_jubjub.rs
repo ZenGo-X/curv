@@ -686,5 +686,4 @@ mod tests {
         let s_b: FE = ECScalar::from(&s_bn);
         assert_eq!(s_a, s_b);
     }
-
 }

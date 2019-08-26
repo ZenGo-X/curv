@@ -112,5 +112,4 @@ mod tests {
         let proof = ECDDHProof::prove(&w, &delta);
         assert!(proof.verify(&delta).is_ok());
     }
-
 }

@@ -143,5 +143,4 @@ mod tests {
         let proof = HomoELGamalProof::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
     }
-
 }

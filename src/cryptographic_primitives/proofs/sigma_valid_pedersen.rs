@@ -119,5 +119,4 @@ mod tests {
         let pedersen_proof = PedersenProof::prove(&m, &r);
         PedersenProof::verify(&pedersen_proof).expect("error pedersen");
     }
-
 }

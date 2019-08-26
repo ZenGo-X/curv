@@ -749,5 +749,4 @@ mod tests {
         let c2 = a * b;
         assert_eq!(c1.get_element(), c2.get_element());
     }
-
 }
