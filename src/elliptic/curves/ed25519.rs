@@ -482,8 +482,9 @@ impl Serialize for Ed25519Point {
     {
         let bytes = self.pk_to_key_slice();
         let bytes_as_bn = BigInt::from(&bytes[..]);
+        let padded_bytes_hex = format!("{:0>64}", bytes_as_bn.to_hex());
         let mut state = serializer.serialize_struct("ed25519CurvePoint", 1)?;
-        state.serialize_field("bytes_str", &bytes_as_bn.to_hex())?;
+        state.serialize_field("bytes_str", &padded_bytes_hex)?;
         state.end()
     }
 }
@@ -576,7 +577,7 @@ pub fn expmod(b: &BigInt, e: &BigInt, m: &BigInt) -> BigInt {
 #[cfg(test)]
 mod tests {
     use super::Ed25519Point;
-    use arithmetic::traits::Modulo;
+    use arithmetic::traits::{Converter, Modulo};
     use elliptic::curves::traits::ECPoint;
     use elliptic::curves::traits::ECScalar;
     use serde_json;
@@ -585,17 +586,34 @@ mod tests {
 
     #[test]
     fn test_serdes_pk() {
-        let pk = GE::generator();
-        let s = serde_json::to_string(&pk).expect("Failed in serialization");
-        let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
+        let mut pk = GE::generator();
+        let mut s = serde_json::to_string(&pk).expect("Failed in serialization");
+        let mut des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
         let eight = ECScalar::from(&BigInt::from(8));
         assert_eq!(des_pk, pk * &eight);
 
-        let pk = GE::base_point2();
-        let s = serde_json::to_string(&pk).expect("Failed in serialization");
-        let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-        let eight = ECScalar::from(&BigInt::from(8));
+        pk = GE::base_point2();
+        s = serde_json::to_string(&pk).expect("Failed in serialization");
+        des_pk = serde_json::from_str(&s).expect("Failed in deserialization");
         assert_eq!(des_pk, pk * &eight);
+
+        // accept serialization of bytes_str < 64 hex
+        s = "{\"bytes_str\":\"2c42d43e1a277e8f3d7d5aacde519c80b913341e425b624d867f790d1578e0\"}"
+            .to_string();
+        des_pk = serde_json::from_str(&s).expect("Failed in deserialization");
+        let eight_inverse: FE = eight.invert();
+        let des_pk_mul = des_pk * &eight_inverse;
+        assert_eq!(
+            des_pk_mul.bytes_compressed_to_big_int().to_hex(),
+            "2c42d43e1a277e8f3d7d5aacde519c80b913341e425b624d867f790d1578e0"
+        );
+
+        // serialize with padding
+        let ser_pk = serde_json::to_string(&des_pk_mul).expect("Failed in serialization");
+        assert_eq!(
+            &ser_pk,
+            "{\"bytes_str\":\"002c42d43e1a277e8f3d7d5aacde519c80b913341e425b624d867f790d1578e0\"}"
+        );
     }
 
     #[test]
