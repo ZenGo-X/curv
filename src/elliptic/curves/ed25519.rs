@@ -597,7 +597,7 @@ mod tests {
         des_pk = serde_json::from_str(&s).expect("Failed in deserialization");
         assert_eq!(des_pk, pk * &eight);
 
-        // accept serialization of bytes_str < 64 hex
+        // deserialize serialization of bytes_str < 64 hex
         s = "{\"bytes_str\":\"2c42d43e1a277e8f3d7d5aacde519c80b913341e425b624d867f790d1578e0\"}"
             .to_string();
         des_pk = serde_json::from_str(&s).expect("Failed in deserialization");
@@ -614,6 +614,10 @@ mod tests {
             &ser_pk,
             "{\"bytes_str\":\"002c42d43e1a277e8f3d7d5aacde519c80b913341e425b624d867f790d1578e0\"}"
         );
+
+        // deserialize a padded serialization
+        let des_pk2: GE = serde_json::from_str(&ser_pk).expect("Failed in deserialization");
+        assert_eq!(des_pk_mul, des_pk2 * &eight_inverse);
     }
 
     #[test]
