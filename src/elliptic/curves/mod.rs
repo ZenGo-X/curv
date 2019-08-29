@@ -5,17 +5,13 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-extern crate rand;
-
-extern crate cryptoxide;
-extern crate curve25519_dalek;
-extern crate pairing;
-extern crate sapling_crypto;
-extern crate secp256k1;
-
+#[cfg(feature = "ec_jubjub")]
 pub mod curve_jubjub;
+#[cfg(feature = "ec_ristretto")]
 pub mod curve_ristretto;
+#[cfg(feature = "ec_ed25519")]
 pub mod ed25519;
+#[cfg(feature = "ec_secp256k1")]
 pub mod secp256_k1;
 
 pub mod traits;

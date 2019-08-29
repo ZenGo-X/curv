@@ -14,10 +14,10 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-extern crate gmp;
-extern crate rand;
+use rand;
 
 const HEX_RADIX: u8 = 16;
 
+#[cfg(feature = "rust-gmp")]
 pub mod big_gmp;
 pub mod traits;

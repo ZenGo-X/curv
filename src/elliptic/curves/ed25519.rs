@@ -11,13 +11,13 @@
 use std::fmt::Debug;
 use std::str;
 pub const TWO_TIMES_SECRET_KEY_SIZE: usize = 64;
-use super::cryptoxide::curve25519::*;
 use super::traits::{ECPoint, ECScalar};
-use arithmetic::traits::Converter;
-use cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptographic_primitives::hashing::traits::Hash;
+use crate::arithmetic::traits::Converter;
+use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
+use crate::cryptographic_primitives::hashing::traits::Hash;
+use crypto::digest::Digest;
+use crypto::sha3::Sha3;
 use merkle::Hashable;
-use ring::digest::Context;
 use serde::de;
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeStruct;
@@ -25,11 +25,12 @@ use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
 use std::fmt;
 use std::ops::{Add, Mul};
-use BigInt;
-use ErrorKey::{self, InvalidPublicKey};
 pub type SK = Fe;
 pub type PK = GeP3;
-use arithmetic::traits::{Modulo, Samplable};
+use crate::arithmetic::traits::{Modulo, Samplable};
+use crate::BigInt;
+use crate::ErrorKey::{self, InvalidPublicKey};
+use cryptoxide::curve25519::*;
 use std::ptr;
 use std::sync::atomic;
 use zeroize::Zeroize;
@@ -47,7 +48,7 @@ pub struct Ed25519Point {
 pub type GE = Ed25519Point;
 pub type FE = Ed25519Scalar;
 
-impl Zeroize for FE {
+impl Zeroize for Ed25519Scalar {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, FE::zero()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -256,7 +257,7 @@ impl PartialEq for Ed25519Point {
     }
 }
 
-impl Zeroize for GE {
+impl Zeroize for Ed25519Point {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, GE::generator()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -323,7 +324,7 @@ impl ECPoint<PK, SK> for Ed25519Point {
         let mut bytes_array_32 = [0u8; 32];
         let byte_len = bytes_vec.len();
         match byte_len {
-            0...32 => {
+            0..=32 => {
                 let mut template = vec![0; 32 - byte_len];
                 template.extend_from_slice(&bytes);
                 let bytes_vec = template;
@@ -469,9 +470,9 @@ impl<'o> Add<&'o Ed25519Point> for &'o Ed25519Point {
 }
 
 impl Hashable for Ed25519Point {
-    fn update_context(&self, context: &mut Context) {
+    fn update_context(&self, context: &mut Sha3) {
         let bytes: Vec<u8> = self.pk_to_key_slice();
-        context.update(&bytes);
+        context.input(&bytes[..]);
     }
 }
 
@@ -577,12 +578,12 @@ pub fn expmod(b: &BigInt, e: &BigInt, m: &BigInt) -> BigInt {
 #[cfg(test)]
 mod tests {
     use super::Ed25519Point;
-    use arithmetic::traits::{Converter, Modulo};
-    use elliptic::curves::traits::ECPoint;
-    use elliptic::curves::traits::ECScalar;
+    use crate::arithmetic::traits::{Converter, Modulo};
+    use crate::elliptic::curves::traits::ECPoint;
+    use crate::elliptic::curves::traits::ECScalar;
+    use crate::BigInt;
+    use crate::{FE, GE};
     use serde_json;
-    use BigInt;
-    use {FE, GE};
 
     #[test]
     fn test_serdes_pk() {

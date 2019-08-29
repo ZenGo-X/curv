@@ -5,6 +5,4 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-extern crate gmp;
-
 pub mod curves;

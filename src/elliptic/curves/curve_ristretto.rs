@@ -6,15 +6,17 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-use super::curve25519_dalek::constants::BASEPOINT_ORDER;
-use super::curve25519_dalek::constants::RISTRETTO_BASEPOINT_COMPRESSED;
-use super::curve25519_dalek::ristretto::CompressedRistretto;
-use super::curve25519_dalek::scalar::Scalar;
-use super::rand::thread_rng;
 use super::traits::{ECPoint, ECScalar};
-use arithmetic::traits::Converter;
-use cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptographic_primitives::hashing::traits::Hash;
+use crate::arithmetic::traits::Converter;
+use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
+use crate::cryptographic_primitives::hashing::traits::Hash;
+use crate::BigInt;
+use crate::ErrorKey::{self, InvalidPublicKey};
+use curve25519_dalek::constants::BASEPOINT_ORDER;
+use curve25519_dalek::constants::RISTRETTO_BASEPOINT_COMPRESSED;
+use curve25519_dalek::ristretto::CompressedRistretto;
+use curve25519_dalek::scalar::Scalar;
+use rand::thread_rng;
 use serde::de;
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeStruct;
@@ -23,13 +25,12 @@ use serde::{Deserialize, Deserializer};
 use std::fmt;
 use std::ops::{Add, Mul};
 use std::str;
-use BigInt;
-use ErrorKey::{self, InvalidPublicKey};
 pub const SECRET_KEY_SIZE: usize = 32;
 pub const COOR_BYTE_SIZE: usize = 32;
 pub const NUM_OF_COORDINATES: usize = 4;
+use crypto::digest::Digest;
+use crypto::sha3::Sha3;
 use merkle::Hashable;
-use ring::digest::Context;
 use std::ptr;
 use std::sync::atomic;
 use zeroize::Zeroize;
@@ -50,7 +51,7 @@ pub struct RistrettoCurvPoint {
 pub type GE = RistrettoCurvPoint;
 pub type FE = RistrettoScalar;
 
-impl Zeroize for FE {
+impl Zeroize for RistrettoScalar {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, FE::zero()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -249,7 +250,7 @@ impl RistrettoCurvPoint {
     }
 }
 
-impl Zeroize for GE {
+impl Zeroize for RistrettoCurvPoint {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, GE::generator()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -290,7 +291,7 @@ impl ECPoint<PK, SK> for RistrettoCurvPoint {
         let mut bytes_array_32 = [0u8; 32];
         let byte_len = bytes_vec.len();
         match byte_len {
-            0...32 => {
+            0..=32 => {
                 let mut template = vec![0; 32 - bytes_vec.len()];
                 template.extend_from_slice(&bytes);
                 let bytes_vec = template;
@@ -406,9 +407,9 @@ impl<'o> Add<&'o RistrettoCurvPoint> for &'o RistrettoCurvPoint {
 }
 
 impl Hashable for RistrettoCurvPoint {
-    fn update_context(&self, context: &mut Context) {
+    fn update_context(&self, context: &mut Sha3) {
         let bytes: Vec<u8> = self.pk_to_key_slice();
-        context.update(&bytes);
+        context.input(&bytes[..]);
     }
 }
 
@@ -467,13 +468,13 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
 mod tests {
 
     use super::RistrettoCurvPoint;
-    use arithmetic::traits::Converter;
-    use arithmetic::traits::Modulo;
-    use elliptic::curves::traits::ECPoint;
-    use elliptic::curves::traits::ECScalar;
+    use crate::arithmetic::traits::Converter;
+    use crate::arithmetic::traits::Modulo;
+    use crate::elliptic::curves::traits::ECPoint;
+    use crate::elliptic::curves::traits::ECScalar;
+    use crate::BigInt;
+    use crate::{FE, GE};
     use serde_json;
-    use BigInt;
-    use {FE, GE};
 
     #[test]
     fn test_serdes_pk() {

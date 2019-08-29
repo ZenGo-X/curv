@@ -1,5 +1,3 @@
-#![cfg(feature="gmp")]
-
 /*
     Curv
 
@@ -16,16 +14,26 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-use super::gmp::mpz::Mpz;
 use super::rand::rngs::OsRng;
 use super::rand::RngCore;
 use super::traits::{
-    BitManipulation, ConvertFrom, Converter, Modulo, NumberTests, Samplable, EGCD,
+    BitManipulation, ConvertFrom, Converter, Modulo, NumberTests, Samplable, ZeroizeBN, EGCD,
 };
+use gmp::mpz::Mpz;
 
 use std::borrow::Borrow;
+use std::ptr;
+use std::sync::atomic;
 
 pub type BigInt = Mpz;
+
+impl ZeroizeBN for Mpz {
+    fn zeroize_bn(&mut self) {
+        unsafe { ptr::write_volatile(self, BigInt::zero()) };
+        atomic::fence(atomic::Ordering::SeqCst);
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
+    }
+}
 
 impl Converter for Mpz {
     fn to_vec(value: &Mpz) -> Vec<u8> {
@@ -71,7 +79,7 @@ impl Modulo for Mpz {
 
 impl Samplable for Mpz {
     fn sample_below(upper: &Self) -> Self {
-        assert!(upper > &Mpz::zero());
+        assert!(*upper > Mpz::zero());
 
         let bits = upper.bit_length();
         loop {
@@ -123,7 +131,7 @@ impl NumberTests for Mpz {
         me.is_multiple_of(&Mpz::from(2))
     }
     fn is_negative(me: &Self) -> bool {
-        me < &Mpz::from(0)
+        *me < Mpz::from(0)
     }
 }
 
@@ -149,8 +157,8 @@ impl BitManipulation for Mpz {
 
 impl ConvertFrom<Mpz> for u64 {
     fn _from(x: &Mpz) -> u64 {
-        let foo: Option<u64> = x.into();
-        foo.unwrap()
+        let opt_x: Option<u64> = x.into();
+        opt_x.unwrap()
     }
 }
 

@@ -5,8 +5,8 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-use BigInt;
-use ErrorKey;
+use crate::BigInt;
+use crate::ErrorKey;
 
 pub trait ECScalar<SK> {
     fn new_random() -> Self;

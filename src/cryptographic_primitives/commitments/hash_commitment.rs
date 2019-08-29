@@ -10,11 +10,11 @@
 /// r is 256bit blinding factor, m is the commited value
 pub struct HashCommitment;
 
-use BigInt;
+use crate::BigInt;
 
 use super::traits::Commitment;
 use super::SECURITY_BITS;
-use arithmetic::traits::Samplable;
+use crate::arithmetic::traits::Samplable;
 use sha3::{Digest, Sha3_256};
 //TODO:  using the function with BigInt's as input instead of string's makes it impossible to commit to empty message or use empty randomness
 impl Commitment<BigInt> for HashCommitment {
@@ -45,9 +45,9 @@ mod tests {
     use super::Commitment;
     use super::HashCommitment;
     use super::SECURITY_BITS;
-    use arithmetic::traits::Samplable;
+    use crate::arithmetic::traits::Samplable;
+    use crate::BigInt;
     use sha3::{Digest, Sha3_256};
-    use BigInt;
 
     #[test]
     fn test_bit_length_create_commitment() {

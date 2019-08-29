@@ -9,15 +9,17 @@
 use std::fmt::Debug;
 use std::str;
 pub const SECRET_KEY_SIZE: usize = 64;
-use super::pairing::bls12_381::Bls12;
-use super::sapling_crypto::jubjub::*;
-use super::sapling_crypto::jubjub::{edwards, fs::Fs, JubjubBls12, PrimeOrder, Unknown};
 use super::traits::{ECPoint, ECScalar};
-use arithmetic::traits::Converter;
-use cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptographic_primitives::hashing::traits::Hash;
+use crate::arithmetic::traits::Converter;
+use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
+use crate::cryptographic_primitives::hashing::traits::Hash;
+use crypto::digest::Digest;
+use crypto::sha3::Sha3;
 use merkle::Hashable;
-use ring::digest::Context;
+use pairing::bls12_381::Bls12;
+use sapling_crypto::jubjub::*;
+use sapling_crypto::jubjub::{edwards, fs::Fs, JubjubBls12, PrimeOrder, Unknown};
+
 use serde::de;
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeStruct;
@@ -25,18 +27,18 @@ use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
 use std::fmt;
 use std::ops::{Add, Mul};
-use BigInt;
-use ErrorKey::{self, InvalidPublicKey};
 pub type SK = Fs;
 // we will take advantage of the fact that jubjub lib provides a uninque type for prime order sub group
 pub type PK = edwards::Point<Bls12, PrimeOrder>; // specific type for element in the prime order sub group
 pub type PKu = edwards::Point<Bls12, Unknown>; // special type for general point
-use super::pairing::Field;
-use super::pairing::PrimeField;
-use super::pairing::PrimeFieldRepr;
-use super::sapling_crypto::jubjub::JubjubParams;
-use super::sapling_crypto::jubjub::ToUniform;
-use arithmetic::traits::{Modulo, Samplable};
+use crate::arithmetic::traits::{Modulo, Samplable};
+use crate::BigInt;
+use crate::ErrorKey::{self, InvalidPublicKey};
+use pairing::Field;
+use pairing::PrimeField;
+use pairing::PrimeFieldRepr;
+use sapling_crypto::jubjub::JubjubParams;
+use sapling_crypto::jubjub::ToUniform;
 use std::ptr;
 use std::sync::atomic;
 use zeroize::Zeroize;
@@ -54,7 +56,7 @@ pub struct JubjubPoint {
 pub type GE = JubjubPoint;
 pub type FE = JubjubScalar;
 
-impl Zeroize for FE {
+impl Zeroize for JubjubScalar {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, FE::zero()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -284,7 +286,7 @@ impl JubjubPoint {
     }
 }
 
-impl Zeroize for GE {
+impl Zeroize for JubjubPoint {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, GE::generator()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -341,13 +343,12 @@ impl ECPoint<PK, SK> for JubjubPoint {
         let mut bytes_array_32 = [0u8; 32];
         let byte_len = bytes_vec.len();
         match byte_len {
-            0...32 => {
+            0..=32 => {
                 let mut template = vec![0; 32 - byte_len];
                 template.extend_from_slice(&bytes);
                 let bytes_vec = template;
                 let bytes_slice = &bytes_vec[0..32];
                 bytes_array_32.copy_from_slice(&bytes_slice);
-                println!("bytes_array_32_u: {:?}", bytes_array_32);
                 let ge_from_bytes = PKu::read(&bytes_array_32[..], params);
                 match ge_from_bytes {
                     Ok(x) => {
@@ -367,7 +368,6 @@ impl ECPoint<PK, SK> for JubjubPoint {
             _ => {
                 let bytes_slice = &bytes_vec[0..32];
                 bytes_array_32.copy_from_slice(&bytes_slice);
-                println!("bytes_array_32_d: {:?}", bytes_array_32);
                 let ge_from_bytes = PKu::read(&bytes_array_32[..], params);
                 match ge_from_bytes {
                     Ok(x) => {
@@ -468,9 +468,9 @@ impl<'o> Add<&'o JubjubPoint> for &'o JubjubPoint {
 }
 
 impl Hashable for JubjubPoint {
-    fn update_context(&self, context: &mut Context) {
+    fn update_context(&self, context: &mut Sha3) {
         let bytes: Vec<u8> = self.pk_to_key_slice();
-        context.update(&bytes);
+        context.input(&bytes[..]);
     }
 }
 
@@ -519,22 +519,20 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
         }
         let bytes_bn = BigInt::from_hex(&bytes_str);
         let bytes = BigInt::to_vec(&bytes_bn);
-        println!("bytes: {:?}", bytes);
 
         Ok(JubjubPoint::from_bytes(&bytes[..]).expect("error deserializing point"))
     }
 }
 
-#[cfg(feature = "curvejubjub")]
 #[cfg(test)]
 mod tests {
     use super::JubjubPoint;
-    use arithmetic::traits::Modulo;
-    use elliptic::curves::traits::ECPoint;
-    use elliptic::curves::traits::ECScalar;
+    use crate::arithmetic::traits::Modulo;
+    use crate::elliptic::curves::traits::ECPoint;
+    use crate::elliptic::curves::traits::ECScalar;
+    use crate::BigInt;
+    use crate::{FE, GE};
     use serde_json;
-    use BigInt;
-    use {FE, GE};
 
     #[test]
     fn test_serdes_pk() {
