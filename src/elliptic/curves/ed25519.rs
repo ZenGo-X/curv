@@ -517,7 +517,7 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
             if key == "bytes_str" {
                 bytes_str = v
             } else {
-                panic!("Serialization failed!")
+                panic!("deSerialization failed!")
             }
         }
 
