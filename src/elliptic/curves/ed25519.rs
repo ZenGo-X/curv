@@ -510,14 +510,15 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
     }
 
     fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<Ed25519Point, E::Error> {
-        let mut bytes_str: String = String::new();
+        let mut bytes_str: String = "".to_string();
 
-        while let Some(ref key) = map.next_key::<String>()? {
-            let v = map.next_value::<String>()?;
-            if key == "bytes_str" {
-                bytes_str = v
-            } else {
-                panic!("deSerialization failed!")
+        while let Some(key) = map.next_key::<&'de str>()? {
+            let v = map.next_value::<&'de str>()?;
+            match key {
+                "bytes_str" => {
+                    bytes_str = String::from(v);
+                }
+                _ => panic!("deSerialization failed!"),
             }
         }
 
@@ -574,7 +575,7 @@ pub fn expmod(b: &BigInt, e: &BigInt, m: &BigInt) -> BigInt {
     t
 }
 
-#[cfg(feature = "ed25519")]
+#[cfg(feature = "ec_ed25519")]
 #[cfg(test)]
 mod tests {
     use super::Ed25519Point;
