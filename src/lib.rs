@@ -5,9 +5,6 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-#[macro_use]
-extern crate serde_derive;
-
 #[cfg(feature = "ecc")]
 pub mod elliptic;
 

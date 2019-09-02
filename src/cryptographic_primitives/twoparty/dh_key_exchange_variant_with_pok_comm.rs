@@ -13,6 +13,8 @@
 /// The variant below is to protect not only from man in the middle but also from malicious
 /// Alice or Bob that can bias the result. The details of the protocol can be found in
 /// https://eprint.iacr.org/2017/552.pdf protocol 3.1 first 3 steps.
+use serde::{Deserialize, Serialize};
+
 use crate::arithmetic::traits::Samplable;
 use crate::cryptographic_primitives::commitments::hash_commitment::HashCommitment;
 use crate::cryptographic_primitives::commitments::traits::Commitment;

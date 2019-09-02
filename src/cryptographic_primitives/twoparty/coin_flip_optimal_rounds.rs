@@ -5,6 +5,8 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
+use serde::{Deserialize, Serialize};
+
 use crate::cryptographic_primitives::proofs::sigma_valid_pedersen::PedersenProof;
 use crate::cryptographic_primitives::proofs::sigma_valid_pedersen::ProvePederesen;
 use crate::cryptographic_primitives::proofs::sigma_valid_pedersen_blind::PedersenBlindingProof;

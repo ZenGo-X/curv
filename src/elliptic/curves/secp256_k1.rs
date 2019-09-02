@@ -49,20 +49,22 @@ pub struct Secp256k1Scalar {
     purpose: &'static str,
     fe: SK,
 }
+
 #[derive(Clone, Debug, Copy)]
 pub struct Secp256k1Point {
     purpose: &'static str,
     ge: PK,
 }
+
 pub type GE = Secp256k1Point;
 pub type FE = Secp256k1Scalar;
 
 impl Secp256k1Point {
-    pub fn random_point() -> Secp256k1Point {
+    pub fn random_point() -> Self {
         let random_scalar: Secp256k1Scalar = Secp256k1Scalar::new_random();
-        let base_point = Secp256k1Point::generator();
+        let base_point = Self::generator();
         let pk = base_point.scalar_mul(&random_scalar.get_element());
-        Secp256k1Point {
+        Self {
             purpose: "random_point",
             ge: pk.get_element(),
         }
@@ -73,15 +75,16 @@ impl Secp256k1Point {
     // This function is a result of a manual testing to find
     // this minimal number of hashes and therefore it is written like this.
     // the prefix "2" is to complete for the right parity of the point
-    pub fn base_point2() -> Secp256k1Point {
-        let g: Secp256k1Point = ECPoint::generator();
+    pub fn base_point2() -> Self {
+        let g: Self = ECPoint::generator();
         let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
         let hash = HSha256::create_hash(&[&hash]);
         let hash = HSha256::create_hash(&[&hash]);
         let mut hash_vec = BigInt::to_vec(&hash);
         let mut template: Vec<u8> = vec![2];
         template.append(&mut hash_vec);
-        Secp256k1Point {
+
+        Self {
             purpose: "random",
             ge: PK::from_slice(&template).unwrap(),
         }
@@ -97,19 +100,19 @@ impl Zeroize for Secp256k1Scalar {
 }
 
 impl ECScalar<SK> for Secp256k1Scalar {
-    fn new_random() -> Secp256k1Scalar {
+    fn new_random() -> Self {
         let mut arr = [0u8; 32];
         thread_rng().fill(&mut arr[..]);
-        Secp256k1Scalar {
+        Self {
             purpose: "random",
             fe: SK::from_slice(&arr[0..arr.len()]).unwrap(),
         }
     }
 
-    fn zero() -> Secp256k1Scalar {
+    fn zero() -> Self {
         let zero_arr = [0u8; 32];
         let zero = unsafe { std::mem::transmute::<[u8; 32], SecretKey>(zero_arr) };
-        Secp256k1Scalar {
+        Self {
             purpose: "zero",
             fe: zero,
         }
@@ -123,7 +126,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
         self.fe = element
     }
 
-    fn from(n: &BigInt) -> Secp256k1Scalar {
+    fn from(n: &BigInt) -> Self {
         let curve_order = FE::q();
         let n_reduced = BigInt::mod_add(n, &BigInt::from(0), &curve_order);
         let mut v = BigInt::to_vec(&n_reduced);
@@ -134,7 +137,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
             v = template;
         }
 
-        Secp256k1Scalar {
+        Self {
             purpose: "from_big_int",
             fe: SK::from_slice(&v).unwrap(),
         }
@@ -148,7 +151,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
         BigInt::from(CURVE_ORDER.as_ref())
     }
 
-    fn add(&self, other: &SK) -> Secp256k1Scalar {
+    fn add(&self, other: &SK) -> Self {
         let mut other_scalar: FE = ECScalar::new_random();
         other_scalar.set_element(other.clone());
         let res: FE = ECScalar::from(&BigInt::mod_add(
@@ -156,13 +159,13 @@ impl ECScalar<SK> for Secp256k1Scalar {
             &other_scalar.to_big_int(),
             &FE::q(),
         ));
-        Secp256k1Scalar {
+        Self {
             purpose: "add",
             fe: res.get_element(),
         }
     }
 
-    fn mul(&self, other: &SK) -> Secp256k1Scalar {
+    fn mul(&self, other: &SK) -> Self {
         let mut other_scalar: FE = ECScalar::new_random();
         other_scalar.set_element(other.clone());
         let res: FE = ECScalar::from(&BigInt::mod_mul(
@@ -170,13 +173,13 @@ impl ECScalar<SK> for Secp256k1Scalar {
             &other_scalar.to_big_int(),
             &FE::q(),
         ));
-        Secp256k1Scalar {
+        Self {
             purpose: "mul",
             fe: res.get_element(),
         }
     }
 
-    fn sub(&self, other: &SK) -> Secp256k1Scalar {
+    fn sub(&self, other: &SK) -> Self {
         let mut other_scalar: FE = ECScalar::new_random();
         other_scalar.set_element(other.clone());
         let res: FE = ECScalar::from(&BigInt::mod_sub(
@@ -184,42 +187,42 @@ impl ECScalar<SK> for Secp256k1Scalar {
             &other_scalar.to_big_int(),
             &FE::q(),
         ));
-        Secp256k1Scalar {
+        Self {
             purpose: "sub",
             fe: res.get_element(),
         }
     }
 
-    fn invert(&self) -> Secp256k1Scalar {
+    fn invert(&self) -> Self {
         let bignum = self.to_big_int();
         let bn_inv = bignum.invert(&FE::q()).unwrap();
         ECScalar::from(&bn_inv)
     }
 }
 impl Mul<Secp256k1Scalar> for Secp256k1Scalar {
-    type Output = Secp256k1Scalar;
-    fn mul(self, other: Secp256k1Scalar) -> Secp256k1Scalar {
+    type Output = Self;
+    fn mul(self, other: Self) -> Self {
         (&self).mul(&other.get_element())
     }
 }
 
 impl<'o> Mul<&'o Secp256k1Scalar> for Secp256k1Scalar {
-    type Output = Secp256k1Scalar;
-    fn mul(self, other: &'o Secp256k1Scalar) -> Secp256k1Scalar {
+    type Output = Self;
+    fn mul(self, other: &'o Self) -> Self {
         (&self).mul(&other.get_element())
     }
 }
 
 impl Add<Secp256k1Scalar> for Secp256k1Scalar {
-    type Output = Secp256k1Scalar;
-    fn add(self, other: Secp256k1Scalar) -> Secp256k1Scalar {
+    type Output = Self;
+    fn add(self, other: Self) -> Self {
         (&self).add(&other.get_element())
     }
 }
 
 impl<'o> Add<&'o Secp256k1Scalar> for Secp256k1Scalar {
-    type Output = Secp256k1Scalar;
-    fn add(self, other: &'o Secp256k1Scalar) -> Secp256k1Scalar {
+    type Output = Self;
+    fn add(self, other: &'o Secp256k1Scalar) -> Self {
         (&self).add(&other.get_element())
     }
 }
@@ -234,7 +237,7 @@ impl Serialize for Secp256k1Scalar {
 }
 
 impl<'de> Deserialize<'de> for Secp256k1Scalar {
-    fn deserialize<D>(deserializer: D) -> Result<Secp256k1Scalar, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -251,20 +254,20 @@ impl<'de> Visitor<'de> for Secp256k1ScalarVisitor {
         formatter.write_str("Secp256k1Scalar")
     }
 
-    fn visit_str<E: de::Error>(self, s: &str) -> Result<Secp256k1Scalar, E> {
+    fn visit_str<E: de::Error>(self, s: &str) -> Result<Self::Value, E> {
         let v = BigInt::from_str_radix(s, 16).expect("Failed in serde");
         Ok(ECScalar::from(&v))
     }
 }
 
 impl PartialEq for Secp256k1Scalar {
-    fn eq(&self, other: &Secp256k1Scalar) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         self.get_element() == other.get_element()
     }
 }
 
 impl PartialEq for Secp256k1Point {
-    fn eq(&self, other: &Secp256k1Point) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         self.get_element() == other.get_element()
     }
 }
@@ -278,11 +281,11 @@ impl Zeroize for Secp256k1Point {
 }
 
 impl ECPoint<PK, SK> for Secp256k1Point {
-    fn generator() -> Secp256k1Point {
+    fn generator() -> Self {
         let mut v = vec![4 as u8];
         v.extend(GENERATOR_X.as_ref());
         v.extend(GENERATOR_Y.as_ref());
-        Secp256k1Point {
+        Self {
             purpose: "base_fe",
             ge: PK::from_slice(&v).unwrap(),
         }
@@ -315,7 +318,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         Some(BigInt::from(&y_vec[..]))
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Secp256k1Point, ErrorKey> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, ErrorKey> {
         let bytes_vec = bytes.to_vec();
         let mut bytes_array_65 = [0u8; 65];
         let mut bytes_array_33 = [0u8; 33];
@@ -332,7 +335,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
 
                 bytes_array_65.copy_from_slice(&bytes_slice[0..65]);
                 let result = PK::from_slice(&bytes_array_65);
-                let test = result.map(|pk| Secp256k1Point {
+                let test = result.map(|pk| Self {
                     purpose: "random",
                     ge: pk,
                 });
@@ -349,7 +352,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
 
                 bytes_array_33.copy_from_slice(&bytes_slice[0..33]);
                 let result = PK::from_slice(&bytes_array_33);
-                let test = result.map(|pk| Secp256k1Point {
+                let test = result.map(|pk| Self {
                     purpose: "random",
                     ge: pk,
                 });
@@ -364,7 +367,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
 
                 bytes_array_65.copy_from_slice(&bytes_slice[0..65]);
                 let result = PK::from_slice(&bytes_array_65);
-                let test = result.map(|pk| Secp256k1Point {
+                let test = result.map(|pk| Self {
                     purpose: "random",
                     ge: pk,
                 });
@@ -380,7 +383,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         v
     }
 
-    fn scalar_mul(&self, fe: &SK) -> Secp256k1Point {
+    fn scalar_mul(&self, fe: &SK) -> Self {
         let mut new_point = *self;
         new_point
             .ge
@@ -389,15 +392,15 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         new_point
     }
 
-    fn add_point(&self, other: &PK) -> Secp256k1Point {
-        Secp256k1Point {
+    fn add_point(&self, other: &PK) -> Self {
+        Self {
             purpose: "combine",
             ge: self.ge.combine(other).unwrap(),
         }
     }
 
-    fn sub_point(&self, other: &PK) -> Secp256k1Point {
-        let point = Secp256k1Point {
+    fn sub_point(&self, other: &PK) -> Self {
+        let point = Self {
             purpose: "sub_point",
             ge: *other,
         };
@@ -428,7 +431,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         ECPoint::add_point(self, &minus_point.get_element())
     }
 
-    fn from_coor(x: &BigInt, y: &BigInt) -> Secp256k1Point {
+    fn from_coor(x: &BigInt, y: &BigInt) -> Self {
         let mut vec_x = BigInt::to_vec(x);
         let mut vec_y = BigInt::to_vec(y);
         let coor_size = (UNCOMPRESSED_PUBLIC_KEY_SIZE - 1) / 2;

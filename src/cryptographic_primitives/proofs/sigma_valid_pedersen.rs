@@ -4,6 +4,7 @@
     (https://github.com/KZen-networks/curv)
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
+use serde::{Deserialize, Serialize};
 
 use super::ProofError;
 use crate::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
