@@ -16,22 +16,25 @@ use super::traits::Commitment;
 use super::SECURITY_BITS;
 use crate::arithmetic::traits::Samplable;
 use sha3::{Digest, Sha3_256};
-//TODO:  using the function with BigInt's as input instead of string's makes it impossible to commit to empty message or use empty randomness
+
 impl Commitment<BigInt> for HashCommitment {
     fn create_commitment_with_user_defined_randomness(
         message: &BigInt,
         blinding_factor: &BigInt,
     ) -> BigInt {
         let mut digest = Sha3_256::new();
+
         let bytes_message: Vec<u8> = message.into();
-        digest.input(&bytes_message);
-        let bytes_blinding_factor: Vec<u8> = blinding_factor.into();
-        digest.input(&bytes_blinding_factor);
+        digest.input(bytes_message.as_slice());
+
+        let salt: Vec<u8> = blinding_factor.into();
+        digest.input(salt.as_slice());
+
         BigInt::from(digest.result().as_ref())
     }
 
     fn create_commitment(message: &BigInt) -> (BigInt, BigInt) {
-        let blinding_factor = BigInt::sample(SECURITY_BITS);
+        let blinding_factor = BigInt::strict_sample(SECURITY_BITS);
         let com = HashCommitment::create_commitment_with_user_defined_randomness(
             message,
             &blinding_factor,
@@ -59,10 +62,10 @@ mod tests {
             let message = BigInt::sample(SECURITY_BITS);
             let (commitment, blind_factor) = HashCommitment::create_commitment(&message);
             if commitment.to_str_radix(2).len() == hex_len {
-                ctr_commit_len = ctr_commit_len + 1;
+                ctr_commit_len += 1;
             }
             if blind_factor.to_str_radix(2).len() == hex_len {
-                ctr_blind_len = ctr_blind_len + 1;
+                ctr_blind_len += 1;
             }
         }
         //test commitment length  - works because SHA256 output length the same as sec_bits
@@ -75,17 +78,8 @@ mod tests {
     }
 
     #[test]
-    fn test_bit_length_create_commitment_with_user_defined_randomness() {
-        let message = BigInt::sample(SECURITY_BITS);
-        let (_commitment, blind_factor) = HashCommitment::create_commitment(&message);
-        let commitment2 =
-            HashCommitment::create_commitment_with_user_defined_randomness(&message, &blind_factor);
-        assert_eq!(commitment2.to_str_radix(16).len(), SECURITY_BITS / 4);
-    }
-
-    #[test]
     fn test_random_num_generation_create_commitment_with_user_defined_randomness() {
-        let message = BigInt::sample(SECURITY_BITS);
+        let message = BigInt::strict_sample(SECURITY_BITS);
         let (commitment, blind_factor) = HashCommitment::create_commitment(&message);
         let commitment2 =
             HashCommitment::create_commitment_with_user_defined_randomness(&message, &blind_factor);
@@ -96,14 +90,18 @@ mod tests {
     fn test_hashing_create_commitment_with_user_defined_randomness() {
         let mut digest = Sha3_256::new();
         let message = BigInt::one();
+
         let commitment = HashCommitment::create_commitment_with_user_defined_randomness(
             &message,
             &BigInt::zero(),
         );
+
         let message2: Vec<u8> = (&message).into();
-        digest.input(&message2);
+        digest.input(message2.as_slice());
+
         let bytes_blinding_factor: Vec<u8> = (&BigInt::zero()).into();
-        digest.input(&bytes_blinding_factor);
+        digest.input(bytes_blinding_factor.as_slice());
+
         let hash_result = BigInt::from(digest.result().as_ref());
         assert_eq!(&commitment, &hash_result);
     }

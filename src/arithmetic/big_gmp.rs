@@ -45,7 +45,7 @@ impl Converter for Mpz {
         self.to_str_radix(super::HEX_RADIX)
     }
 
-    fn from_hex(value: &str) -> Mpz {
+    fn from_hex(value: &str) -> Self {
         BigInt::from_str_radix(value, super::HEX_RADIX).expect("Error in serialization")
     }
 }
@@ -110,7 +110,7 @@ impl Samplable for Mpz {
         let bytes = (bit_size - 1) / 8 + 1;
         let mut buf: Vec<u8> = vec![0; bytes];
         rng.fill_bytes(&mut buf);
-        Self::from(&*buf) >> (bytes * 8 - bit_size)
+        Self::from(buf.as_slice()) >> (bytes * 8 - bit_size)
     }
 
     fn strict_sample(bit_size: usize) -> Self {
