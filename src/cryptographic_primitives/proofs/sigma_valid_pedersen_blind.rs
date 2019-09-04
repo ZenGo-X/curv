@@ -40,30 +40,31 @@ pub trait ProvePederesenBlind {
 }
 impl ProvePederesenBlind for PedersenBlindingProof {
     //TODO: add self verification to prover proof
-    fn prove(m: &FE, r: &FE) -> PedersenBlindingProof {
-        let h = GE::base_point2();
+    fn prove(msg: &FE, blind_factor: &FE) -> PedersenBlindingProof {
+        let base_point = GE::base_point2();
         let mut s: FE = ECScalar::new_random();
-        let a = h.scalar_mul(&s.get_element());
+        let a = base_point.scalar_mul(&s.get_element());
         let com = PedersenCommitment::create_commitment_with_user_defined_randomness(
-            &m.to_big_int(),
-            &r.to_big_int(),
+            &msg.to_big_int(),
+            &blind_factor.to_big_int(),
         );
         let g: GE = ECPoint::generator();
         let challenge = HSha256::create_hash(&[
             &g.bytes_compressed_to_big_int(),
-            &h.bytes_compressed_to_big_int(),
+            &base_point.bytes_compressed_to_big_int(),
             &com.bytes_compressed_to_big_int(),
             &a.bytes_compressed_to_big_int(),
-            &m.to_big_int(),
+            &msg.to_big_int(),
         ]);
-        let e: FE = ECScalar::from(&challenge);
 
-        let er = e.mul(&r.get_element());
+        let e: FE = ECScalar::from(&challenge);
+        let er = e.mul(&blind_factor.get_element());
         let z = s.add(&er.get_element());
         s.zeroize();
+
         PedersenBlindingProof {
             e,
-            m: *m,
+            m: *msg,
             a,
             com,
             z,
@@ -109,7 +110,6 @@ mod tests {
         let m: FE = ECScalar::new_random();
         let r: FE = ECScalar::new_random();
         let pedersen_proof = PedersenBlindingProof::prove(&m, &r);
-        let _verified =
-            PedersenBlindingProof::verify(&pedersen_proof).expect("error pedersen blind");
+        PedersenBlindingProof::verify(&pedersen_proof).expect("error pedersen blind");
     }
 }

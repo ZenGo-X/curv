@@ -93,11 +93,11 @@ mod tests {
         };
         let G: GE = ECPoint::generator();
         let h: FE = ECScalar::new_random();
-        let H = &G * &h;
+        let H = G * h;
         let y: FE = ECScalar::new_random();
-        let Y = &G * &y;
-        let D = &H * &witness.x + Y.clone() * &witness.r;
-        let E = G.clone() * &witness.r;
+        let Y = G * y;
+        let D = H * witness.x + Y * witness.r;
+        let E = G * witness.r;
         let delta = HomoElGamalStatement { G, H, Y, D, E };
         let proof = HomoELGamalProof::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
@@ -111,16 +111,10 @@ mod tests {
         };
         let G: GE = GE::generator();
         let y: FE = FE::new_random();
-        let Y = &G * &y;
-        let D = &G * &witness.x + Y.clone() * &witness.r;
-        let E = G.clone() * &witness.r;
-        let delta = HomoElGamalStatement {
-            G: G.clone(),
-            H: G,
-            Y,
-            D,
-            E,
-        };
+        let Y = G * y;
+        let D = G * witness.x + Y * witness.r;
+        let E = G * witness.r;
+        let delta = HomoElGamalStatement { G, H: G, Y, D, E };
         let proof = HomoELGamalProof::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
     }
@@ -135,11 +129,11 @@ mod tests {
         };
         let G: GE = ECPoint::generator();
         let h: FE = ECScalar::new_random();
-        let H = &G * &h;
+        let H = G * h;
         let y: FE = ECScalar::new_random();
-        let Y = &G * &y;
-        let D = &H * &witness.x + Y.clone() * &witness.r;
-        let E = &G * &witness.r + G.clone();
+        let Y = G * y;
+        let D = H * witness.x + Y * witness.r;
+        let E = G * witness.r + G;
         let delta = HomoElGamalStatement { G, H, Y, D, E };
         let proof = HomoELGamalProof::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());

@@ -57,7 +57,7 @@ impl Party1SecondMessage {
         (
             Party1SecondMessage {
                 proof,
-                seed: party1seed.clone(),
+                seed: *party1seed,
             },
             ECScalar::from(&coin_flip_result),
         )

@@ -26,7 +26,7 @@ pub fn secret_sharing_3_out_of_5() {
     shares_vec.push(secret_shares[4].clone());
     //test reconstruction
 
-    let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 1, 2, 4], &shares_vec);
+    let secret_reconstructed = vss_scheme.reconstruct(&[0, 1, 2, 4], &shares_vec);
 
     assert_eq!(secret, secret_reconstructed);
     // test secret shares are verifiable
@@ -36,7 +36,7 @@ pub fn secret_sharing_3_out_of_5() {
     assert!(valid1.is_ok());
 
     let g: GE = GE::generator();
-    let share1_public = g * &secret_shares[0];
+    let share1_public = g * secret_shares[0];
     let valid1_public = vss_scheme.validate_share_public(&share1_public, 1);
     assert!(valid1_public.is_ok());
 
@@ -47,11 +47,11 @@ pub fn secret_sharing_3_out_of_5() {
     let l2 = vss_scheme.map_share_to_new_params(2, &s);
     let l3 = vss_scheme.map_share_to_new_params(3, &s);
     let l4 = vss_scheme.map_share_to_new_params(4, &s);
-    let w = l0 * secret_shares[0].clone()
-        + l1 * secret_shares[1].clone()
-        + l2 * secret_shares[2].clone()
-        + l3 * secret_shares[3].clone()
-        + l4 * secret_shares[4].clone();
+    let w = l0 * secret_shares[0]
+        + l1 * secret_shares[1]
+        + l2 * secret_shares[2]
+        + l3 * secret_shares[3]
+        + l4 * secret_shares[4];
     assert_eq!(w, secret_reconstructed);
 }
 

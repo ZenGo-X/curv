@@ -19,11 +19,10 @@ pub fn ped_com(message: &BigInt) {
 
     let security_bits = 256;
     let blinding_factor = BigInt::sample(security_bits);
-    let com = PedersenCommitment::create_commitment_with_user_defined_randomness(
+    let _com = PedersenCommitment::create_commitment_with_user_defined_randomness(
         message,
         &blinding_factor,
     );
-    (com, blinding_factor);
 }
 
 fn main() {

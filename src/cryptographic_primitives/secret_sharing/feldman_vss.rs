@@ -67,9 +67,7 @@ impl VerifiableSS {
         let secret_shares = VerifiableSS::evaluate_polynomial(&poly, index_vec);
 
         let G: GE = ECPoint::generator();
-        let commitments = (0..poly.len())
-            .map(|i| G.clone() * &poly[i])
-            .collect::<Vec<GE>>();
+        let commitments = (0..poly.len()).map(|i| G * poly[i]).collect::<Vec<GE>>();
         (
             VerifiableSS {
                 parameters: ShamirSecretSharing {
@@ -197,8 +195,7 @@ impl VerifiableSS {
         let mut comm_iterator = self.commitments.iter().rev();
         let head = comm_iterator.next().unwrap();
         let tail = comm_iterator;
-        let comm_to_point = tail.fold(head.clone(), |acc, x: &GE| *x + acc * index_fe);
-        comm_to_point
+        tail.fold(head.clone(), |acc, x: &GE| *x + acc * index_fe)
     }
 
     //compute \lambda_{index,S}, a lagrangian coefficient that change the (t,n) scheme to (|S|,|S|)
@@ -255,7 +252,7 @@ mod tests {
         shares_vec.push(secret_shares[4].clone());
         //test reconstruction
 
-        let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 1, 4, 5], &shares_vec);
+        let secret_reconstructed = vss_scheme.reconstruct(&[0, 1, 4, 5], &shares_vec);
         assert_eq!(secret, secret_reconstructed);
     }
 
@@ -272,7 +269,7 @@ mod tests {
         shares_vec.push(secret_shares[4].clone());
         //test reconstruction
 
-        let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 1, 2, 4], &shares_vec);
+        let secret_reconstructed = vss_scheme.reconstruct(&[0, 1, 2, 4], &shares_vec);
 
         assert_eq!(secret, secret_reconstructed);
         // test secret shares are verifiable
@@ -282,7 +279,7 @@ mod tests {
         assert!(valid1.is_ok());
 
         let g: GE = GE::generator();
-        let share1_public = g * &secret_shares[0];
+        let share1_public = g * secret_shares[0];
         let valid1_public = vss_scheme.validate_share_public(&share1_public, 1);
         assert!(valid1_public.is_ok());
 
@@ -293,11 +290,11 @@ mod tests {
         let l2 = vss_scheme.map_share_to_new_params(2, &s);
         let l3 = vss_scheme.map_share_to_new_params(3, &s);
         let l4 = vss_scheme.map_share_to_new_params(4, &s);
-        let w = l0 * secret_shares[0].clone()
-            + l1 * secret_shares[1].clone()
-            + l2 * secret_shares[2].clone()
-            + l3 * secret_shares[3].clone()
-            + l4 * secret_shares[4].clone();
+        let w = l0 * secret_shares[0]
+            + l1 * secret_shares[1]
+            + l2 * secret_shares[2]
+            + l3 * secret_shares[3]
+            + l4 * secret_shares[4];
         assert_eq!(w, secret_reconstructed);
     }
 
@@ -314,7 +311,7 @@ mod tests {
         shares_vec.push(secret_shares[4].clone());
 
         //test reconstruction
-        let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 6, 2, 4], &shares_vec);
+        let secret_reconstructed = vss_scheme.reconstruct(&[0, 6, 2, 4], &shares_vec);
         assert_eq!(secret, secret_reconstructed);
 
         // test secret shares are verifiable
@@ -330,11 +327,11 @@ mod tests {
         let l3 = vss_scheme.map_share_to_new_params(3, &s);
         let l4 = vss_scheme.map_share_to_new_params(4, &s);
         let l6 = vss_scheme.map_share_to_new_params(6, &s);
-        let w = l0 * secret_shares[0].clone()
-            + l1 * secret_shares[1].clone()
-            + l3 * secret_shares[3].clone()
-            + l4 * secret_shares[4].clone()
-            + l6 * secret_shares[6].clone();
+        let w = l0 * secret_shares[0]
+            + l1 * secret_shares[1]
+            + l3 * secret_shares[3]
+            + l4 * secret_shares[4]
+            + l6 * secret_shares[6];
         assert_eq!(w, secret_reconstructed);
     }
 
@@ -349,7 +346,7 @@ mod tests {
         shares_vec.push(secret_shares[1].clone());
 
         //test reconstruction
-        let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 1], &shares_vec);
+        let secret_reconstructed = vss_scheme.reconstruct(&[0, 1], &shares_vec);
         assert_eq!(secret, secret_reconstructed);
 
         // test secret shares are verifiable
@@ -363,7 +360,7 @@ mod tests {
         let l0 = vss_scheme.map_share_to_new_params(0, &s);
         let l1 = vss_scheme.map_share_to_new_params(1, &s);
 
-        let w = l0 * secret_shares[0].clone() + l1 * secret_shares[1].clone();
+        let w = l0 * secret_shares[0] + l1 * secret_shares[1];
         assert_eq!(w, secret_reconstructed);
     }
 
@@ -379,19 +376,19 @@ mod tests {
 
         // test commitment to point and sum of commitments
         let (vss_scheme2, secret_shares2) = VerifiableSS::share(1, 3, &secret);
-        let sum = secret_shares[0].clone() + secret_shares2[0].clone();
+        let sum = secret_shares[0] + secret_shares2[0];
         let point_comm1 = vss_scheme.get_point_commitment(1);
         let point_comm2 = vss_scheme.get_point_commitment(2);
         let g: GE = GE::generator();
-        let g_sum = g.clone() * &sum;
-        assert_eq!(g.clone() * secret_shares[0].clone(), point_comm1.clone());
-        assert_eq!(g.clone() * secret_shares[1].clone(), point_comm2.clone());
+        let g_sum = g * sum;
+        assert_eq!(g * secret_shares[0], point_comm1.clone());
+        assert_eq!(g * secret_shares[1], point_comm2.clone());
         let point1_sum_com =
             vss_scheme.get_point_commitment(1) + vss_scheme2.get_point_commitment(1);
         assert_eq!(point1_sum_com, g_sum);
 
         //test reconstruction
-        let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 1], &shares_vec);
+        let secret_reconstructed = vss_scheme.reconstruct(&[0, 1], &shares_vec);
         assert_eq!(secret, secret_reconstructed);
 
         // test secret shares are verifiable
@@ -405,7 +402,7 @@ mod tests {
         let l0 = vss_scheme.map_share_to_new_params(0, &s);
         let l2 = vss_scheme.map_share_to_new_params(2, &s);
 
-        let w = l0 * secret_shares[0].clone() + l2 * secret_shares[2].clone();
+        let w = l0 * secret_shares[0] + l2 * secret_shares[2];
         assert_eq!(w, secret_reconstructed);
     }
 }
