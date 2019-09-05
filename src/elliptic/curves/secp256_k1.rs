@@ -69,24 +69,25 @@ impl Secp256k1Point {
             ge: pk.get_element(),
         }
     }
-    // To generate a random base point we take the hash of the curve generator.
-    // This hash creates a random string which do not encode a valid (x,y) curve point.
+    // To generate another base point we take the hash of the curve generator (base point).
+    // This hash creates a number which do not encode a valid (x,y) curve point.
     // Therefore we continue to hash the result until the first valid point comes out.
     // This function is a result of a manual testing to find
     // this minimal number of hashes and therefore it is written like this.
     // the prefix "2" is to complete for the right parity of the point
     pub fn base_point2() -> Self {
-        let g: Self = ECPoint::generator();
+        let g = Self::generator();
+
         let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
         let hash = HSha256::create_hash(&[&hash]);
         let hash = HSha256::create_hash(&[&hash]);
-        let mut hash_vec = BigInt::to_vec(&hash);
-        let mut template: Vec<u8> = vec![2];
-        template.append(&mut hash_vec);
+
+        let mut possible_pk = vec![2u8];
+        possible_pk.append(&mut BigInt::to_vec(&hash));
 
         Self {
             purpose: "random",
-            ge: PK::from_slice(&template).unwrap(),
+            ge: PK::from_slice(possible_pk.as_slice()).unwrap(),
         }
     }
 }
