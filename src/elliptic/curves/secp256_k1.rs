@@ -31,7 +31,7 @@ use secp256k1::constants::{
 };
 use secp256k1::{PublicKey, Secp256k1, SecretKey, VerifyOnly};
 use serde::de;
-use serde::de::{MapAccess, Visitor};
+use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
@@ -109,8 +109,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
     }
 
     fn zero() -> Self {
-        let zero_arr = [0u8; 32];
-        let zero = unsafe { std::mem::transmute::<[u8; 32], SecretKey>(zero_arr) };
+        let zero = unsafe { std::mem::transmute::<[u8; 32], SecretKey>([0u8; 32]) };
         Self {
             purpose: "zero",
             fe: zero,
@@ -574,6 +573,9 @@ mod tests {
 
         let decoded: Secp256k1Point = serde_json::from_str(&encoded).unwrap();
         assert_eq!(decoded, pk);
+
+        // let encoded = bincode::serialize(&pk).unwrap();
+        // let decoded: Secp256k1Point = bincode::deserialize(encoded.as_slice()).unwrap();
     }
 
     #[test]
