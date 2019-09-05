@@ -546,6 +546,8 @@ mod tests {
     use super::Secp256k1Scalar;
     use crate::arithmetic::traits::Converter;
     use crate::arithmetic::traits::Modulo;
+    use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
+    use crate::cryptographic_primitives::hashing::traits::Hash;
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use serde_json;
@@ -632,12 +634,11 @@ mod tests {
 
     #[test]
     fn test_from_bytes() {
-        let base_point = Secp256k1Point::generator();
-        let y = BigInt::to_vec(&base_point.y_coor().unwrap());
-        let result = Secp256k1Point::from_bytes(y.as_slice());
-        assert_eq!(result.unwrap_err(), ErrorKey::InvalidPublicKey);
+        let g = Secp256k1Point::generator();
 
-        let g = Secp256k1Point::random_point();
+        let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
+        let result = Secp256k1Point::from_bytes(BigInt::to_vec(&hash).as_slice());
+        assert_eq!(result.unwrap_err(), ErrorKey::InvalidPublicKey);
 
         let mut b = [0u8; 64];
         b[63] = 1;
@@ -651,6 +652,10 @@ mod tests {
         x_and_y.extend(y.iter());
 
         assert!(Secp256k1Point::from_bytes(x.as_slice()).is_ok());
+        assert_eq!(
+            Secp256k1Point::from_bytes(y.as_slice()).unwrap_err(),
+            ErrorKey::InvalidPublicKey
+        );
         assert!(Secp256k1Point::from_bytes(x_and_y.as_slice()).is_ok())
     }
 
