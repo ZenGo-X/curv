@@ -16,7 +16,7 @@ use crate::arithmetic::traits::Converter;
 use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use crate::cryptographic_primitives::hashing::traits::Hash;
 use serde::de;
-use serde::de::{MapAccess, Visitor};
+use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
@@ -500,17 +500,29 @@ impl<'de> Deserialize<'de> for Ed25519Point {
         D: Deserializer<'de>,
     {
         let fields = &["bytes_str"];
-        deserializer.deserialize_struct("Ed25519Point", fields, RistrettoCurvPointVisitor)
+        deserializer.deserialize_struct("Ed25519Point", fields, Ed25519PointVisitor)
     }
 }
 
-struct RistrettoCurvPointVisitor;
+struct Ed25519PointVisitor;
 
-impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
+impl<'de> Visitor<'de> for Ed25519PointVisitor {
     type Value = Ed25519Point;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("Ed25519Point")
+    }
+
+    fn visit_seq<V>(self, mut seq: V) -> Result<Ed25519Point, V::Error>
+    where
+        V: SeqAccess<'de>,
+    {
+        let bytes_str = dbg!(seq
+            .next_element()?
+            .ok_or_else(|| panic!("deserialization failed"))?);
+        let bytes_bn = BigInt::from_hex(bytes_str);
+        let bytes = BigInt::to_vec(&bytes_bn);
+        Ok(Ed25519Point::from_bytes(&bytes[..]).expect("error deserializing point"))
     }
 
     fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<Ed25519Point, E::Error> {
@@ -522,7 +534,7 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
                 "bytes_str" => {
                     bytes_str = String::from(v);
                 }
-                _ => panic!("deSerialization failed!"),
+                _ => panic!("deserialization failed!"),
             }
         }
 
@@ -624,6 +636,15 @@ mod tests {
         // deserialize a padded serialization
         let des_pk2: GE = serde_json::from_str(&ser_pk).expect("Failed in deserialization");
         assert_eq!(des_pk_mul, des_pk2 * &eight_inverse);
+    }
+
+    #[test]
+    fn bincode_pk() {
+        let pk = GE::generator();
+        let encoded = bincode::serialize(&pk).unwrap();
+        let decoded: Ed25519Point = bincode::deserialize(encoded.as_slice()).unwrap();
+        let eight = ECScalar::from(&BigInt::from(8));
+        assert_eq!(pk * &eight, decoded);
     }
 
     #[test]

@@ -18,7 +18,7 @@ use sapling_crypto::jubjub::*;
 use sapling_crypto::jubjub::{edwards, fs::Fs, JubjubBls12, PrimeOrder, Unknown};
 
 use serde::de;
-use serde::de::{MapAccess, Visitor};
+use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
@@ -474,17 +474,30 @@ impl<'de> Deserialize<'de> for JubjubPoint {
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_map(RistrettoCurvPointVisitor)
+        const FIELDS: &[&str] = &["bytes_str"];
+        deserializer.deserialize_struct("JujubPoint", FIELDS, JubjubPointVisitor)
     }
 }
 
-struct RistrettoCurvPointVisitor;
+struct JubjubPointVisitor;
 
-impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
+impl<'de> Visitor<'de> for JubjubPointVisitor {
     type Value = JubjubPoint;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("JubjubCurvePoint")
+    }
+
+    fn visit_seq<V>(self, mut seq: V) -> Result<JubjubPoint, V::Error>
+    where
+        V: SeqAccess<'de>,
+    {
+        let bytes_str = seq
+            .next_element()?
+            .ok_or_else(|| panic!("deserialization failed"))?;
+        let bytes_bn = BigInt::from_hex(bytes_str);
+        let bytes = BigInt::to_vec(&bytes_bn);
+        Ok(JubjubPoint::from_bytes(&bytes[..]).expect("error deserializing point"))
     }
 
     fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<JubjubPoint, E::Error> {
@@ -496,7 +509,7 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
                 "bytes_str" => {
                     bytes_str = String::from(v);
                 }
-                _ => panic!("deSerialization failed!"),
+                _ => panic!("deserialization failed!"),
             }
         }
         let bytes_bn = BigInt::from_hex(&bytes_str);
@@ -514,6 +527,7 @@ mod tests {
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
     use crate::{FE, GE};
+    use bincode;
     use serde_json;
 
     #[test]
@@ -529,6 +543,15 @@ mod tests {
         let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
         let eight = ECScalar::from(&BigInt::from(8));
         assert_eq!(des_pk, pk * &eight);
+    }
+
+    #[test]
+    fn bincode_pk() {
+        let pk = GE::generator();
+        let bin = bincode::serialize(&pk).unwrap();
+        let decoded: JubjubPoint = bincode::deserialize(bin.as_slice()).unwrap();
+        let eight = ECScalar::from(&BigInt::from(8));
+        assert_eq!(decoded, pk * &eight);
     }
 
     #[test]
