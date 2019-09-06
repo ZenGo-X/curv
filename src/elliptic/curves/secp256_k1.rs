@@ -559,6 +559,10 @@ mod tests {
 
         let decoded: Secp256k1Scalar = serde_json::from_str(&encoded).unwrap();
         assert_eq!(decoded, sk);
+
+        let encoded = bincode::serialize(&sk).unwrap();
+        let decoded: Secp256k1Scalar = bincode::deserialize(encoded.as_slice()).unwrap();
+        assert_eq!(decoded, sk);
     }
 
     #[test]
@@ -576,6 +580,7 @@ mod tests {
 
         // let encoded = bincode::serialize(&pk).unwrap();
         // let decoded: Secp256k1Point = bincode::deserialize(encoded.as_slice()).unwrap();
+        // assert_eq!(decoded, pk);
     }
 
     #[test]
