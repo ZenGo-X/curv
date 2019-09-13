@@ -22,7 +22,8 @@ sha3 = "0.8.2"
 rust-crypto = "^0.2"
 hex = "^0.3"
 merkle-sha3 = "^0.1"
-blake2b_simd = "0.5.7"
+blake2b_simd = "0.5.8"
+lazy_static = "1.4"
 
 [dependencies.sapling-crypto]
 git = "https://github.com/omershlo/librustzcash.git"

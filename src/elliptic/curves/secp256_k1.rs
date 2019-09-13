@@ -16,14 +16,14 @@
 // The Public Key codec: Point <> SecretKey
 //
 
-use super::traits::{ECPoint, ECScalar};
-use crate::arithmetic::traits::{Converter, Modulo};
-use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
-use crate::cryptographic_primitives::hashing::traits::Hash;
-use crate::BigInt;
-use crate::ErrorKey;
+use std::fmt;
+use std::ops::{Add, Mul};
+use std::ptr;
+use std::sync::atomic;
+
 use crypto::digest::Digest;
 use crypto::sha3::Sha3;
+use lazy_static::lazy_static;
 use merkle::Hashable;
 use rand::thread_rng;
 use secp256k1::constants::{
@@ -35,14 +35,21 @@ use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
-use std::fmt;
-use std::ops::{Add, Mul};
-use std::ptr;
-use std::sync::{atomic, Once};
 use zeroize::Zeroize;
+
+use super::traits::{ECPoint, ECScalar};
+use crate::arithmetic::traits::{Converter, Modulo};
+use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
+use crate::cryptographic_primitives::hashing::traits::Hash;
+use crate::BigInt;
+use crate::ErrorKey;
 
 pub type SK = SecretKey;
 pub type PK = PublicKey;
+
+lazy_static! {
+    static ref CONTEXT: Secp256k1<VerifyOnly> = Secp256k1::verification_only();
+}
 
 #[derive(Clone, Debug, Copy)]
 pub struct Secp256k1Scalar {
@@ -318,22 +325,27 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         let len = bytes.len();
 
         let formalized: Vec<u8> = match len {
-            65 | 33 => bytes.to_vec(),
-            64 => {
-                // x, y without prefix
-                let mut v = Vec::new();
-                v.push(0x04);
+            65 | 33 => bytes.to_vec(), // uncompressed/compressed public key
+            34..=64 => {
+                // try to convert to uncompressed format
+                let mut v = vec![4u8];
+                v.extend(vec![0; 64 - len]);
                 v.extend(bytes.iter());
                 v
             }
-            32 => {
-                // x without prefix
-                let mut v = Vec::new();
-                v.push(0x02); // according to standard, 02/03 when y is even/odd, but we just set 02 here
+            0..=32 => {
+                // try to convert to compressed format
+                let mut v = vec![2u8];
+                v.extend(vec![0; 32 - len]);
                 v.extend(bytes.iter());
                 v
             }
-            _ => bytes.to_vec(),
+            _ => {
+                // > 65, we take the first 64 bytes anyway
+                let mut v = vec![4u8];
+                v.extend(bytes[..64].iter());
+                v
+            }
         };
 
         PK::from_slice(formalized.as_slice())
@@ -352,7 +364,7 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         let mut new_point = *self;
         new_point
             .ge
-            .mul_assign(get_context(), &fe[..])
+            .mul_assign(&CONTEXT, &fe[..])
             .expect("Assignment expected");
         new_point
     }
@@ -392,49 +404,25 @@ impl ECPoint<PK, SK> for Secp256k1Point {
         x_vec.extend_from_slice(&y_vec);
 
         let minus_point: GE = ECPoint::from_bytes(&x_vec).unwrap();
-        //let minus_point: GE = ECPoint::from_coor(&x, &y_inv);
         ECPoint::add_point(self, &minus_point.get_element())
     }
 
     fn from_coor(x: &BigInt, y: &BigInt) -> Self {
-        let mut vec_x = BigInt::to_vec(x);
-        let mut vec_y = BigInt::to_vec(y);
-        let coor_size = (UNCOMPRESSED_PUBLIC_KEY_SIZE - 1) / 2;
+        let x = BigInt::to_vec(x);
+        let y = BigInt::to_vec(y);
+        let coor_size = (UNCOMPRESSED_PUBLIC_KEY_SIZE - 1) / 2; // 32
 
-        if vec_x.len() < coor_size {
-            // pad
-            let mut x_buffer = vec![0; coor_size - vec_x.len()];
-            x_buffer.extend_from_slice(&vec_x);
-            vec_x = x_buffer
-        }
+        let mut v = vec![4u8];
+        v.extend(vec![0; coor_size - x.len()]);
+        v.extend(x);
+        v.extend(vec![0; coor_size - y.len()]);
+        v.extend(y);
 
-        if vec_y.len() < coor_size {
-            // pad
-            let mut y_buffer = vec![0; coor_size - vec_y.len()];
-            y_buffer.extend_from_slice(&vec_y);
-            vec_y = y_buffer
-        }
-
-        assert_eq!(x, &BigInt::from(vec_x.as_ref()));
-        assert_eq!(y, &BigInt::from(vec_y.as_ref()));
-
-        let mut v = vec![4 as u8];
-        v.extend(vec_x);
-        v.extend(vec_y);
-        Secp256k1Point {
+        Self {
             purpose: "base_fe",
-            ge: PK::from_slice(&v).unwrap(),
+            ge: PK::from_slice(v.as_slice()).unwrap(),
         }
     }
-}
-
-static mut CONTEXT: Option<Secp256k1<VerifyOnly>> = None;
-pub fn get_context() -> &'static Secp256k1<VerifyOnly> {
-    static INIT_CONTEXT: Once = Once::new();
-    INIT_CONTEXT.call_once(|| unsafe {
-        CONTEXT = Some(Secp256k1::verification_only());
-    });
-    unsafe { CONTEXT.as_ref().unwrap() }
 }
 
 impl Hashable for Secp256k1Point {
@@ -651,6 +639,14 @@ mod tests {
         b[63] = 1;
         assert!(Secp256k1Point::from_bytes(&b).is_err());
 
+        let mut b = [0u8; 65];
+        b[64] = 1;
+        assert!(Secp256k1Point::from_bytes(&b).is_err());
+
+        let mut b = [0u8; 66];
+        b[65] = 1;
+        assert!(Secp256k1Point::from_bytes(&b).is_err());
+
         let x = BigInt::to_vec(&g.x_coor().unwrap());
         let y = BigInt::to_vec(&g.y_coor().unwrap());
 
@@ -659,11 +655,18 @@ mod tests {
         x_and_y.extend(y.iter());
 
         assert!(Secp256k1Point::from_bytes(x.as_slice()).is_ok());
+
         assert_eq!(
             Secp256k1Point::from_bytes(y.as_slice()).unwrap_err(),
             ErrorKey::InvalidPublicKey
         );
-        assert!(Secp256k1Point::from_bytes(x_and_y.as_slice()).is_ok())
+        assert!(Secp256k1Point::from_bytes(x_and_y.as_slice()).is_ok());
+
+        let mut xy_push_1 = x_and_y.clone();
+        xy_push_1.push(1);
+        xy_push_1.push(1);
+        assert_eq!(xy_push_1.len(), 66);
+        assert!(Secp256k1Point::from_bytes(xy_push_1.as_slice()).is_ok());
     }
 
     #[test]
