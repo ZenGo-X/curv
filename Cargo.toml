@@ -1,6 +1,6 @@
 [package]
 name = "curv"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2018"
 
 [lib]
@@ -13,6 +13,7 @@ ec_ristretto = ["rust-gmp", "ecc" , "curve25519-dalek"]
 ec_ed25519 = ["rust-gmp", "ecc" , "cryptoxide"]
 ec_jubjub = ["rust-gmp", "ecc" , "pairing", "sapling-crypto"]
 ecc = []
+merkle = ["rust-crypto", "merkle-sha3"]
 
 [dependencies]
 rand = "0.6"
@@ -20,10 +21,19 @@ serde = "1.0"
 serde_derive = "1.0"
 zeroize = "0.10"
 sha3 = "0.8.2"
-rust-crypto = "^0.2"
+sha2 = "0.8.0"
+hmac = "0.7.1"
+digest = "0.8.1"
 hex = "^0.3"
-merkle-sha3 = "^0.1"
 blake2b_simd = "0.5.7"
+
+[dependencies.rust-crypto]
+version = "^0.2"
+optional = true
+
+[dependencies.merkle-sha3]
+version = "^0.1"
+optional = true
 
 [dependencies.sapling-crypto]
 git = "https://github.com/omershlo/librustzcash.git"
