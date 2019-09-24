@@ -8,9 +8,9 @@
 use super::traits::Hash;
 use crate::arithmetic::traits::Converter;
 use crate::elliptic::curves::traits::{ECPoint, ECScalar};
-use crypto::digest::Digest;
-use crypto::sha2::Sha256;
-use hex::decode;
+
+use digest::Digest;
+use sha2::Sha256;
 
 use crate::BigInt;
 use crate::{FE, GE};
@@ -25,11 +25,8 @@ impl Hash for HSha256 {
             hasher.input(&BigInt::to_vec(value));
         }
 
-        let result_string = hasher.result_str();
-
-        let result_bytes = decode(result_string).unwrap();
-
-        BigInt::from(&result_bytes[..])
+        let result_hex = hasher.result();
+        BigInt::from(&result_hex[..])
     }
 
     fn create_hash_from_ge(ge_vec: &[&GE]) -> FE {
@@ -38,9 +35,8 @@ impl Hash for HSha256 {
             hasher.input(&value.pk_to_key_slice());
         }
 
-        let result_string = hasher.result_str();
-        let result_bytes = decode(result_string).unwrap();
-        let result = BigInt::from(&result_bytes[..]);
+        let result_hex = hasher.result();
+        let result = BigInt::from(&result_hex[..]);
         ECScalar::from(&result)
     }
 }

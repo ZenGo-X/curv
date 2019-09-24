@@ -28,12 +28,17 @@ use std::str;
 pub const SECRET_KEY_SIZE: usize = 32;
 pub const COOR_BYTE_SIZE: usize = 32;
 pub const NUM_OF_COORDINATES: usize = 4;
-use crypto::digest::Digest;
-use crypto::sha3::Sha3;
-use merkle::Hashable;
+
 use std::ptr;
 use std::sync::atomic;
 use zeroize::Zeroize;
+
+#[cfg(feature = "merkle")]
+use crypto::digest::Digest;
+#[cfg(feature = "merkle")]
+use crypto::sha3::Sha3;
+#[cfg(feature = "merkle")]
+use merkle::Hashable;
 
 pub type SK = Scalar;
 pub type PK = CompressedRistretto;
@@ -406,6 +411,7 @@ impl<'o> Add<&'o RistrettoCurvPoint> for &'o RistrettoCurvPoint {
     }
 }
 
+#[cfg(feature = "merkle")]
 impl Hashable for RistrettoCurvPoint {
     fn update_context(&self, context: &mut Sha3) {
         let bytes: Vec<u8> = self.pk_to_key_slice();

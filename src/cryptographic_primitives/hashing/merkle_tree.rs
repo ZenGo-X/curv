@@ -5,6 +5,8 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
+// enabled via feature since it uses rust-crypto.
+
 use crypto::sha3::Sha3;
 use merkle::{MerkleTree, Proof};
 

@@ -15,9 +15,6 @@ use super::traits::{ECPoint, ECScalar};
 use crate::arithmetic::traits::Converter;
 use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use crate::cryptographic_primitives::hashing::traits::Hash;
-use crypto::digest::Digest;
-use crypto::sha3::Sha3;
-use merkle::Hashable;
 use serde::de;
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeStruct;
@@ -30,7 +27,13 @@ pub type PK = GeP3;
 use crate::arithmetic::traits::{Modulo, Samplable};
 use crate::BigInt;
 use crate::ErrorKey::{self, InvalidPublicKey};
+#[cfg(feature = "merkle")]
+use crypto::digest::Digest;
+#[cfg(feature = "merkle")]
+use crypto::sha3::Sha3;
 use cryptoxide::curve25519::*;
+#[cfg(feature = "merkle")]
+use merkle::Hashable;
 use std::ptr;
 use std::sync::atomic;
 use zeroize::Zeroize;
@@ -469,6 +472,7 @@ impl<'o> Add<&'o Ed25519Point> for &'o Ed25519Point {
     }
 }
 
+#[cfg(feature = "merkle")]
 impl Hashable for Ed25519Point {
     fn update_context(&self, context: &mut Sha3) {
         let bytes: Vec<u8> = self.pk_to_key_slice();

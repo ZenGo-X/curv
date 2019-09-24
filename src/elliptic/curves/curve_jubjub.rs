@@ -13,9 +13,6 @@ use super::traits::{ECPoint, ECScalar};
 use crate::arithmetic::traits::Converter;
 use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use crate::cryptographic_primitives::hashing::traits::Hash;
-use crypto::digest::Digest;
-use crypto::sha3::Sha3;
-use merkle::Hashable;
 use pairing::bls12_381::Bls12;
 use sapling_crypto::jubjub::*;
 use sapling_crypto::jubjub::{edwards, fs::Fs, JubjubBls12, PrimeOrder, Unknown};
@@ -42,6 +39,13 @@ use sapling_crypto::jubjub::ToUniform;
 use std::ptr;
 use std::sync::atomic;
 use zeroize::Zeroize;
+
+#[cfg(feature = "merkle")]
+use crypto::digest::Digest;
+#[cfg(feature = "merkle")]
+use crypto::sha3::Sha3;
+#[cfg(feature = "merkle")]
+use merkle::Hashable;
 
 #[derive(Clone, Copy)]
 pub struct JubjubScalar {
@@ -467,6 +471,7 @@ impl<'o> Add<&'o JubjubPoint> for &'o JubjubPoint {
     }
 }
 
+#[cfg(feature = "merkle")]
 impl Hashable for JubjubPoint {
     fn update_context(&self, context: &mut Sha3) {
         let bytes: Vec<u8> = self.pk_to_key_slice();
