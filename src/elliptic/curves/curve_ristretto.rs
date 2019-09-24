@@ -18,7 +18,7 @@ use curve25519_dalek::ristretto::CompressedRistretto;
 use curve25519_dalek::scalar::Scalar;
 use rand::thread_rng;
 use serde::de;
-use serde::de::{MapAccess, Visitor};
+use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
@@ -426,7 +426,7 @@ impl Serialize for RistrettoCurvPoint {
     {
         let bytes = self.pk_to_key_slice();
         let bytes_as_bn = BigInt::from(&bytes[..]);
-        let mut state = serializer.serialize_struct("ristrettoCurvePoint", 1)?;
+        let mut state = serializer.serialize_struct("RistrettoCurvPoint", 1)?;
         state.serialize_field("bytes_str", &bytes_as_bn.to_hex())?;
         state.end()
     }
@@ -437,7 +437,8 @@ impl<'de> Deserialize<'de> for RistrettoCurvPoint {
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_map(RistrettoCurvPointVisitor)
+        const FIELDS: &[&str] = &["bytes_str"];
+        deserializer.deserialize_struct("RistrettoCurvPoint", FIELDS, RistrettoCurvPointVisitor)
     }
 }
 
@@ -448,6 +449,18 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("RistrettoCurvPoint")
+    }
+
+    fn visit_seq<V>(self, mut seq: V) -> Result<RistrettoCurvPoint, V::Error>
+    where
+        V: SeqAccess<'de>,
+    {
+        let bytes_str = seq
+            .next_element()?
+            .ok_or_else(|| panic!("deserialization failed"))?;
+        let bytes_bn = BigInt::from_hex(bytes_str);
+        let bytes = BigInt::to_vec(&bytes_bn);
+        Ok(RistrettoCurvPoint::from_bytes(&bytes[..]).expect("error deserializing point"))
     }
 
     fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<RistrettoCurvPoint, E::Error> {
@@ -469,7 +482,6 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
     }
 }
 
-#[cfg(feature = "curveristretto")]
 #[cfg(test)]
 mod tests {
 
@@ -493,6 +505,14 @@ mod tests {
         let s = serde_json::to_string(&pk).expect("Failed in serialization");
         let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
         assert_eq!(des_pk, pk);
+    }
+
+    #[test]
+    fn bincode_pk() {
+        let pk = GE::generator();
+        let encoded = bincode::serialize(&pk).unwrap();
+        let decoded: RistrettoCurvPoint = bincode::deserialize(encoded.as_slice()).unwrap();
+        assert_eq!(decoded, pk);
     }
 
     #[test]

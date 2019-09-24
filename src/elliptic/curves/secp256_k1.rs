@@ -29,7 +29,7 @@ use secp256k1::constants::{
 };
 use secp256k1::{PublicKey, Secp256k1, SecretKey, VerifyOnly};
 use serde::de;
-use serde::de::{MapAccess, Visitor};
+use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
@@ -556,6 +556,23 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
         formatter.write_str("Secp256k1Point")
     }
 
+    fn visit_seq<V>(self, mut seq: V) -> Result<Secp256k1Point, V::Error>
+    where
+        V: SeqAccess<'de>,
+    {
+        let x = seq
+            .next_element()?
+            .ok_or_else(|| panic!("deserialization failed"))?;
+        let y = seq
+            .next_element()?
+            .ok_or_else(|| panic!("deserialization failed"))?;
+
+        let bx = BigInt::from_hex(x);
+        let by = BigInt::from_hex(y);
+
+        Ok(Secp256k1Point::from_coor(&bx, &by))
+    }
+
     fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<Secp256k1Point, E::Error> {
         let mut x = String::new();
         let mut y = String::new();
@@ -589,6 +606,7 @@ mod tests {
     use crate::cryptographic_primitives::hashing::traits::Hash;
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
+    use bincode;
     use serde_json;
 
     #[test]
@@ -649,6 +667,14 @@ mod tests {
 
         let des_pk: Secp256k1Point = serde_json::from_str(&s).expect("Failed in serialization");
         assert_eq!(des_pk.ge, pk.ge);
+    }
+
+    #[test]
+    fn bincode_pk() {
+        let pk = Secp256k1Point::generator();
+        let bin = bincode::serialize(&pk).unwrap();
+        let decoded: Secp256k1Point = bincode::deserialize(bin.as_slice()).unwrap();
+        assert_eq!(decoded, pk);
     }
 
     use crate::elliptic::curves::secp256_k1::{FE, GE};
