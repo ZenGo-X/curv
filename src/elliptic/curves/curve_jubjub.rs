@@ -342,48 +342,25 @@ impl ECPoint<PK, SK> for JubjubPoint {
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<JubjubPoint, ErrorKey> {
-        let params = &JubjubBls12::new();
-        let bytes_vec = bytes.to_vec();
         let mut bytes_array_32 = [0u8; 32];
-        let byte_len = bytes_vec.len();
-        match byte_len {
+        match bytes.len() {
             0..=32 => {
-                let mut template = vec![0; 32 - byte_len];
-                template.extend_from_slice(&bytes);
-                let bytes_vec = template;
-                let bytes_slice = &bytes_vec[0..32];
-                bytes_array_32.copy_from_slice(&bytes_slice);
-                let ge_from_bytes = PKu::read(&bytes_array_32[..], params);
-                match ge_from_bytes {
-                    Ok(x) => {
-                        let new_point = JubjubPoint {
-                            purpose: "random",
-                            ge: x.mul_by_cofactor(params),
-                        };
-                        Ok(new_point)
-                    }
-
-                    Err(e) => {
-                        println!("ERROR: {:?}", e);
-                        Err(InvalidPublicKey)
-                    }
-                }
+                (&mut bytes_array_32[32 - bytes.len()..]).copy_from_slice(bytes);
             }
             _ => {
-                let bytes_slice = &bytes_vec[0..32];
-                bytes_array_32.copy_from_slice(&bytes_slice);
-                let ge_from_bytes = PKu::read(&bytes_array_32[..], params);
-                match ge_from_bytes {
-                    Ok(x) => {
-                        let new_point = JubjubPoint {
-                            purpose: "random",
-                            ge: x.mul_by_cofactor(params),
-                        };
-                        Ok(new_point)
-                    }
+                bytes_array_32.copy_from_slice(&bytes[..32]);
+            }
+        }
 
-                    Err(_) => Err(InvalidPublicKey),
-                }
+        let params = JubjubBls12::new();
+        match PKu::read(&bytes_array_32[..], &params) {
+            Ok(x) => Ok(JubjubPoint {
+                purpose: "random",
+                ge: x.mul_by_cofactor(&params),
+            }),
+            Err(e) => {
+                println!("ERROR: {:?}", e);
+                Err(InvalidPublicKey)
             }
         }
     }
