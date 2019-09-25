@@ -23,6 +23,7 @@ use std::sync::atomic;
 
 use crypto::digest::Digest;
 use crypto::sha3::Sha3;
+use gmp::mpz::ParseMpzError;
 use lazy_static::lazy_static;
 use merkle::Hashable;
 use rand::thread_rng;
@@ -256,11 +257,13 @@ impl<'de> Visitor<'de> for Secp256k1ScalarVisitor {
     type Value = Secp256k1Scalar;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("Secp256k1Scalar")
+        formatter.write_str("struct Secp256k1Scalar")
     }
 
     fn visit_str<E: de::Error>(self, s: &str) -> Result<Self::Value, E> {
-        let v = BigInt::from_str_radix(s, 16).expect("Failed in serde");
+        let v = BigInt::from_str_radix(s, 16).map_err(|e| match e {
+            ParseMpzError { .. } => de::Error::invalid_value(de::Unexpected::Str(s), &self),
+        })?;
         Ok(ECScalar::from(&v))
     }
 }
@@ -505,7 +508,7 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
         formatter.write_str("struct Secp256k1Point")
     }
 
-    fn visit_seq<V>(self, mut seq: V) -> Result<Secp256k1Point, V::Error>
+    fn visit_seq<V>(self, mut seq: V) -> Result<Self::Value, V::Error>
     where
         V: SeqAccess<'de>,
     {
@@ -566,9 +569,13 @@ mod tests {
         let decoded: Secp256k1Scalar = serde_json::from_str(&encoded).unwrap();
         assert_eq!(decoded, sk);
 
-        let encoded = bincode::serialize(&sk).unwrap();
+        let mut encoded = bincode::serialize(&sk).unwrap();
         let decoded: Secp256k1Scalar = bincode::deserialize(encoded.as_slice()).unwrap();
         assert_eq!(decoded, sk);
+
+        encoded[0] = 0u8;
+        let decoded: Result<Secp256k1Scalar, _> = bincode::deserialize(encoded.as_slice());
+        assert!(decoded.is_err());
     }
 
     #[test]
@@ -578,15 +585,19 @@ mod tests {
         let y = pk.y_coor().unwrap();
         let encoded = serde_json::to_string(&pk).unwrap();
 
-        let expected = format!("{{\"x\":\"{}\",\"y\":\"{}\"}}", x.to_hex(), y.to_hex());
+        let expected = format!(r#"{{"x":"{}","y":"{}"}}"#, x.to_hex(), y.to_hex());
         assert_eq!(encoded, expected);
 
         let decoded: Secp256k1Point = serde_json::from_str(&encoded).unwrap();
         assert_eq!(decoded, pk);
 
-        let encoded = bincode::serialize(&pk).unwrap();
+        let mut encoded = bincode::serialize(&pk).unwrap();
         let decoded: Secp256k1Point = bincode::deserialize(encoded.as_slice()).unwrap();
         assert_eq!(decoded, pk);
+
+        encoded[0] = 0u8;
+        let decoded: Result<Secp256k1Point, _> = bincode::deserialize(encoded.as_slice());
+        assert!(decoded.is_err());
     }
 
     #[test]
