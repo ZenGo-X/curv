@@ -13,15 +13,12 @@ use super::traits::{ECPoint, ECScalar};
 use crate::arithmetic::traits::Converter;
 use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use crate::cryptographic_primitives::hashing::traits::Hash;
-use crypto::digest::Digest;
-use crypto::sha3::Sha3;
-use merkle::Hashable;
 use pairing::bls12_381::Bls12;
 use sapling_crypto::jubjub::*;
 use sapling_crypto::jubjub::{edwards, fs::Fs, JubjubBls12, PrimeOrder, Unknown};
 
 use serde::de;
-use serde::de::{MapAccess, Visitor};
+use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
@@ -42,6 +39,13 @@ use sapling_crypto::jubjub::ToUniform;
 use std::ptr;
 use std::sync::atomic;
 use zeroize::Zeroize;
+
+#[cfg(feature = "merkle")]
+use crypto::digest::Digest;
+#[cfg(feature = "merkle")]
+use crypto::sha3::Sha3;
+#[cfg(feature = "merkle")]
+use merkle::Hashable;
 
 #[derive(Clone, Copy)]
 pub struct JubjubScalar {
@@ -338,48 +342,25 @@ impl ECPoint<PK, SK> for JubjubPoint {
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<JubjubPoint, ErrorKey> {
-        let params = &JubjubBls12::new();
-        let bytes_vec = bytes.to_vec();
         let mut bytes_array_32 = [0u8; 32];
-        let byte_len = bytes_vec.len();
-        match byte_len {
+        match bytes.len() {
             0..=32 => {
-                let mut template = vec![0; 32 - byte_len];
-                template.extend_from_slice(&bytes);
-                let bytes_vec = template;
-                let bytes_slice = &bytes_vec[0..32];
-                bytes_array_32.copy_from_slice(&bytes_slice);
-                let ge_from_bytes = PKu::read(&bytes_array_32[..], params);
-                match ge_from_bytes {
-                    Ok(x) => {
-                        let new_point = JubjubPoint {
-                            purpose: "random",
-                            ge: x.mul_by_cofactor(params),
-                        };
-                        Ok(new_point)
-                    }
-
-                    Err(e) => {
-                        println!("ERROR: {:?}", e);
-                        Err(InvalidPublicKey)
-                    }
-                }
+                (&mut bytes_array_32[32 - bytes.len()..]).copy_from_slice(bytes);
             }
             _ => {
-                let bytes_slice = &bytes_vec[0..32];
-                bytes_array_32.copy_from_slice(&bytes_slice);
-                let ge_from_bytes = PKu::read(&bytes_array_32[..], params);
-                match ge_from_bytes {
-                    Ok(x) => {
-                        let new_point = JubjubPoint {
-                            purpose: "random",
-                            ge: x.mul_by_cofactor(params),
-                        };
-                        Ok(new_point)
-                    }
+                bytes_array_32.copy_from_slice(&bytes[..32]);
+            }
+        }
 
-                    Err(_) => Err(InvalidPublicKey),
-                }
+        let params = JubjubBls12::new();
+        match PKu::read(&bytes_array_32[..], &params) {
+            Ok(x) => Ok(JubjubPoint {
+                purpose: "random",
+                ge: x.mul_by_cofactor(&params),
+            }),
+            Err(e) => {
+                println!("ERROR: {:?}", e);
+                Err(InvalidPublicKey)
             }
         }
     }
@@ -467,6 +448,7 @@ impl<'o> Add<&'o JubjubPoint> for &'o JubjubPoint {
     }
 }
 
+#[cfg(feature = "merkle")]
 impl Hashable for JubjubPoint {
     fn update_context(&self, context: &mut Sha3) {
         let bytes: Vec<u8> = self.pk_to_key_slice();
@@ -492,17 +474,30 @@ impl<'de> Deserialize<'de> for JubjubPoint {
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_map(RistrettoCurvPointVisitor)
+        const FIELDS: &[&str] = &["bytes_str"];
+        deserializer.deserialize_struct("JujubPoint", FIELDS, JubjubPointVisitor)
     }
 }
 
-struct RistrettoCurvPointVisitor;
+struct JubjubPointVisitor;
 
-impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
+impl<'de> Visitor<'de> for JubjubPointVisitor {
     type Value = JubjubPoint;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("JubjubCurvePoint")
+    }
+
+    fn visit_seq<V>(self, mut seq: V) -> Result<JubjubPoint, V::Error>
+    where
+        V: SeqAccess<'de>,
+    {
+        let bytes_str = seq
+            .next_element()?
+            .ok_or_else(|| panic!("deserialization failed"))?;
+        let bytes_bn = BigInt::from_hex(bytes_str);
+        let bytes = BigInt::to_vec(&bytes_bn);
+        Ok(JubjubPoint::from_bytes(&bytes[..]).expect("error deserializing point"))
     }
 
     fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<JubjubPoint, E::Error> {
@@ -514,7 +509,7 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
                 "bytes_str" => {
                     bytes_str = String::from(v);
                 }
-                _ => panic!("deSerialization failed!"),
+                _ => panic!("deserialization failed!"),
             }
         }
         let bytes_bn = BigInt::from_hex(&bytes_str);
@@ -532,6 +527,7 @@ mod tests {
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
     use crate::{FE, GE};
+    use bincode;
     use serde_json;
 
     #[test]
@@ -547,6 +543,15 @@ mod tests {
         let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
         let eight = ECScalar::from(&BigInt::from(8));
         assert_eq!(des_pk, pk * &eight);
+    }
+
+    #[test]
+    fn bincode_pk() {
+        let pk = GE::generator();
+        let bin = bincode::serialize(&pk).unwrap();
+        let decoded: JubjubPoint = bincode::deserialize(bin.as_slice()).unwrap();
+        let eight = ECScalar::from(&BigInt::from(8));
+        assert_eq!(decoded, pk * &eight);
     }
 
     #[test]

@@ -15,4 +15,5 @@ pub trait Hash {
 
 pub trait KeyedHash {
     fn create_hmac(key: &BigInt, data: &[&BigInt]) -> BigInt;
+    fn verify(key: &BigInt, data: &[&BigInt], code_bytes: [u8; 64]) -> Result<(), ()>;
 }

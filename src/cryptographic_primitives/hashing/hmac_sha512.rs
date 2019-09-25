@@ -10,17 +10,18 @@ use crate::BigInt;
 use super::traits::KeyedHash;
 use crate::arithmetic::traits::Converter;
 
-use crypto::hmac::Hmac;
-use crypto::mac::Mac;
-use crypto::sha2::Sha512;
+use hmac::{Hmac, Mac};
+use sha2::Sha512;
 use zeroize::Zeroize;
+type HmacSha256type = Hmac<Sha512>;
 
 pub struct HMacSha512;
 
 impl KeyedHash for HMacSha512 {
     fn create_hmac(key: &BigInt, data: &[&BigInt]) -> BigInt {
         let mut key_bytes: Vec<u8> = key.into();
-        let mut hmac = Hmac::new(Sha512::new(), &key_bytes);
+
+        let mut hmac = HmacSha256type::new_varkey(&key_bytes).expect("");
 
         for value in data {
             hmac.input(&BigInt::to_vec(value));
@@ -29,7 +30,20 @@ impl KeyedHash for HMacSha512 {
         let result = hmac.result();
         let code = result.code();
 
-        BigInt::from(code)
+        BigInt::from(code.as_slice())
+    }
+    fn verify(key: &BigInt, data: &[&BigInt], code_bytes: [u8; 64]) -> Result<(), ()> {
+        let key_bytes: Vec<u8> = key.into();
+
+        let mut hmac = HmacSha256type::new_varkey(&key_bytes).expect("");
+
+        for value in data {
+            hmac.input(&BigInt::to_vec(value));
+        }
+        match hmac.verify(&code_bytes) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(()),
+        }
     }
 }
 
@@ -37,6 +51,7 @@ impl KeyedHash for HMacSha512 {
 mod tests {
 
     use super::HMacSha512;
+    use crate::arithmetic::traits::Converter;
     use crate::arithmetic::traits::Samplable;
     use crate::cryptographic_primitives::hashing::traits::KeyedHash;
     use crate::BigInt;
