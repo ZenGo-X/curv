@@ -380,7 +380,6 @@ impl ECPoint<PK, SK> for Secp256k1Point {
     fn pk_to_key_slice(&self) -> Vec<u8> {
         let mut v = vec![4 as u8];
         let x_vec = BigInt::to_vec(&self.x_coor().unwrap());
-
         let y_vec = BigInt::to_vec(&self.y_coor().unwrap());
 
         let mut raw_x: Vec<u8> = Vec::new();
@@ -803,8 +802,6 @@ mod tests {
             assert!(key_slice[0].clone() == 4);
 
             let rg_prime: GE = ECPoint::from_bytes(&key_slice[1..65]).unwrap();
-            println!("TEST2");
-
             assert_eq!(rg_prime.get_element(), rg.get_element());
         }
     }
