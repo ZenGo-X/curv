@@ -379,9 +379,19 @@ impl ECPoint<PK, SK> for Secp256k1Point {
     }
     fn pk_to_key_slice(&self) -> Vec<u8> {
         let mut v = vec![4 as u8];
+        let x_vec = BigInt::to_vec(&self.x_coor().unwrap());
+        let y_vec = BigInt::to_vec(&self.y_coor().unwrap());
 
-        v.extend(BigInt::to_vec(&self.x_coor().unwrap()));
-        v.extend(BigInt::to_vec(&self.y_coor().unwrap()));
+        let mut raw_x: Vec<u8> = Vec::new();
+        let mut raw_y: Vec<u8> = Vec::new();
+        raw_x.extend(vec![0u8; 32 - x_vec.len()]);
+        raw_x.extend(x_vec);
+
+        raw_y.extend(vec![0u8; 32 - y_vec.len()]);
+        raw_y.extend(y_vec);
+
+        v.extend(raw_x);
+        v.extend(raw_y);
         v
     }
 
@@ -779,5 +789,20 @@ mod tests {
         let c1 = a.mul(&b.get_element());
         let c2 = a * b;
         assert_eq!(c1.get_element(), c2.get_element());
+    }
+
+    #[test]
+    fn test_pk_to_key_slice() {
+        for _ in 1..200 {
+            let r = FE::new_random();
+            let rg = GE::generator() * &r;
+            let key_slice = rg.pk_to_key_slice();
+
+            assert!(key_slice.len() == 65);
+            assert!(key_slice[0].clone() == 4);
+
+            let rg_prime: GE = ECPoint::from_bytes(&key_slice[1..65]).unwrap();
+            assert_eq!(rg_prime.get_element(), rg.get_element());
+        }
     }
 }

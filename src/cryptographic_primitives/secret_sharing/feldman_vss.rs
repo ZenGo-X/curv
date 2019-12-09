@@ -176,13 +176,13 @@ impl VerifiableSS {
         tail.fold(head.clone(), |acc, x| acc.add(&x.get_element()))
     }
 
-    pub fn validate_share(&self, secret_share: &FE, index: usize) -> Result<(), (ErrorSS)> {
+    pub fn validate_share(&self, secret_share: &FE, index: usize) -> Result<(), ErrorSS> {
         let G: GE = ECPoint::generator();
         let ss_point = G * secret_share;
         self.validate_share_public(&ss_point, index)
     }
 
-    pub fn validate_share_public(&self, ss_point: &GE, index: usize) -> Result<(), (ErrorSS)> {
+    pub fn validate_share_public(&self, ss_point: &GE, index: usize) -> Result<(), ErrorSS> {
         let comm_to_point = self.get_point_commitment(index);
         if *ss_point == comm_to_point {
             Ok(())
