@@ -39,6 +39,13 @@ impl Hash for HSha512 {
         let result = BigInt::from(&result_hex[..]);
         ECScalar::from(&result)
     }
+
+    fn create_hash_from_slice(byte_slice: &[u8]) -> BigInt {
+        let mut hasher = Sha512::new();
+        hasher.input(byte_slice);
+        let result_hex = hasher.result();
+        BigInt::from(&result_hex[..])
+    }
 }
 
 #[cfg(test)]

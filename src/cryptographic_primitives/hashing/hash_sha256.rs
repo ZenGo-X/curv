@@ -39,6 +39,13 @@ impl Hash for HSha256 {
         let result = BigInt::from(&result_hex[..]);
         ECScalar::from(&result)
     }
+
+    fn create_hash_from_slice(byte_slice: &[u8]) -> BigInt {
+        let mut hasher = Sha256::new();
+        hasher.input(byte_slice);
+        let result_hex = hasher.result();
+        BigInt::from(&result_hex[..])
+    }
 }
 
 #[cfg(test)]
@@ -49,6 +56,24 @@ mod tests {
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
     use crate::GE;
+    extern crate hex;
+    extern crate sha2;
+    use crate::arithmetic::traits::Converter;
+    use sha2::Digest;
+    use sha2::Sha256;
+
+    #[test]
+    fn test_byte_vec() {
+        let message: Vec<u8> = vec![0, 1];
+        let big_int0 = BigInt::from((message[0] as i32));
+        let big_int1 = BigInt::from((message[1] as i32));
+
+        let result = HSha256::create_hash(&[&big_int0, &big_int1]).to_hex();
+        let mut hasher = Sha256::new();
+        hasher.input(&message);
+        let result2 = hex::encode(hasher.result());
+        assert_eq!(result, result2);
+    }
 
     #[test]
     // Test Vectors taken from:
