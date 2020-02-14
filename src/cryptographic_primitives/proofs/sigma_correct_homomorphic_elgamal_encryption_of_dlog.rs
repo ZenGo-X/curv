@@ -5,6 +5,7 @@
     (https://github.com/KZen-networks/curv)
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
+use serde::{Deserialize, Serialize};
 
 use super::ProofError;
 use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
@@ -95,10 +96,10 @@ mod tests {
         };
         let G: GE = ECPoint::generator();
         let y: FE = ECScalar::new_random();
-        let Y = G.clone() * &y;
-        let D = G.clone() * &witness.x + Y.clone() * &witness.r;
-        let E = G.clone() * &witness.r;
-        let Q = G.clone() * &witness.x;
+        let Y = G * y;
+        let D = G * witness.x + Y * witness.r;
+        let E = G * witness.r;
+        let Q = G * witness.x;
         let delta = HomoElGamalDlogStatement { G, Y, Q, D, E };
         let proof = HomoELGamalDlogProof::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
@@ -115,10 +116,10 @@ mod tests {
         };
         let G: GE = ECPoint::generator();
         let y: FE = ECScalar::new_random();
-        let Y = G.clone() * &y;
-        let D = G.clone() * &witness.x + Y.clone() * &witness.r;
-        let E = G.clone() * &witness.r + G.clone();
-        let Q = G.clone() * &witness.x + G.clone();
+        let Y = G * y;
+        let D = G * witness.x + Y * witness.r;
+        let E = G * witness.r + G;
+        let Q = G * witness.x + G;
         let delta = HomoElGamalDlogStatement { G, Y, Q, D, E };
         let proof = HomoELGamalDlogProof::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());

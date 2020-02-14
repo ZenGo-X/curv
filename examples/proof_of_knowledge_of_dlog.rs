@@ -16,10 +16,8 @@ pub fn dlog_proof() {
     let witness: FE = ECScalar::new_random();
     let dlog_proof = DLogProof::prove(&witness);
     let verified = DLogProof::verify(&dlog_proof);
-    match verified {
-        Ok(_t) => assert!(true),
-        Err(_e) => assert!(false),
-    }
+
+    assert!(verified.is_ok());
 }
 
 fn main() {

@@ -80,14 +80,14 @@ mod tests {
     // https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/secure-hashing#shavs
     fn vector_sha256_test() {
         // Empty Message
-        let result: BigInt = HSha256::create_hash(&vec![]);
+        let result: BigInt = HSha256::create_hash(&[]);
         assert_eq!(
             result.to_str_radix(16),
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         );
 
         // 256 bit message
-        let result: BigInt = HSha256::create_hash(&vec![&BigInt::from_str_radix(
+        let result: BigInt = HSha256::create_hash(&[&BigInt::from_str_radix(
             "09fc1accc230a205e4a208e64a8f204291f581a12756392da4b8c0cf5ef02b95",
             16,
         )
@@ -98,7 +98,7 @@ mod tests {
         );
 
         // 2x128 bit messages
-        let result: BigInt = HSha256::create_hash(&vec![
+        let result: BigInt = HSha256::create_hash(&[
             &BigInt::from_str_radix("09fc1accc230a205e4a208e64a8f2042", 16).unwrap(),
             &BigInt::from_str_radix("91f581a12756392da4b8c0cf5ef02b95", 16).unwrap(),
         ]);
@@ -108,7 +108,7 @@ mod tests {
         );
 
         // 512 bit message
-        let result: BigInt = HSha256::create_hash(&vec![&BigInt::from_str_radix("5a86b737eaea8ee976a0a24da63e7ed7eefad18a101c1211e2b3650c5187c2a8a650547208251f6d4237e661c7bf4c77f335390394c37fa1a9f9be836ac28509", 16).unwrap()]);
+        let result: BigInt = HSha256::create_hash(&[&BigInt::from_str_radix("5a86b737eaea8ee976a0a24da63e7ed7eefad18a101c1211e2b3650c5187c2a8a650547208251f6d4237e661c7bf4c77f335390394c37fa1a9f9be836ac28509", 16).unwrap()]);
         assert_eq!(
             result.to_str_radix(16),
             "42e61e174fbb3897d6dd6cef3dd2802fe67b331953b06114a65c772859dfc1aa"
@@ -118,11 +118,11 @@ mod tests {
     #[test]
     fn create_sha256_from_ge_test() {
         let point = GE::base_point2();
-        let result1 = HSha256::create_hash_from_ge(&vec![&point, &GE::generator()]);
+        let result1 = HSha256::create_hash_from_ge(&[&point, &GE::generator()]);
         assert!(result1.to_big_int().to_str_radix(2).len() > 240);
-        let result2 = HSha256::create_hash_from_ge(&vec![&GE::generator(), &point]);
+        let result2 = HSha256::create_hash_from_ge(&[&GE::generator(), &point]);
         assert_ne!(result1, result2);
-        let result3 = HSha256::create_hash_from_ge(&vec![&GE::generator(), &point]);
+        let result3 = HSha256::create_hash_from_ge(&[&GE::generator(), &point]);
         assert_eq!(result2, result3);
     }
 }

@@ -4,6 +4,7 @@
     (https://github.com/KZen-networks/curv)
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
+use serde::{Deserialize, Serialize};
 
 use super::ProofError;
 use crate::FE;
@@ -98,9 +99,7 @@ mod tests {
         let witness: FE = ECScalar::new_random();
         let dlog_proof = DLogProof::prove(&witness);
         let verified = DLogProof::verify(&dlog_proof);
-        match verified {
-            Ok(_t) => assert!(true),
-            Err(_e) => assert!(false),
-        }
+
+        assert!(verified.is_ok())
     }
 }

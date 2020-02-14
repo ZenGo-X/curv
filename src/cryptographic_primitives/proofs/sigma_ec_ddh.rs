@@ -4,6 +4,7 @@
     (https://github.com/KZen-networks/curv)
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
+use serde::{Deserialize, Serialize};
 
 use super::ProofError;
 use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
@@ -90,8 +91,8 @@ mod tests {
         let x: FE = ECScalar::new_random();
         let g1: GE = ECPoint::generator();
         let g2: GE = GE::base_point2();
-        let h1 = &g1 * &x;
-        let h2 = &g2 * &x;
+        let h1 = g1 * x;
+        let h2 = g2 * x;
         let delta = ECDDHStatement { g1, g2, h1, h2 };
         let w = ECDDHWitness { x };
         let proof = ECDDHProof::prove(&w, &delta);
@@ -105,8 +106,8 @@ mod tests {
         let g1: GE = ECPoint::generator();
         let g2: GE = GE::base_point2();
         let x2: FE = ECScalar::new_random();
-        let h1 = &g1 * &x;
-        let h2 = &g2 * &x2;
+        let h1 = g1 * x;
+        let h2 = g2 * x2;
         let delta = ECDDHStatement { g1, g2, h1, h2 };
         let w = ECDDHWitness { x };
         let proof = ECDDHProof::prove(&w, &delta);

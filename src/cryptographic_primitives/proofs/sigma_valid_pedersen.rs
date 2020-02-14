@@ -4,6 +4,7 @@
     (https://github.com/KZen-networks/curv)
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
+use serde::{Deserialize, Serialize};
 
 use super::ProofError;
 use crate::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
@@ -40,7 +41,7 @@ pub trait ProvePederesen {
 }
 
 impl ProvePederesen for PedersenProof {
-    fn prove(m: &FE, r: &FE) -> PedersenProof {
+    fn prove(msg: &FE, blind_factor: &FE) -> PedersenProof {
         let g: GE = ECPoint::generator();
         let h = GE::base_point2();
         let mut s1: FE = ECScalar::new_random();
@@ -48,8 +49,8 @@ impl ProvePederesen for PedersenProof {
         let a1 = g.scalar_mul(&s1.get_element());
         let a2 = h.scalar_mul(&s2.get_element());
         let com = PedersenCommitment::create_commitment_with_user_defined_randomness(
-            &m.to_big_int(),
-            &r.to_big_int(),
+            &msg.to_big_int(),
+            &blind_factor.to_big_int(),
         );
         let g: GE = ECPoint::generator();
         let challenge = HSha256::create_hash(&[
@@ -62,9 +63,9 @@ impl ProvePederesen for PedersenProof {
 
         let e: FE = ECScalar::from(&challenge);
 
-        let em = e.mul(&m.get_element());
+        let em = e.mul(&msg.get_element());
         let z1 = s1.add(&em.get_element());
-        let er = e.mul(&r.get_element());
+        let er = e.mul(&blind_factor.get_element());
         let z2 = s2.add(&er.get_element());
         s1.zeroize();
         s2.zeroize();
