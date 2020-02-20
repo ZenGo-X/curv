@@ -195,13 +195,9 @@ impl ECScalar<Seed> for Secp256r1Scalar {
     }
 
     fn from(n: &BigInt) -> Secp256r1Scalar {
-        println!("from #1");
         let curve_order = Self::q();
-        println!("from #2");
         let n_reduced = n.mod_floor(&curve_order);
-        println!("from #3");
         let mut v = BigInt::to_vec(&n_reduced);
-        println!("from #4");
 
         if v.len() < SECRET_KEY_SIZE {
             let mut template = vec![0; SECRET_KEY_SIZE - v.len()];
@@ -209,7 +205,6 @@ impl ECScalar<Seed> for Secp256r1Scalar {
             v = template;
         }
 
-        println!("from #5");
         Secp256r1Scalar {
             purpose: "from_big_int",
             fe: Seed::from_bytes(
@@ -343,36 +338,21 @@ impl<'de> Visitor<'de> for Secp256r1ScalarVisitor {
 impl Mul<Secp256r1Scalar> for Secp256r1Point {
     type Output = Secp256r1Point;
     fn mul(self, other: Secp256r1Scalar) -> Self::Output {
-        println!("Mul<Secp256r1Scalar> for Secp256r1Point");
-        println!("-- self = {:?}", self);
-        println!("-- other = {:?}", other);
-        let res = self.scalar_mul(&other.get_element());
-        println!("-- res = {:?}", res);
-        res
+        self.scalar_mul(&other.get_element())
     }
 }
 
 impl<'o> Mul<&'o Secp256r1Scalar> for Secp256r1Point {
     type Output = Secp256r1Point;
     fn mul(self, other: &'o Secp256r1Scalar) -> Self::Output {
-        println!("Mul<&'o Secp256r1Scalar> for Secp256r1Point");
-        println!("-- self = {:?}", self);
-        println!("-- other = {:?}", other);
-        let res = self.scalar_mul(&other.get_element());
-        println!("-- res = {:?}", res);
-        res
+        self.scalar_mul(&other.get_element())
     }
 }
 
 impl<'o> Mul<&'o Secp256r1Scalar> for &'o Secp256r1Point {
     type Output = Secp256r1Point;
     fn mul(self, other: &'o Secp256r1Scalar) -> Self::Output {
-        println!("Mul<&'o Secp256r1Scalar> for &'o Secp256r1Point");
-        println!("-- self = {:?}", self);
-        println!("-- other = {:?}", other);
-        let res = self.scalar_mul(&other.get_element());
-        println!("-- res = {:?}", res);
-        res
+        self.scalar_mul(&other.get_element())
     }
 }
 
@@ -555,11 +535,9 @@ impl ECPoint<PublicKey, Seed> for Secp256r1Point {
     }
 
     fn scalar_mul(&self, fe: &Seed) -> Self {
-        println!("scalar_mul #1");
         let public_key = self.ge
             .scalar_mul(fe, &p256::PRIVATE_KEY_OPS, &p256::PUBLIC_KEY_OPS)
             .unwrap();
-        println!("scalar_mul #2");
 
         Secp256r1Point {
             purpose: "scalar_mul",
@@ -701,7 +679,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ec_point_from() {
+    fn test_ec_point_from_bytes() {
         let filename = "src/elliptic/curves/test_vectors/secp256_r1.txt";
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
@@ -720,11 +698,11 @@ mod tests {
             let mut line = lines_iter.next().unwrap().unwrap();
             let y = line.split_off("y = ".len());
 
-            test_ec_point_from_internal(&x, &y);
+            test_ec_point_from_bytes_internal(&x, &y);
         }
     }
 
-    fn test_ec_point_from_internal(x_hex: &str, y_hex: &str) {
+    fn test_ec_point_from_bytes_internal(x_hex: &str, y_hex: &str) {
         let x_bi = BigInt::from_hex(x_hex);
         let y_bi = BigInt::from_hex(y_hex);
         let point: Secp256r1Point =
@@ -876,7 +854,6 @@ mod tests {
 
     // test k * G = Q
     fn test_ec_point_scalar_mul_internal(k_dec: &str, x_hex: &str, y_hex: &str) {
-        println!("k_dec = {}", k_dec);
         let k_bi: BigInt = BigInt::from_str_radix(k_dec, 10).expect("Error in serialization");
         let x_bi = BigInt::from_hex(x_hex);
         let y_bi = BigInt::from_hex(y_hex);
@@ -884,10 +861,6 @@ mod tests {
         let expected: Secp256r1Point = Secp256r1Point::from_coor(&x_bi, &y_bi);
         let scalar: Secp256r1Scalar = ECScalar::from(&k_bi);
         let actual = generator.scalar_mul(&scalar.get_element());
-        println!("actual:");
-        for x in actual.get_element().serialize_uncompressed().iter() {
-            print!("{:02x} ", x);
-        }
 
         assert_eq!(
             actual.bytes_compressed_to_big_int().to_hex(),
@@ -900,11 +873,6 @@ mod tests {
         let zero = Secp256r1Scalar::zero();
         let generator: Secp256r1Point = Secp256r1Point::generator();
         let actual = generator.scalar_mul(&zero.get_element());
-        println!("actual:");
-        for x in actual.get_element().serialize_uncompressed().iter() {
-            print!("{:02x} ", x);
-        }
-        println!("actual: {}", actual.bytes_compressed_to_big_int().to_hex());
 
         assert_eq!(
             actual.bytes_compressed_to_big_int().to_hex(),
@@ -914,7 +882,6 @@ mod tests {
 
     #[test]
     fn test_ec_point_add_point() {
-        println!("#1");
         let x1_bi = BigInt::from_hex("6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296");
         let y1_bi = BigInt::from_hex("4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5");
 
@@ -924,18 +891,10 @@ mod tests {
         let x3_bi = BigInt::from_hex("7CF27B188D034F7E8A52380304B51AC3C08969E277F21B35A60B48FC47669978");
         let y3_bi = BigInt::from_hex("07775510DB8ED040293D9AC69F7430DBBA7DADE63CE982299E04B79D227873D1");
 
-        println!("#2");
         let point1: Secp256r1Point = Secp256r1Point::from_coor(&x1_bi, &y1_bi);
-        println!("#3");
         let point2: Secp256r1Point = Secp256r1Point::from_coor(&x2_bi, &y2_bi);
-        println!("#4");
         let expected: Secp256r1Point = Secp256r1Point::from_coor(&x3_bi, &y3_bi);
-        println!("#5");
         let actual = point1.add_point(&point2.get_element());
-        println!("actual:");
-        for x in actual.get_element().serialize_uncompressed().iter() {
-            print!("{:02x} ", x);
-        }
 
         assert_eq!(
             actual.bytes_compressed_to_big_int().to_hex(),
@@ -947,14 +906,8 @@ mod tests {
     fn test_ec_point_zero_point_add() {
         let zero = Secp256r1Scalar::zero();
         let generator: Secp256r1Point = Secp256r1Point::generator();
-        println!("test_ec_point_zero_point_add #1");
         let point_at_infinity = generator.scalar_mul(&zero.get_element());
-        println!("test_ec_point_zero_point_add #2, point_at_infinity = {}", point_at_infinity.bytes_compressed_to_big_int().to_hex());
         let actual = point_at_infinity.add_point(&generator.get_element());
-        println!("actual:");
-        for x in actual.get_element().serialize_uncompressed().iter() {
-            print!("{:02x} ", x);
-        }
 
         assert_eq!(
             actual.bytes_compressed_to_big_int().to_hex(),
@@ -964,7 +917,6 @@ mod tests {
 
     #[test]
     fn test_ec_point_sub_point() {
-        println!("#1");
         let x1_bi = BigInt::from_hex("7CF27B188D034F7E8A52380304B51AC3C08969E277F21B35A60B48FC47669978");
         let y1_bi = BigInt::from_hex("07775510DB8ED040293D9AC69F7430DBBA7DADE63CE982299E04B79D227873D1");
 
@@ -974,18 +926,10 @@ mod tests {
         let x3_bi = BigInt::from_hex("6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296");
         let y3_bi = BigInt::from_hex("4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5");
 
-        println!("#2");
         let point1: Secp256r1Point = Secp256r1Point::from_coor(&x1_bi, &y1_bi);
-        println!("#3");
         let point2: Secp256r1Point = Secp256r1Point::from_coor(&x2_bi, &y2_bi);
-        println!("#4");
         let expected: Secp256r1Point = Secp256r1Point::from_coor(&x3_bi, &y3_bi);
-        println!("#5");
         let actual = point1.sub_point(&point2.get_element());
-        println!("actual:");
-        for x in actual.get_element().serialize_uncompressed().iter() {
-            print!("{:02x} ", x);
-        }
 
         assert_eq!(
             actual.bytes_compressed_to_big_int().to_hex(),
@@ -996,7 +940,6 @@ mod tests {
     fn test_base_point2() {
         let g: Secp256r1Point = ECPoint::generator();
         let x = g.x_coor().unwrap().to_hex();
-        println!("x = {}", x);
 //        let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
 //        BigInt::from(g.x_coor())
 
