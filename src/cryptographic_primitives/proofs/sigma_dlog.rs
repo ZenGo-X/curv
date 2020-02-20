@@ -40,21 +40,33 @@ pub trait ProveDLog {
 
 impl ProveDLog for DLogProof {
     fn prove(sk: &FE) -> DLogProof {
+        println!("ProveDLog::prove #1");
         let base_point: GE = ECPoint::generator();
+        println!("ProveDLog::prove #2");
         let generator_x = base_point.bytes_compressed_to_big_int();
+        println!("ProveDLog::prove #3");
         let mut sk_t_rand_commitment: FE = ECScalar::new_random();
+        println!("ProveDLog::prove #4");
         let pk_t_rand_commitment = base_point.scalar_mul(&sk_t_rand_commitment.get_element());
+        println!("ProveDLog::prove #5");
         let ec_point: GE = ECPoint::generator();
+        println!("ProveDLog::prove #6");
         let pk = ec_point.scalar_mul(&sk.get_element());
+        println!("ProveDLog::prove #7");
         let challenge = HSha256::create_hash(&[
             &pk_t_rand_commitment.bytes_compressed_to_big_int(),
             &generator_x,
             &pk.bytes_compressed_to_big_int(),
         ]);
+        println!("ProveDLog::prove #8");
         let challenge_fe: FE = ECScalar::from(&challenge);
+        println!("ProveDLog::prove #9");
         let challenge_mul_sk = challenge_fe.mul(&sk.get_element());
+        println!("ProveDLog::prove #10");
         let challenge_response = sk_t_rand_commitment.sub(&challenge_mul_sk.get_element());
+        println!("ProveDLog::prove #11");
         sk_t_rand_commitment.zeroize();
+        println!("ProveDLog::prove #12");
         DLogProof {
             pk,
             pk_t_rand_commitment,
@@ -95,9 +107,13 @@ mod tests {
 
     #[test]
     fn test_dlog_proof() {
+        println!("test_dlog_proof #1");
         let witness: FE = ECScalar::new_random();
+        println!("test_dlog_proof #2");
         let dlog_proof = DLogProof::prove(&witness);
+        println!("test_dlog_proof #3");
         let verified = DLogProof::verify(&dlog_proof);
+        println!("test_dlog_proof #4");
         match verified {
             Ok(_t) => assert!(true),
             Err(_e) => assert!(false),
