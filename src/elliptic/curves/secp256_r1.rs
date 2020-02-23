@@ -531,7 +531,9 @@ impl ECPoint<PublicKey, Seed> for Secp256r1Point {
     }
 
     fn pk_to_key_slice(&self) -> Vec<u8> {
-        self.get_element().serialize_uncompressed().to_vec()
+        self.get_element()
+            .serialize_uncompressed()[..UNCOMPRESSED_PUBLIC_KEY_SIZE]
+            .to_vec()
     }
 
     fn scalar_mul(&self, fe: &Seed) -> Self {
@@ -820,6 +822,7 @@ mod tests {
         let point: Secp256r1Point =
             Secp256r1Point::from_coor(&x_bi, &y_bi);
 
+        assert_eq!(point.pk_to_key_slice().len(), UNCOMPRESSED_PUBLIC_KEY_SIZE); // uncompressed
         for i in 0..UNCOMPRESSED_PUBLIC_KEY_SIZE {
             assert_eq!(
                 point.pk_to_key_slice()[i],
