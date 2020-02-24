@@ -1,7 +1,5 @@
 use crate::arithmetic::traits::{Converter, Modulo};
 use crate::{BigInt, ErrorKey};
-use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
-use crate::cryptographic_primitives::hashing::traits::Hash;
 use crate::elliptic::curves::traits::{ECScalar, ECPoint};
 
 use serde::de;
@@ -595,11 +593,7 @@ mod tests {
         Secp256r1Scalar,
         Secp256r1Point,
         Converter,
-        CURVE_ORDER,
-        PUBLIC_KEY_SIZE,
         UNCOMPRESSED_PUBLIC_KEY_SIZE,
-        HSha256,
-        Hash
     };
     use serde_json;
     use std::fs::File;
@@ -630,7 +624,7 @@ mod tests {
     #[test]
     fn test_ec_scalar_new_random() {
         // just checking doesn't crash
-        let scalar = Secp256r1Scalar::new_random();
+        let _scalar = Secp256r1Scalar::new_random();
     }
 
     #[test]
@@ -692,7 +686,7 @@ mod tests {
             if line == "" {
                 continue;
             }
-            let k = line.split_off("k = ".len());
+            let _k = line.split_off("k = ".len());
 
             let mut line = lines_iter.next().unwrap().unwrap();
             let x = line.split_off("x = ".len());
@@ -747,7 +741,7 @@ mod tests {
     fn test_ec_point_from_not_on_curve() {
         let x_bi = BigInt::from_hex("6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296");
         let y_bi = BigInt::from_hex("4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F6");
-        let point: Secp256r1Point =
+        let _point: Secp256r1Point =
             Secp256r1Point::from_coor(&x_bi, &y_bi);
     }
 
@@ -763,7 +757,7 @@ mod tests {
             if line == "" {
                 continue;
             }
-            let k = line.split_off("k = ".len());
+            let _k = line.split_off("k = ".len());
 
             let mut line = lines_iter.next().unwrap().unwrap();
             let x = line.split_off("x = ".len());
@@ -804,7 +798,7 @@ mod tests {
             if line == "" {
                 continue;
             }
-            let k = line.split_off("k = ".len());
+            let _k = line.split_off("k = ".len());
 
             let mut line = lines_iter.next().unwrap().unwrap();
             let x = line.split_off("x = ".len());
@@ -938,16 +932,5 @@ mod tests {
             actual.bytes_compressed_to_big_int().to_hex(),
             expected.bytes_compressed_to_big_int().to_hex(),
         );
-    }
-
-    fn test_base_point2() {
-        let g: Secp256r1Point = ECPoint::generator();
-        let x = g.x_coor().unwrap().to_hex();
-//        let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
-//        BigInt::from(g.x_coor())
-
-//        let hash = HSha256::create_hash(&[&hash]);
-//        let hash = HSha256::create_hash(&[&hash]);
-//        let mut hash_vec = BigInt::to_vec(&hash);
     }
 }
