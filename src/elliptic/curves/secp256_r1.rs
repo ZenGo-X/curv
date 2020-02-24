@@ -20,7 +20,6 @@ use ring::signature::{
     }
 };
 use zeroize::Zeroize;
-use std::ptr::null;
 
 /// The size (in bytes) of a message
 pub const MESSAGE_SIZE: usize = 32;
