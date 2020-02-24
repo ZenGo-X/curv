@@ -20,6 +20,7 @@ use ring::signature::{
     }
 };
 use zeroize::Zeroize;
+use std::ptr::null;
 
 /// The size (in bytes) of a message
 pub const MESSAGE_SIZE: usize = 32;
@@ -43,7 +44,6 @@ pub const FIELD_MODULO: [u8; 32] = [
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 ];
 
-/// The order of the P-256 curve
 pub const CURVE_ORDER: [u8; 32] = [
     0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00,
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -71,7 +71,6 @@ pub const CURVE_B: [u8; 32] = [
     0x3B, 0xCE, 0x3C, 0x3E, 0x27, 0xD2, 0x60, 0x4B,
 ];
 
-/// The X coordinate of the generator
 pub const GENERATOR_X: [u8; 32] = [
     0x6B, 0x17, 0xD1, 0xF2, 0xE1, 0x2C, 0x42, 0x47,
     0xF8, 0xBC, 0xE6, 0xE5, 0x63, 0xA4, 0x40, 0xF2,
@@ -79,12 +78,28 @@ pub const GENERATOR_X: [u8; 32] = [
     0xF4, 0xA1, 0x39, 0x45, 0xD8, 0x98, 0xC2, 0x96,
 ];
 
-/// The Y coordinate of the generator
 pub const GENERATOR_Y: [u8; 32] = [
     0x4f, 0xe3, 0x42, 0xe2, 0xfe, 0x1a, 0x7f, 0x9b,
     0x8e, 0xe7, 0xeb, 0x4a, 0x7c, 0x0f, 0x9e, 0x16,
     0x2b, 0xce, 0x33, 0x57, 0x6b, 0x31, 0x5e, 0xce,
     0xcb, 0xb6, 0x40, 0x68, 0x37, 0xbf, 0x51, 0xf5,
+];
+
+/* X coordinate of a base point of unknown discrete logarithm.
+   Computed using a deterministic algorithm with a (supposedly) random input seed.
+   See test_ec_point_base_point2 */
+pub const BASE_POINT2_X: [u8; 32] = [
+    0x70, 0xf7, 0x2b, 0xba, 0xc4, 0x0e, 0x8a, 0x59,
+    0x4c, 0x91, 0xa7, 0xba, 0xc3, 0x76, 0x59, 0x27,
+    0x89, 0x10, 0x76, 0x4c, 0xd7, 0xc2, 0x0a, 0x7d,
+    0x65, 0xa5, 0x9a, 0x04, 0xb0, 0xac, 0x2a, 0xde,
+];
+
+pub const BASE_POINT2_Y: [u8; 32] = [
+    0xcf, 0x1d, 0x01, 0x4b, 0x72, 0x7d, 0xb1, 0xf2,
+    0x5d, 0x6a, 0xd0, 0xd5, 0xb7, 0xa4, 0x43, 0x22,
+    0xb3, 0x8d, 0x75, 0x8c, 0x0b, 0x05, 0x38, 0x23,
+    0xf2, 0x36, 0x6f, 0x72, 0x65, 0x72, 0x3e, 0x5b,
 ];
 
 #[derive(Clone, Debug, Copy)]
@@ -113,22 +128,10 @@ impl Secp256r1Point {
         }
     }
 
-    // TODO replace! this is insecure
     pub fn base_point2() -> Secp256r1Point {
-//        let g: Secp256r1Point = ECPoint::generator();
-//        let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
-//        let hash = HSha256::create_hash(&[&hash]);
-//        let hash = HSha256::create_hash(&[&hash]);
-//        let mut hash_vec = BigInt::to_vec(&hash);
-//        let mut template: Vec<u8> = vec![2];
-//        template.append(&mut hash_vec);
-//        Secp256r1Point {
-//            purpose: "random",
-//            ge: PK::from_slice(&template).unwrap(),
-//        }
         Secp256r1Point::from_coor(
-            &BigInt::from_hex("7CF27B188D034F7E8A52380304B51AC3C08969E277F21B35A60B48FC47669978"),
-            &BigInt::from_hex("07775510DB8ED040293D9AC69F7430DBBA7DADE63CE982299E04B79D227873D1"),
+            &BigInt::from(BASE_POINT2_X.as_ref()),
+            &BigInt::from(BASE_POINT2_Y.as_ref()),
         )
     }
 
@@ -467,10 +470,10 @@ impl Zeroize for Secp256r1Point {
 
 impl ECPoint<PublicKey, Seed> for Secp256r1Point {
     fn generator() -> Secp256r1Point {
-        let mut bytes = vec![];
-        bytes.extend_from_slice(GENERATOR_X.as_ref());
-        bytes.extend_from_slice(GENERATOR_Y.as_ref());
-        Self::from_bytes(bytes.as_ref()).unwrap()
+        Secp256r1Point::from_coor(
+            &BigInt::from(GENERATOR_X.as_ref()),
+            &BigInt::from(GENERATOR_Y.as_ref()),
+        )
     }
 
     fn get_element(&self) -> PublicKey {
@@ -599,6 +602,8 @@ mod tests {
     use std::fs::File;
     use std::io::{BufRead, BufReader};
     use hex;
+    use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
+    use crate::cryptographic_primitives::hashing::traits::Hash;
 
     #[test]
     fn test_ec_scalar_from_bigint() {
@@ -931,6 +936,23 @@ mod tests {
         assert_eq!(
             actual.bytes_compressed_to_big_int().to_hex(),
             expected.bytes_compressed_to_big_int().to_hex(),
+        );
+    }
+
+    #[test]
+    fn test_ec_point_base_point2() {
+        /* show that base_point2() is returning a point which was computed using a deterministic
+           algorithm with a (supposedly) random input (the generator's compressed representation) */
+
+        let base_point2 = Secp256r1Point::base_point2();
+
+        let g = Secp256r1Point::generator();
+        let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
+        let hash = HSha256::create_hash(&[&hash]);
+
+        assert_eq!(
+            hash,
+            base_point2.x_coor().unwrap(),
         );
     }
 }
