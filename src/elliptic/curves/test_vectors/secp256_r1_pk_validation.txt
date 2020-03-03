@@ -1,0 +1,34 @@
+# Taken from NIST Cryptographic Algorithm Validadtion Program test vectors:
+# https://csrc.nist.gov/Projects/cryptographic-algorithm-validation-program/Digital-Signatures#ecdsa2vs
+
+x = d17c446237d9df87266ba3a91ff27f45abfdcb77bfd83536e92903efb861a9a9
+y = 1eabb6a349ce2cd447d777b6739c5fc066add2002d2029052c408d0701066231c
+Result = F (1 - Q_x or Q_y out of range)
+
+x = 17875397ae87369365656d490e8ce956911bd97607f2aff41b56f6f3a61989826
+y = 980a3c4f61b9692633fbba5ef04c9cb546dd05cdec9fa8428b8849670e2fba92
+Result = F (1 - Q_x or Q_y out of range)
+
+x = f2d1c0dc0852c3d8a2a2500a23a44813ccce1ac4e58444175b440469ffc12273
+y = 32bfe992831b305d8c37b9672df5d29fcb5c29b4a40534683e3ace23d24647dd
+Result = F (2 - Point not on curve)
+
+x = 10b0ca230fff7c04768f4b3d5c75fa9f6c539bea644dffbec5dc796a213061b58
+y = f5edf37c11052b75f771b7f9fa050e353e464221fec916684ed45b6fead38205
+Result = F (1 - Q_x or Q_y out of range)
+
+x = a40d077a87dae157d93dcccf3fe3aca9c6479a75aa2669509d2ef05c7de6782f
+y = 503d86b87d743ba20804fd7e7884aa017414a7b5b5963e0d46e3a9611419ddf3
+Result = F (2 - Point not on curve)
+
+x = 14bf57f76c260b51ec6bbc72dbd49f02a56eaed070b774dc4bad75a54653c3d56
+y = 7a231a23bf8b3aa31d9600d888a0678677a30e573decd3dc56b33f365cc11236
+Result = F (1 - Q_x or Q_y out of range)
+
+x = f8c6dd3181a76aa0e36c2790bba47041acbe7b1e473ff71eee39a824dc595ff0
+y = 9c965f227f281b3072b95b8daf29e88b35284f3574462e268e529bbdc50e9e52
+Result = F (2 - Point not on curve)
+
+x = 7a81a7e0b015252928d8b36e4ca37e92fdc328eb25c774b4f872693028c4be38
+y = 08862f7335147261e7b1c3d055f9a316e4cab7daf99cc09d1c647f5dd6e7d5bb
+Result = F (2 - Point not on curve)
