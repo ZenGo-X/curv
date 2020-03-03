@@ -600,9 +600,13 @@ mod tests {
     use serde_json;
     use std::fs::File;
     use std::io::{BufRead, BufReader};
+    use std::panic;
     use hex;
     use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
     use crate::cryptographic_primitives::hashing::traits::Hash;
+
+    const KEY_PAIRS_FILE: &str = "src/elliptic/curves/test_vectors/secp256_r1.txt";
+    const PUBLIC_KEY_VALIDATION_FILE: &str = "src/elliptic/curves/test_vectors/secp256_r1_pk_validation.txt";
 
     #[test]
     fn test_ec_scalar_from_bigint() {
@@ -680,14 +684,14 @@ mod tests {
 
     #[test]
     fn test_ec_point_from_bytes() {
-        let filename = "src/elliptic/curves/test_vectors/secp256_r1.txt";
+        let filename = KEY_PAIRS_FILE;
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
 
         let mut lines_iter = reader.lines().into_iter();
         while let Some(line_res) = lines_iter.next() {
-            let mut line = line_res.unwrap(); // Ignore errors.
-            if line == "" {
+            let mut line = line_res.unwrap();
+            if should_ignore_line(&line) {
                 continue;
             }
             let _k = line.split_off("k = ".len());
@@ -741,24 +745,48 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn test_ec_point_from_not_on_curve() {
-        let x_bi = BigInt::from_hex("6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296");
-        let y_bi = BigInt::from_hex("4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F6");
-        let _point: Secp256r1Point =
-            Secp256r1Point::from_coor(&x_bi, &y_bi);
-    }
-
-    #[test]
-    fn test_ec_point_get_element() {
-        let filename = "src/elliptic/curves/test_vectors/secp256_r1.txt";
+        let filename = PUBLIC_KEY_VALIDATION_FILE;
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
 
         let mut lines_iter = reader.lines().into_iter();
         while let Some(line_res) = lines_iter.next() {
             let mut line = line_res.unwrap(); // Ignore errors.
-            if line == "" {
+            if should_ignore_line(&line) {
+                continue;
+            }
+            let x = line.split_off("x = ".len());
+
+            let mut line = lines_iter.next().unwrap().unwrap();
+            let y = line.split_off("y = ".len());
+
+            let mut line = lines_iter.next().unwrap().unwrap();
+            let _result = line.split_off("Result = ".len());
+
+            test_ec_point_from_not_on_curve_internal(&x, &y);
+        }
+    }
+
+    fn test_ec_point_from_not_on_curve_internal(x: &str, y: &str) {
+        let x_bi = BigInt::from_hex(x);
+        let y_bi = BigInt::from_hex(y);
+        let result = panic::catch_unwind(|| {
+            Secp256r1Point::from_coor(&x_bi, &y_bi);
+        });
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_ec_point_get_element() {
+        let filename = KEY_PAIRS_FILE;
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+
+        let mut lines_iter = reader.lines().into_iter();
+        while let Some(line_res) = lines_iter.next() {
+            let mut line = line_res.unwrap(); // Ignore errors.
+            if should_ignore_line(&line) {
                 continue;
             }
             let _k = line.split_off("k = ".len());
@@ -792,14 +820,14 @@ mod tests {
 
     #[test]
     fn test_ec_point_pk_to_key_slice() {
-        let filename = "src/elliptic/curves/test_vectors/secp256_r1.txt";  // TODO: pull to constant
+        let filename = KEY_PAIRS_FILE;
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
 
         let mut lines_iter = reader.lines().into_iter();
         while let Some(line_res) = lines_iter.next() {
             let mut line = line_res.unwrap(); // Ignore errors.
-            if line == "" {
+            if should_ignore_line(&line) {
                 continue;
             }
             let _k = line.split_off("k = ".len());
@@ -831,14 +859,14 @@ mod tests {
 
     #[test]
     fn test_ec_point_scalar_mul() {
-        let filename = "src/elliptic/curves/test_vectors/secp256_r1.txt";  // TODO: pull to constant
+        let filename = KEY_PAIRS_FILE;
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
 
         let mut lines_iter = reader.lines().into_iter();
         while let Some(line_res) = lines_iter.next() {
             let mut line = line_res.unwrap(); // Ignore errors.
-            if line == "" {
+            if should_ignore_line(&line) {
                 continue;
             }
             let k = line.split_off("k = ".len());
@@ -962,5 +990,9 @@ mod tests {
             ),
             base_point2
         );
+    }
+
+    fn should_ignore_line(line: &str) -> bool {
+        line == "" || (line.len() > 0 && &line[0..1] == "#")
     }
 }
