@@ -98,7 +98,8 @@ impl ECScalar<SK> for JubjubScalar {
     }
 
     fn from(n: &BigInt) -> JubjubScalar {
-        let mut v = BigInt::to_vec(&n);
+        let n_mod = BigInt::modulus(n, &FE::q());
+        let mut v = BigInt::to_vec(&n_mod);
         let mut bytes_array: [u8; SECRET_KEY_SIZE];
         if v.len() < SECRET_KEY_SIZE {
             let mut template = vec![0; SECRET_KEY_SIZE - v.len()];
@@ -689,4 +690,5 @@ mod tests {
         let s_b: FE = ECScalar::from(&s_bn);
         assert_eq!(s_a, s_b);
     }
+ 
 }
