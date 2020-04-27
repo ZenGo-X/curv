@@ -46,6 +46,19 @@ use crypto::sha3::Sha3;
 #[cfg(feature = "merkle")]
 use merkle::Hashable;
 
+/* X coordinate of a point of unknown discrete logarithm.
+Computed using a deterministic algorithm with the generator as input.
+See test_base_point2 */
+const BASE_POINT2_X: [u8; 32] = [
+    0x08, 0xd1, 0x32, 0x21, 0xe3, 0xa7, 0x32, 0x6a, 0x34, 0xdd, 0x45, 0x21, 0x4b, 0xa8, 0x01, 0x16,
+    0xdd, 0x14, 0x2e, 0x4b, 0x5f, 0xf3, 0xce, 0x66, 0xa8, 0xdc, 0x7b, 0xfa, 0x03, 0x78, 0xb7, 0x95,
+];
+
+const BASE_POINT2_Y: [u8; 32] = [
+    0x5d, 0x41, 0xac, 0x14, 0x77, 0x61, 0x4b, 0x5c, 0x08, 0x48, 0xd5, 0x0d, 0xbd, 0x56, 0x5e, 0xa2,
+    0x80, 0x7b, 0xcb, 0xa1, 0xdf, 0x0d, 0xf0, 0x7a, 0x82, 0x17, 0xe9, 0xf7, 0xf7, 0xc2, 0xbe, 0x88,
+];
+
 pub type SK = SecretKey;
 pub type PK = PublicKey;
 
@@ -72,23 +85,14 @@ impl Secp256k1Point {
             ge: pk.get_element(),
         }
     }
-    // To generate a random base point we take the hash of the curve generator.
-    // This hash creates a random string which do not encode a valid (x,y) curve point.
-    // Therefore we continue to hash the result until the first valid point comes out.
-    // This function is a result of a manual testing to find
-    // this minimal number of hashes and therefore it is written like this.
-    // the prefix "2" is to complete for the right parity of the point
+
     pub fn base_point2() -> Secp256k1Point {
-        let g: Secp256k1Point = ECPoint::generator();
-        let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
-        let hash = HSha256::create_hash(&[&hash]);
-        let hash = HSha256::create_hash(&[&hash]);
-        let mut hash_vec = BigInt::to_vec(&hash);
-        let mut template: Vec<u8> = vec![2];
-        template.append(&mut hash_vec);
+        let mut v = vec![4 as u8];
+        v.extend(BASE_POINT2_X.as_ref());
+        v.extend(BASE_POINT2_Y.as_ref());
         Secp256k1Point {
             purpose: "random",
-            ge: PK::from_slice(&template).unwrap(),
+            ge: PK::from_slice(&v).unwrap(),
         }
     }
 }
@@ -804,5 +808,30 @@ mod tests {
             let rg_prime: GE = ECPoint::from_bytes(&key_slice[1..65]).unwrap();
             assert_eq!(rg_prime.get_element(), rg.get_element());
         }
+    }
+
+    #[test]
+    fn test_base_point2() {
+        /* Show that base_point2() is returning a point of unknown discrete logarithm.
+        It is done by using SHA256 repeatedly as a pseudo-random function, with the generator
+        as the initial input, until receiving a valid Secp256k1 point. */
+
+        let base_point2 = Secp256k1Point::base_point2();
+
+        let g = Secp256k1Point::generator();
+        let mut hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
+        hash = HSha256::create_hash(&[&hash]);
+        hash = HSha256::create_hash(&[&hash]);
+
+        assert_eq!(hash, base_point2.x_coor().unwrap(),);
+
+        // check that base_point2 is indeed on the curve (from_coor() will fail otherwise)
+        assert_eq!(
+            Secp256k1Point::from_coor(
+                &base_point2.x_coor().unwrap(),
+                &base_point2.y_coor().unwrap()
+            ),
+            base_point2
+        );
     }
 }
