@@ -115,14 +115,20 @@ mod tests {
         println!("secret_party_1 = {:?}", secret_party_1);
         let (kg_party_one_first_message, kg_ec_key_pair_party1) =
             Party1FirstMessage::first_with_fixed_secret_share(secret_party_1);
-        println!("kg_party_one_first_message = {:?}", kg_party_one_first_message);
+        println!(
+            "kg_party_one_first_message = {:?}",
+            kg_party_one_first_message
+        );
         println!("kg_ec_key_pair_party1 = {:?}", kg_ec_key_pair_party1);
         let secret_party_2: FE = ECScalar::from(&BigInt::from(2));
         println!("secret_party_2 = {:?}", secret_party_2);
 
         let (kg_party_two_first_message, kg_ec_key_pair_party2) =
             Party2FirstMessage::first_with_fixed_secret_share(secret_party_2);
-        println!("kg_party_two_first_message = {:?}", kg_party_two_first_message);
+        println!(
+            "kg_party_two_first_message = {:?}",
+            kg_party_two_first_message
+        );
         println!("kg_ec_key_pair_party2 = {:?}", kg_ec_key_pair_party2);
 
         assert_eq!(

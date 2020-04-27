@@ -1,7 +1,16 @@
 use crate::arithmetic::traits::{Converter, Modulo};
+use crate::elliptic::curves::traits::{ECPoint, ECScalar};
 use crate::{BigInt, ErrorKey};
-use crate::elliptic::curves::traits::{ECScalar, ECPoint};
 
+use rand::{thread_rng, Rng};
+use ring::signature::{
+    cpu,
+    ec::{
+        suite_b::{curve::P256, ops::*},
+        PublicKey, Seed,
+    },
+    untrusted,
+};
 use serde::de;
 use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeStruct;
@@ -11,14 +20,6 @@ use std::fmt;
 use std::ops::{Add, Mul};
 use std::ptr;
 use std::sync::atomic;
-use rand::{thread_rng, Rng};
-use ring::signature::{
-    cpu,
-    untrusted,
-    ec::{
-        suite_b::{ops::*, curve::P256}, Seed, PublicKey
-    }
-};
 use zeroize::Zeroize;
 
 /// The size (in bytes) of a message
@@ -37,68 +38,51 @@ pub const PUBLIC_KEY_SIZE: usize = 33;
 pub const UNCOMPRESSED_PUBLIC_KEY_SIZE: usize = 65;
 
 pub const FIELD_MODULO: [u8; 32] = [
-    0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x01,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF,
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+    0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 ];
 
 pub const CURVE_ORDER: [u8; 32] = [
-    0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00,
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-    0xBC, 0xE6, 0xFA, 0xAD, 0xA7, 0x17, 0x9E, 0x84,
-    0xF3, 0xB9, 0xCA, 0xC2, 0xFC, 0x63, 0x25, 0x51,
+    0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+    0xBC, 0xE6, 0xFA, 0xAD, 0xA7, 0x17, 0x9E, 0x84, 0xF3, 0xB9, 0xCA, 0xC2, 0xFC, 0x63, 0x25, 0x51,
 ];
 
 pub const SEED: [u8; 20] = [
-    0xC4, 0x9D, 0x36, 0x08, 0x86, 0xE7, 0x04, 0x93,
-    0x6A, 0x66, 0x78, 0xE1, 0x13, 0x9D, 0x26, 0xB7,
+    0xC4, 0x9D, 0x36, 0x08, 0x86, 0xE7, 0x04, 0x93, 0x6A, 0x66, 0x78, 0xE1, 0x13, 0x9D, 0x26, 0xB7,
     0x81, 0x9F, 0x7E, 0x90,
 ];
 
 pub const CURVE_A: [u8; 32] = [
-    0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x01,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF,
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFC,
+    0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFC,
 ];
 
 pub const CURVE_B: [u8; 32] = [
-    0x5A, 0xC6, 0x35, 0xD8, 0xAA, 0x3A, 0x93, 0xE7,
-    0xB3, 0xEB, 0xBD, 0x55, 0x76, 0x98, 0x86, 0xBC,
-    0x65, 0x1D, 0x06, 0xB0, 0xCC, 0x53, 0xB0, 0xF6,
-    0x3B, 0xCE, 0x3C, 0x3E, 0x27, 0xD2, 0x60, 0x4B,
+    0x5A, 0xC6, 0x35, 0xD8, 0xAA, 0x3A, 0x93, 0xE7, 0xB3, 0xEB, 0xBD, 0x55, 0x76, 0x98, 0x86, 0xBC,
+    0x65, 0x1D, 0x06, 0xB0, 0xCC, 0x53, 0xB0, 0xF6, 0x3B, 0xCE, 0x3C, 0x3E, 0x27, 0xD2, 0x60, 0x4B,
 ];
 
 pub const GENERATOR_X: [u8; 32] = [
-    0x6B, 0x17, 0xD1, 0xF2, 0xE1, 0x2C, 0x42, 0x47,
-    0xF8, 0xBC, 0xE6, 0xE5, 0x63, 0xA4, 0x40, 0xF2,
-    0x77, 0x03, 0x7D, 0x81, 0x2D, 0xEB, 0x33, 0xA0,
-    0xF4, 0xA1, 0x39, 0x45, 0xD8, 0x98, 0xC2, 0x96,
+    0x6B, 0x17, 0xD1, 0xF2, 0xE1, 0x2C, 0x42, 0x47, 0xF8, 0xBC, 0xE6, 0xE5, 0x63, 0xA4, 0x40, 0xF2,
+    0x77, 0x03, 0x7D, 0x81, 0x2D, 0xEB, 0x33, 0xA0, 0xF4, 0xA1, 0x39, 0x45, 0xD8, 0x98, 0xC2, 0x96,
 ];
 
 pub const GENERATOR_Y: [u8; 32] = [
-    0x4f, 0xe3, 0x42, 0xe2, 0xfe, 0x1a, 0x7f, 0x9b,
-    0x8e, 0xe7, 0xeb, 0x4a, 0x7c, 0x0f, 0x9e, 0x16,
-    0x2b, 0xce, 0x33, 0x57, 0x6b, 0x31, 0x5e, 0xce,
-    0xcb, 0xb6, 0x40, 0x68, 0x37, 0xbf, 0x51, 0xf5,
+    0x4f, 0xe3, 0x42, 0xe2, 0xfe, 0x1a, 0x7f, 0x9b, 0x8e, 0xe7, 0xeb, 0x4a, 0x7c, 0x0f, 0x9e, 0x16,
+    0x2b, 0xce, 0x33, 0x57, 0x6b, 0x31, 0x5e, 0xce, 0xcb, 0xb6, 0x40, 0x68, 0x37, 0xbf, 0x51, 0xf5,
 ];
 
 /* X coordinate of a base point of unknown discrete logarithm.
-   Computed using a deterministic algorithm with a (supposedly) random input seed.
-   See test_ec_point_base_point2 */
+Computed using a deterministic algorithm with a (supposedly) random input seed.
+See test_ec_point_base_point2 */
 pub const BASE_POINT2_X: [u8; 32] = [
-    0x70, 0xf7, 0x2b, 0xba, 0xc4, 0x0e, 0x8a, 0x59,
-    0x4c, 0x91, 0xa7, 0xba, 0xc3, 0x76, 0x59, 0x27,
-    0x89, 0x10, 0x76, 0x4c, 0xd7, 0xc2, 0x0a, 0x7d,
-    0x65, 0xa5, 0x9a, 0x04, 0xb0, 0xac, 0x2a, 0xde,
+    0x70, 0xf7, 0x2b, 0xba, 0xc4, 0x0e, 0x8a, 0x59, 0x4c, 0x91, 0xa7, 0xba, 0xc3, 0x76, 0x59, 0x27,
+    0x89, 0x10, 0x76, 0x4c, 0xd7, 0xc2, 0x0a, 0x7d, 0x65, 0xa5, 0x9a, 0x04, 0xb0, 0xac, 0x2a, 0xde,
 ];
 
 pub const BASE_POINT2_Y: [u8; 32] = [
-    0x30, 0xe2, 0xfe, 0xb3, 0x8d, 0x82, 0x4e, 0x0e,
-    0xa2, 0x95, 0x2f, 0x2a, 0x48, 0x5b, 0xbc, 0xdd,
-    0x4c, 0x72, 0x8a, 0x74, 0xf4, 0xfa, 0xc7, 0xdc,
-    0x0d, 0xc9, 0x90, 0x8d, 0x9a, 0x8d, 0xc1, 0xa4,
+    0x30, 0xe2, 0xfe, 0xb3, 0x8d, 0x82, 0x4e, 0x0e, 0xa2, 0x95, 0x2f, 0x2a, 0x48, 0x5b, 0xbc, 0xdd,
+    0x4c, 0x72, 0x8a, 0x74, 0xf4, 0xfa, 0xc7, 0xdc, 0x0d, 0xc9, 0x90, 0x8d, 0x9a, 0x8d, 0xc1, 0xa4,
 ];
 
 #[derive(Clone, Debug, Copy)]
@@ -134,7 +118,7 @@ impl Secp256r1Point {
         )
     }
 
-    fn to_negative(&self) -> Result<Self, ErrorKey>  {
+    fn to_negative(&self) -> Result<Self, ErrorKey> {
         let order = BigInt::from(&FIELD_MODULO[..]);
         let x = self.x_coor().unwrap();
         let y = self.y_coor().unwrap();
@@ -174,8 +158,9 @@ impl ECScalar<Seed> for Secp256r1Scalar {
             fe: Seed::from_bytes(
                 &P256,
                 untrusted::Input::from(&arr.to_vec()),
-                cpu::features()  // TODO: remove cpu to be encapsulated on the seed
-            ).unwrap()  // TODO: handle unwrap
+                cpu::features(), // TODO: remove cpu to be encapsulated on the seed
+            )
+            .unwrap(), // TODO: handle unwrap
         }
     }
 
@@ -207,11 +192,7 @@ impl ECScalar<Seed> for Secp256r1Scalar {
 
         Secp256r1Scalar {
             purpose: "from_big_int",
-            fe: Seed::from_bytes(
-                &P256,
-                untrusted::Input::from(&v),
-                cpu::features()
-            ).unwrap()
+            fe: Seed::from_bytes(&P256, untrusted::Input::from(&v), cpu::features()).unwrap(),
         }
     }
 
@@ -304,8 +285,8 @@ impl<'o> Add<&'o Secp256r1Scalar> for Secp256r1Scalar {
 
 impl Serialize for Secp256r1Scalar {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         serializer.serialize_str(&self.to_big_int().to_hex())
     }
@@ -313,8 +294,8 @@ impl Serialize for Secp256r1Scalar {
 
 impl<'de> Deserialize<'de> for Secp256r1Scalar {
     fn deserialize<D>(deserializer: D) -> Result<Secp256r1Scalar, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         deserializer.deserialize_str(Secp256r1ScalarVisitor)
     }
@@ -379,8 +360,8 @@ impl<'o> Add<&'o Secp256r1Point> for &'o Secp256r1Point {
 
 impl Serialize for Secp256r1Point {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let mut state = serializer.serialize_struct("Secp256r1Point", 2)?;
         state.serialize_field("x", &self.x_coor().unwrap().to_hex())?;
@@ -391,8 +372,8 @@ impl Serialize for Secp256r1Point {
 
 impl<'de> Deserialize<'de> for Secp256r1Point {
     fn deserialize<D>(deserializer: D) -> Result<Secp256r1Point, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         let fields = &["x", "y"];
         deserializer.deserialize_struct("Secp256r1Point", fields, Secp256r1PointVisitor)
@@ -409,8 +390,8 @@ impl<'de> Visitor<'de> for Secp256r1PointVisitor {
     }
 
     fn visit_seq<V>(self, mut seq: V) -> Result<Secp256r1Point, V::Error>
-        where
-            V: SeqAccess<'de>,
+    where
+        V: SeqAccess<'de>,
     {
         let x = seq
             .next_element()?
@@ -509,35 +490,30 @@ impl ECPoint<PublicKey, Seed> for Secp256r1Point {
         match bytes.len() {
             33..=64 => {
                 // pad with 04 and then 00 bytes
-                let mut bytes_uncompressed_vec = vec![0; UNCOMPRESSED_PUBLIC_KEY_SIZE - bytes.len()];
+                let mut bytes_uncompressed_vec =
+                    vec![0; UNCOMPRESSED_PUBLIC_KEY_SIZE - bytes.len()];
                 bytes_uncompressed_vec[0] = 04;
                 bytes_uncompressed_vec.extend_from_slice(bytes);
 
-                match PublicKey::new(
-                    bytes_uncompressed_vec.as_slice(),
-                    &p256::PUBLIC_KEY_OPS,
-                ) {
+                match PublicKey::new(bytes_uncompressed_vec.as_slice(), &p256::PUBLIC_KEY_OPS) {
                     Err(_) => Err(ErrorKey::InvalidPublicKey),
                     Ok(public_key) => Ok(Secp256r1Point {
                         purpose: "random",
                         ge: public_key,
-                    })
+                    }),
                 }
-            },
-            _ => {
-                Err(ErrorKey::InvalidPublicKey)
             }
+            _ => Err(ErrorKey::InvalidPublicKey),
         }
     }
 
     fn pk_to_key_slice(&self) -> Vec<u8> {
-        self.get_element()
-            .serialize_uncompressed()[..UNCOMPRESSED_PUBLIC_KEY_SIZE]
-            .to_vec()
+        self.get_element().serialize_uncompressed()[..UNCOMPRESSED_PUBLIC_KEY_SIZE].to_vec()
     }
 
     fn scalar_mul(&self, fe: &Seed) -> Self {
-        let public_key = self.ge
+        let public_key = self
+            .ge
             .scalar_mul(fe, &p256::PRIVATE_KEY_OPS, &p256::PUBLIC_KEY_OPS)
             .unwrap();
 
@@ -589,24 +565,20 @@ impl ECPoint<PublicKey, Seed> for Secp256r1Point {
 #[cfg(test)]
 mod tests {
     use super::{
-        BigInt,
-        ECScalar,
-        ECPoint,
-        Secp256r1Scalar,
-        Secp256r1Point,
-        Converter,
+        BigInt, Converter, ECPoint, ECScalar, Secp256r1Point, Secp256r1Scalar,
         UNCOMPRESSED_PUBLIC_KEY_SIZE,
     };
+    use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
+    use crate::cryptographic_primitives::hashing::traits::Hash;
+    use hex;
     use serde_json;
     use std::fs::File;
     use std::io::{BufRead, BufReader};
     use std::panic;
-    use hex;
-    use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
-    use crate::cryptographic_primitives::hashing::traits::Hash;
 
     const KEY_PAIRS_FILE: &str = "src/elliptic/curves/test_vectors/secp256_r1.txt";
-    const PUBLIC_KEY_VALIDATION_FILE: &str = "src/elliptic/curves/test_vectors/secp256_r1_pk_validation.txt";
+    const PUBLIC_KEY_VALIDATION_FILE: &str =
+        "src/elliptic/curves/test_vectors/secp256_r1_pk_validation.txt";
 
     #[test]
     fn test_ec_scalar_from_bigint() {
@@ -619,7 +591,10 @@ mod tests {
     #[test]
     fn test_ec_scalar_q() {
         let q: BigInt = Secp256r1Scalar::q();
-        assert_eq!(q.to_hex(), "ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551")
+        assert_eq!(
+            q.to_hex(),
+            "ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551"
+        )
     }
 
     #[test]
@@ -709,18 +684,14 @@ mod tests {
     fn test_ec_point_from_bytes_internal(x_hex: &str, y_hex: &str) {
         let x_bi = BigInt::from_hex(x_hex);
         let y_bi = BigInt::from_hex(y_hex);
-        let point: Secp256r1Point =
-            Secp256r1Point::from_coor(&x_bi, &y_bi);
+        let point: Secp256r1Point = Secp256r1Point::from_coor(&x_bi, &y_bi);
         assert!(point.x_coor().is_some());
         assert_eq!(
             point.x_coor().unwrap().to_hex(),
-            x_bi.to_hex()  // because to_hex() returns unpadded
+            x_bi.to_hex() // because to_hex() returns unpadded
         );
         assert!(point.y_coor().is_some());
-        assert_eq!(
-            point.y_coor().unwrap().to_hex(),
-            y_bi.to_hex()
-        );
+        assert_eq!(point.y_coor().unwrap().to_hex(), y_bi.to_hex());
 
         let x_vec = hex::decode(x_hex).unwrap();
         let x_bytes = x_vec.as_slice();
@@ -729,19 +700,15 @@ mod tests {
         let mut bytes = vec![];
         bytes.extend_from_slice(x_bytes);
         bytes.extend_from_slice(y_bytes);
-        let point_res =
-            Secp256r1Point::from_bytes(bytes.as_slice());
+        let point_res = Secp256r1Point::from_bytes(bytes.as_slice());
         assert!(point_res.is_ok());
         let point = point_res.unwrap();
         assert_eq!(
             point.x_coor().unwrap().to_hex(),
-            x_bi.to_hex()  // because to_hex() returns unpadded
+            x_bi.to_hex() // because to_hex() returns unpadded
         );
         assert!(point.y_coor().is_some());
-        assert_eq!(
-            point.y_coor().unwrap().to_hex(),
-            y_bi.to_hex()
-        );
+        assert_eq!(point.y_coor().unwrap().to_hex(), y_bi.to_hex());
     }
 
     #[test]
@@ -804,8 +771,7 @@ mod tests {
     fn test_ec_point_get_element_internal(x_hex: &str, y_hex: &str) {
         let x_bi = BigInt::from_hex(x_hex);
         let y_bi = BigInt::from_hex(y_hex);
-        let point: Secp256r1Point =
-            Secp256r1Point::from_coor(&x_bi, &y_bi);
+        let point: Secp256r1Point = Secp256r1Point::from_coor(&x_bi, &y_bi);
         let pk = point.get_element();
 
         let copy_point = Secp256r1Point {
@@ -845,8 +811,7 @@ mod tests {
     fn test_ec_point_pk_to_key_slice_internal(x_hex: &str, y_hex: &str) {
         let x_bi = BigInt::from_hex(x_hex);
         let y_bi = BigInt::from_hex(y_hex);
-        let point: Secp256r1Point =
-            Secp256r1Point::from_coor(&x_bi, &y_bi);
+        let point: Secp256r1Point = Secp256r1Point::from_coor(&x_bi, &y_bi);
 
         assert_eq!(point.pk_to_key_slice().len(), UNCOMPRESSED_PUBLIC_KEY_SIZE); // uncompressed
         for i in 0..UNCOMPRESSED_PUBLIC_KEY_SIZE {
@@ -905,20 +870,26 @@ mod tests {
 
         assert_eq!(
             actual.bytes_compressed_to_big_int().to_hex(),
-            "20000000000000000000000000000000000000000000000000000000000000000",  // compressed point at infinity
+            "20000000000000000000000000000000000000000000000000000000000000000", // compressed point at infinity
         );
     }
 
     #[test]
     fn test_ec_point_add_point() {
-        let x1_bi = BigInt::from_hex("6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296");
-        let y1_bi = BigInt::from_hex("4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5");
+        let x1_bi =
+            BigInt::from_hex("6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296");
+        let y1_bi =
+            BigInt::from_hex("4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5");
 
-        let x2_bi = BigInt::from_hex("6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296");
-        let y2_bi = BigInt::from_hex("4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5");
+        let x2_bi =
+            BigInt::from_hex("6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296");
+        let y2_bi =
+            BigInt::from_hex("4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5");
 
-        let x3_bi = BigInt::from_hex("7CF27B188D034F7E8A52380304B51AC3C08969E277F21B35A60B48FC47669978");
-        let y3_bi = BigInt::from_hex("07775510DB8ED040293D9AC69F7430DBBA7DADE63CE982299E04B79D227873D1");
+        let x3_bi =
+            BigInt::from_hex("7CF27B188D034F7E8A52380304B51AC3C08969E277F21B35A60B48FC47669978");
+        let y3_bi =
+            BigInt::from_hex("07775510DB8ED040293D9AC69F7430DBBA7DADE63CE982299E04B79D227873D1");
 
         let point1: Secp256r1Point = Secp256r1Point::from_coor(&x1_bi, &y1_bi);
         let point2: Secp256r1Point = Secp256r1Point::from_coor(&x2_bi, &y2_bi);
@@ -940,20 +911,26 @@ mod tests {
 
         assert_eq!(
             actual.bytes_compressed_to_big_int().to_hex(),
-            generator.bytes_compressed_to_big_int().to_hex(),  // compressed point at infinity
+            generator.bytes_compressed_to_big_int().to_hex(), // compressed point at infinity
         );
     }
 
     #[test]
     fn test_ec_point_sub_point() {
-        let x1_bi = BigInt::from_hex("7CF27B188D034F7E8A52380304B51AC3C08969E277F21B35A60B48FC47669978");
-        let y1_bi = BigInt::from_hex("07775510DB8ED040293D9AC69F7430DBBA7DADE63CE982299E04B79D227873D1");
+        let x1_bi =
+            BigInt::from_hex("7CF27B188D034F7E8A52380304B51AC3C08969E277F21B35A60B48FC47669978");
+        let y1_bi =
+            BigInt::from_hex("07775510DB8ED040293D9AC69F7430DBBA7DADE63CE982299E04B79D227873D1");
 
-        let x2_bi = BigInt::from_hex("6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296");
-        let y2_bi = BigInt::from_hex("4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5");
+        let x2_bi =
+            BigInt::from_hex("6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296");
+        let y2_bi =
+            BigInt::from_hex("4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5");
 
-        let x3_bi = BigInt::from_hex("6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296");
-        let y3_bi = BigInt::from_hex("4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5");
+        let x3_bi =
+            BigInt::from_hex("6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296");
+        let y3_bi =
+            BigInt::from_hex("4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5");
 
         let point1: Secp256r1Point = Secp256r1Point::from_coor(&x1_bi, &y1_bi);
         let point2: Secp256r1Point = Secp256r1Point::from_coor(&x2_bi, &y2_bi);
@@ -969,7 +946,7 @@ mod tests {
     #[test]
     fn test_ec_point_base_point2() {
         /* show that base_point2() is returning a point which was computed using a deterministic
-           algorithm with a (supposedly) random input (the generator's compressed representation) */
+        algorithm with a (supposedly) random input (the generator's compressed representation) */
 
         let base_point2 = Secp256r1Point::base_point2();
 
@@ -977,16 +954,13 @@ mod tests {
         let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
         let hash = HSha256::create_hash(&[&hash]);
 
-        assert_eq!(
-            hash,
-            base_point2.x_coor().unwrap(),
-        );
+        assert_eq!(hash, base_point2.x_coor().unwrap(),);
 
         // check that base_point2 is indeed on the curve (from_coor() will fail otherwise)
         assert_eq!(
             Secp256r1Point::from_coor(
-            &base_point2.x_coor().unwrap(),
-            &base_point2.y_coor().unwrap()
+                &base_point2.x_coor().unwrap(),
+                &base_point2.y_coor().unwrap()
             ),
             base_point2
         );
