@@ -1,6 +1,6 @@
 [package]
 name = "curv"
-version = "0.2.5"
+version = "0.2.6"
 edition = "2018"
 
 [lib]
@@ -12,6 +12,7 @@ ec_secp256k1 = ["rust-gmp" ,"ecc", "secp256k1"]
 ec_ristretto = ["rust-gmp", "ecc" , "curve25519-dalek"]
 ec_ed25519 = ["rust-gmp", "ecc" , "cryptoxide"]
 ec_jubjub = ["rust-gmp", "ecc" , "pairing", "sapling-crypto"]
+ec_bls12_381 = ["rust-gmp", "ecc" , "bls12_381"]
 ecc = []
 merkle = ["rust-crypto", "merkle-sha3"]
 
@@ -33,6 +34,11 @@ optional = true
 
 [dependencies.merkle-sha3]
 version = "^0.1"
+optional = true
+
+
+[dependencies.bls12_381]
+version = "0.1.1"
 optional = true
 
 [dependencies.sapling-crypto]

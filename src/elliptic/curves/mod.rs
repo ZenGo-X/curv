@@ -5,6 +5,8 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
+#[cfg(feature = "bls12_381")]
+pub mod bls12_381;
 #[cfg(feature = "ec_jubjub")]
 pub mod curve_jubjub;
 #[cfg(feature = "ec_ristretto")]
@@ -13,5 +15,4 @@ pub mod curve_ristretto;
 pub mod ed25519;
 #[cfg(feature = "ec_secp256k1")]
 pub mod secp256_k1;
-
 pub mod traits;
