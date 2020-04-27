@@ -65,8 +65,8 @@ mod tests {
     #[test]
     fn test_byte_vec() {
         let message: Vec<u8> = vec![0, 1];
-        let big_int0 = BigInt::from((message[0] as i32));
-        let big_int1 = BigInt::from((message[1] as i32));
+        let big_int0 = BigInt::from(message[0] as i32);
+        let big_int1 = BigInt::from(message[1] as i32);
 
         let result = HSha256::create_hash(&[&big_int0, &big_int1]).to_hex();
         let mut hasher = Sha256::new();
