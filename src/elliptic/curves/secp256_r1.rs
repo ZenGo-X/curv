@@ -22,12 +22,6 @@ use std::ptr;
 use std::sync::atomic;
 use zeroize::Zeroize;
 
-/// The size (in bytes) of a message
-pub const MESSAGE_SIZE: usize = 32;
-
-/// The size (in bytes) of a P-256 signature
-pub const SIGNATURE_SIZE: usize = 64;
-
 /// The size (in bytes) of a P-256 secret key
 pub const SECRET_KEY_SIZE: usize = 32;
 
