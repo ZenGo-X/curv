@@ -8,14 +8,15 @@
 // jubjub : https://z.cash/technology/jubjub/
 use std::fmt::Debug;
 use std::str;
-pub const SECRET_KEY_SIZE: usize = 64;
+pub const SECRET_KEY_SIZE: usize = 32;
 use super::traits::{ECPoint, ECScalar};
 use crate::arithmetic::traits::Converter;
-use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
+use crate::cryptographic_primitives::hashing::hash_sha512::HSha512;
 use crate::cryptographic_primitives::hashing::traits::Hash;
-use pairing::bls12_381::Bls12;
-use sapling_crypto::jubjub::*;
-use sapling_crypto::jubjub::{edwards, fs::Fs, JubjubBls12, PrimeOrder, Unknown};
+
+use bls12_381::G1Affine;
+use bls12_381::G1Projective;
+use bls12_381::Scalar;
 
 use serde::de;
 use serde::de::{MapAccess, SeqAccess, Visitor};
@@ -24,18 +25,14 @@ use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
 use std::fmt;
 use std::ops::{Add, Mul};
-pub type SK = Fs;
-// we will take advantage of the fact that jubjub lib provides a uninque type for prime order sub group
-pub type PK = edwards::Point<Bls12, PrimeOrder>; // specific type for element in the prime order sub group
-pub type PKu = edwards::Point<Bls12, Unknown>; // special type for general point
-use crate::arithmetic::traits::{Modulo, Samplable};
+pub type SK = Scalar;
+// We use G1 only
+pub type PK = G1Affine;
+
+use crate::arithmetic::traits::Samplable;
 use crate::BigInt;
-use crate::ErrorKey::{self, InvalidPublicKey};
-use pairing::Field;
-use pairing::PrimeField;
-use pairing::PrimeFieldRepr;
-use sapling_crypto::jubjub::JubjubParams;
-use sapling_crypto::jubjub::ToUniform;
+use crate::ErrorKey::{self};
+
 use std::ptr;
 use std::sync::atomic;
 use zeroize::Zeroize;
@@ -48,19 +45,19 @@ use crypto::sha3::Sha3;
 use merkle::Hashable;
 
 #[derive(Clone, Copy)]
-pub struct JubjubScalar {
+pub struct FieldScalar {
     purpose: &'static str,
     fe: SK,
 }
 #[derive(Clone, Copy)]
-pub struct JubjubPoint {
+pub struct G1Point {
     purpose: &'static str,
     ge: PK,
 }
-pub type GE = JubjubPoint;
-pub type FE = JubjubScalar;
+pub type GE = G1Point;
+pub type FE = FieldScalar;
 
-impl Zeroize for JubjubScalar {
+impl Zeroize for FieldScalar {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, FE::zero()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -68,23 +65,14 @@ impl Zeroize for JubjubScalar {
     }
 }
 
-impl ECScalar<SK> for JubjubScalar {
-    // jujub library are zero masking the first 4 bits for all random numbers (in ed25519 we do it here)
-    // currently they are using rand 0.4 which is outdated therefore we do it here ourselves.
-    fn new_random() -> JubjubScalar {
-        //   let mut arr = [0u8; 32];
-        // thread_rng().fill(&mut arr[..]);
-        //    JubjubScalar {
-        //        purpose: "random",
-        //        fe:SK::rand(&mut arr),
-        //    }
+impl ECScalar<SK> for FieldScalar {
+    fn new_random() -> FieldScalar {
         let rnd_bn = BigInt::sample_below(&FE::q());
-        let rnd_bn_mul_8 = BigInt::mod_mul(&rnd_bn, &BigInt::from(8), &FE::q());
-        ECScalar::from(&rnd_bn_mul_8)
+        ECScalar::from(&rnd_bn)
     }
 
-    fn zero() -> JubjubScalar {
-        JubjubScalar {
+    fn zero() -> FieldScalar {
+        FieldScalar {
             purpose: "zero",
             fe: SK::zero(),
         }
@@ -97,7 +85,7 @@ impl ECScalar<SK> for JubjubScalar {
         self.fe = element
     }
 
-    fn from(n: &BigInt) -> JubjubScalar {
+    fn from(n: &BigInt) -> FieldScalar {
         let n_mod = BigInt::modulus(n, &FE::q());
         let mut v = BigInt::to_vec(&n_mod);
         let mut bytes_array: [u8; SECRET_KEY_SIZE];
@@ -112,28 +100,24 @@ impl ECScalar<SK> for JubjubScalar {
 
         bytes_array.reverse();
 
-        JubjubScalar {
+        FieldScalar {
             purpose: "from_big_int",
-            fe: SK::to_uniform(&bytes_array),
+            fe: SK::from_bytes(&bytes_array).unwrap(),
         }
     }
 
     fn to_big_int(&self) -> BigInt {
-        let to_fs_rep = self.fe.into_repr();
-        let to_u64 = to_fs_rep.0.iter().rev();
-        let to_bn = to_u64.fold(BigInt::zero(), |acc, x| {
-            let element_bn = BigInt::from(*x);
-            element_bn + (acc << 64)
-        });
-        to_bn
+        let mut bytes = SK::to_bytes(&self.fe);
+        bytes.reverse();
+        BigInt::from(&bytes[..])
     }
 
     fn q() -> BigInt {
         let q_u64: [u64; 4] = [
-            0xd0970e5ed6f72cb7,
-            0xa6682093ccc81082,
-            0x6673b0101343b00,
-            0xe7db4ea6533afa9,
+            0xffffffff00000001,
+            0x53bda402fffe5bfe,
+            0x3339d80809a1d805,
+            0x73eda753299d7d48,
         ];
         let to_bn = q_u64.iter().rev().fold(BigInt::zero(), |acc, x| {
             let element_bn = BigInt::from(*x);
@@ -142,37 +126,42 @@ impl ECScalar<SK> for JubjubScalar {
         to_bn
     }
 
-    fn add(&self, other: &SK) -> JubjubScalar {
-        let mut add_fe = JubjubScalar {
+    fn add(&self, other: &SK) -> FieldScalar {
+        let add_fe = FieldScalar {
             purpose: "other add",
             fe: *other,
         };
-        add_fe.fe.add_assign(&self.fe);
-        add_fe
+        let res = add_fe.fe.add(&self.fe);
+        FieldScalar {
+            purpose: "add",
+            fe: res,
+        }
     }
 
-    fn mul(&self, other: &SK) -> JubjubScalar {
-        let mut mul_fe = JubjubScalar {
+    fn mul(&self, other: &SK) -> FieldScalar {
+        let mul_fe = FieldScalar {
             purpose: "other mul",
             fe: *other,
         };
-        mul_fe.fe.mul_assign(&self.fe);
-        mul_fe
+        let res = mul_fe.fe.mul(&self.fe);
+        FieldScalar {
+            purpose: "mul",
+            fe: res,
+        }
     }
 
-    fn sub(&self, other: &SK) -> JubjubScalar {
-        let mut other_neg = other.clone();
-        other_neg.negate();
-        let sub_fe = JubjubScalar {
+    fn sub(&self, other: &SK) -> FieldScalar {
+        let other_neg = other.neg();
+        let sub_fe = FieldScalar {
             purpose: "other sub",
-            fe: other_neg.clone(),
+            fe: other_neg,
         };
         self.add(&sub_fe.get_element())
     }
 
-    fn invert(&self) -> JubjubScalar {
-        let inv_sc = self.fe.inverse().unwrap();
-        let inv_fe = JubjubScalar {
+    fn invert(&self) -> FieldScalar {
+        let inv_sc = self.fe.invert().unwrap();
+        let inv_fe = FieldScalar {
             purpose: "inverse",
             fe: inv_sc,
         };
@@ -180,7 +169,7 @@ impl ECScalar<SK> for JubjubScalar {
     }
 }
 
-impl Debug for JubjubScalar {
+impl Debug for FieldScalar {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -190,41 +179,41 @@ impl Debug for JubjubScalar {
     }
 }
 
-impl PartialEq for JubjubScalar {
-    fn eq(&self, other: &JubjubScalar) -> bool {
+impl PartialEq for FieldScalar {
+    fn eq(&self, other: &FieldScalar) -> bool {
         self.get_element() == other.get_element()
     }
 }
 
-impl Mul<JubjubScalar> for JubjubScalar {
-    type Output = JubjubScalar;
-    fn mul(self, other: JubjubScalar) -> JubjubScalar {
+impl Mul<FieldScalar> for FieldScalar {
+    type Output = FieldScalar;
+    fn mul(self, other: FieldScalar) -> FieldScalar {
         (&self).mul(&other.get_element())
     }
 }
 
-impl<'o> Mul<&'o JubjubScalar> for JubjubScalar {
-    type Output = JubjubScalar;
-    fn mul(self, other: &'o JubjubScalar) -> JubjubScalar {
+impl<'o> Mul<&'o FieldScalar> for FieldScalar {
+    type Output = FieldScalar;
+    fn mul(self, other: &'o FieldScalar) -> FieldScalar {
         (&self).mul(&other.get_element())
     }
 }
 
-impl Add<JubjubScalar> for JubjubScalar {
-    type Output = JubjubScalar;
-    fn add(self, other: JubjubScalar) -> JubjubScalar {
+impl Add<FieldScalar> for FieldScalar {
+    type Output = FieldScalar;
+    fn add(self, other: FieldScalar) -> FieldScalar {
         (&self).add(&other.get_element())
     }
 }
 
-impl<'o> Add<&'o JubjubScalar> for JubjubScalar {
-    type Output = JubjubScalar;
-    fn add(self, other: &'o JubjubScalar) -> JubjubScalar {
+impl<'o> Add<&'o FieldScalar> for FieldScalar {
+    type Output = FieldScalar;
+    fn add(self, other: &'o FieldScalar) -> FieldScalar {
         (&self).add(&other.get_element())
     }
 }
 
-impl Serialize for JubjubScalar {
+impl Serialize for FieldScalar {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -233,31 +222,31 @@ impl Serialize for JubjubScalar {
     }
 }
 
-impl<'de> Deserialize<'de> for JubjubScalar {
-    fn deserialize<D>(deserializer: D) -> Result<JubjubScalar, D::Error>
+impl<'de> Deserialize<'de> for FieldScalar {
+    fn deserialize<D>(deserializer: D) -> Result<FieldScalar, D::Error>
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_str(JubjubScalarVisitor)
+        deserializer.deserialize_str(BLS12_381ScalarVisitor)
     }
 }
 
-struct JubjubScalarVisitor;
+struct BLS12_381ScalarVisitor;
 
-impl<'de> Visitor<'de> for JubjubScalarVisitor {
-    type Value = JubjubScalar;
+impl<'de> Visitor<'de> for BLS12_381ScalarVisitor {
+    type Value = FieldScalar;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("jubjub")
+        formatter.write_str("bls12_381")
     }
 
-    fn visit_str<E: de::Error>(self, s: &str) -> Result<JubjubScalar, E> {
+    fn visit_str<E: de::Error>(self, s: &str) -> Result<FieldScalar, E> {
         let v = BigInt::from_str_radix(s, 16).expect("Failed in serde");
         Ok(ECScalar::from(&v))
     }
 }
 
-impl Debug for JubjubPoint {
+impl Debug for G1Point {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -268,30 +257,33 @@ impl Debug for JubjubPoint {
     }
 }
 
-impl PartialEq for JubjubPoint {
-    fn eq(&self, other: &JubjubPoint) -> bool {
+impl PartialEq for G1Point {
+    fn eq(&self, other: &G1Point) -> bool {
         self.get_element() == other.get_element()
     }
 }
 
-impl JubjubPoint {
-    pub fn base_point2() -> JubjubPoint {
+impl G1Point {
+    pub fn base_point2() -> G1Point {
+        // 48 bytes
         let g: GE = ECPoint::generator();
-        let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
-        let hash = HSha256::create_hash(&[&hash]);
-        let hash = HSha256::create_hash(&[&hash]);
-        let hash = HSha256::create_hash(&[&hash]);
+        let hash = HSha512::create_hash(&[&g.bytes_compressed_to_big_int()]);
+        let hash = HSha512::create_hash(&[&hash]);
 
-        let bytes = BigInt::to_vec(&hash);
+        let mut bytes = BigInt::to_vec(&hash);
+        bytes[47] = 151; //Fq must be canoncial + specific flags. This byte is the same as the one from the generator.
+
         let h: GE = ECPoint::from_bytes(&bytes[..]).unwrap();
-        JubjubPoint {
-            purpose: "random",
-            ge: h.get_element(),
+        let bp2_proj: G1Projective = h.ge.into();
+        let bp2_proj_in_g1 = bp2_proj.clear_cofactor();
+        G1Point {
+            purpose: "base point 2",
+            ge: bp2_proj_in_g1.into(),
         }
     }
 }
 
-impl Zeroize for JubjubPoint {
+impl Zeroize for G1Point {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, GE::generator()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -299,14 +291,11 @@ impl Zeroize for JubjubPoint {
     }
 }
 
-impl ECPoint<PK, SK> for JubjubPoint {
-    fn generator() -> JubjubPoint {
-        let params = JubjubBls12::new();
-        let p_g = FixedGenerators::SpendingKeyGenerator;
-
-        JubjubPoint {
+impl ECPoint<PK, SK> for G1Point {
+    fn generator() -> G1Point {
+        G1Point {
             purpose: "base_fe",
-            ge: PK::from(params.generator(p_g).clone()),
+            ge: G1Affine::generator(),
         }
     }
 
@@ -315,149 +304,136 @@ impl ECPoint<PK, SK> for JubjubPoint {
     }
 
     fn x_coor(&self) -> Option<BigInt> {
-        let x_coor = PK::into_xy(&self.ge).0.into_repr();
-        let to_u64 = x_coor.0.iter().rev();
-        let to_bn = to_u64.fold(BigInt::zero(), |acc, x| {
-            let element_bn = BigInt::from(*x);
-            element_bn + (acc << 64)
-        });
-        Some(to_bn)
+        let bytes = G1Affine::to_uncompressed(&self.ge);
+        let x_coor = &bytes[0..48];
+        let bn = BigInt::from(x_coor);
+        Some(bn)
     }
 
     fn y_coor(&self) -> Option<BigInt> {
-        let y_coor = PK::into_xy(&self.ge).1.into_repr();
-        let to_u64 = y_coor.0.iter().rev();
-        let to_bn = to_u64.fold(BigInt::zero(), |acc, x| {
-            let element_bn = BigInt::from(*x);
-            element_bn + (acc << 64)
-        });
-        Some(to_bn)
+        let bytes = G1Affine::to_uncompressed(&self.ge);
+        let y_coor = &bytes[48..98];
+        let bn = BigInt::from(y_coor);
+        Some(bn)
     }
 
     fn bytes_compressed_to_big_int(&self) -> BigInt {
-        let (x, _) = self.ge.into_xy();
-        let sign = x.into_repr().is_odd();
-        let y_coor = self.y_coor().unwrap();
-        let point_compressed_bn = (BigInt::from(sign as u32) << 255) + y_coor;
-        point_compressed_bn
+        let bytes = self.ge.to_compressed();
+        let bn = BigInt::from(&bytes[..]);
+        bn
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<JubjubPoint, ErrorKey> {
-        let mut bytes_array_32 = [0u8; 32];
+    fn from_bytes(bytes: &[u8]) -> Result<G1Point, ErrorKey> {
+        let mut bytes_array_48 = [0u8; 48];
         match bytes.len() {
-            0..=32 => {
-                (&mut bytes_array_32[32 - bytes.len()..]).copy_from_slice(bytes);
+            0..=48 => {
+                (&mut bytes_array_48[48 - bytes.len()..]).copy_from_slice(bytes);
             }
             _ => {
-                bytes_array_32.copy_from_slice(&bytes[..32]);
+                bytes_array_48.copy_from_slice(&bytes[..48]);
             }
         }
 
-        let params = JubjubBls12::new();
-        match PKu::read(&bytes_array_32[..], &params) {
-            Ok(x) => Ok(JubjubPoint {
-                purpose: "random",
-                ge: x.mul_by_cofactor(&params),
-            }),
-            Err(e) => {
-                println!("ERROR: {:?}", e);
-                Err(InvalidPublicKey)
-            }
-        }
+        let pk = G1Point {
+            purpose: "random",
+            ge: G1Affine::from_compressed_unchecked(&bytes_array_48).unwrap(),
+        };
+        return Ok(pk);
     }
 
-    // in this case the opposite of from_bytes: takes compressed pk to 32 bytes.
+    // in this case the opposite of from_bytes: takes compressed pk to 48 bytes.
     fn pk_to_key_slice(&self) -> Vec<u8> {
-        let mut v = vec![];
-        self.ge.write(&mut v).unwrap();
-        v
-        //    let point_compressed_bn = self.bytes_compressed_to_big_int();
-        //    BigInt::to_vec(&point_compressed_bn)
+        let bytes = G1Affine::to_compressed(&self.ge);
+        let mut compressed_vec = Vec::new();
+        compressed_vec.extend_from_slice(&bytes[..]);
+        compressed_vec
     }
 
-    fn scalar_mul(&self, fe: &SK) -> JubjubPoint {
-        let params = &JubjubBls12::new();
-        let ge = self.ge.mul(fe.clone(), params);
-        JubjubPoint {
+    fn scalar_mul(&self, fe: &SK) -> G1Point {
+        let res = &self.ge * fe;
+        let res_affine: G1Affine = res.into();
+        G1Point {
             purpose: "scalar_point_mul",
-            ge,
+            ge: res_affine,
         }
     }
 
-    fn add_point(&self, other: &PK) -> JubjubPoint {
-        let params = &JubjubBls12::new();
-        let ge = self.ge.add(other, params);
-        JubjubPoint {
+    fn add_point(&self, other: &PK) -> G1Point {
+        let ge_proj: G1Projective = self.ge.into();
+        let res = other + &ge_proj;
+        G1Point {
             purpose: "combine",
-            ge,
+            ge: res.into(),
         }
     }
 
-    fn sub_point(&self, other: &PK) -> JubjubPoint {
-        let params = &JubjubBls12::new();
-        let other_neg = other.negate();
-        let ge = self.ge.add(&other_neg, params);
+    fn sub_point(&self, other: &PK) -> G1Point {
+        let ge_proj: G1Projective = self.ge.into();
+        let res = &ge_proj - other;
 
-        JubjubPoint { purpose: "sub", ge }
+        G1Point {
+            purpose: "sub",
+            ge: res.into(),
+        }
     }
 
-    fn from_coor(_x: &BigInt, _y: &BigInt) -> JubjubPoint {
+    fn from_coor(_x: &BigInt, _y: &BigInt) -> G1Point {
         // TODO
         unimplemented!();
     }
 }
 
-impl Mul<JubjubScalar> for JubjubPoint {
-    type Output = JubjubPoint;
-    fn mul(self, other: JubjubScalar) -> JubjubPoint {
+impl Mul<FieldScalar> for G1Point {
+    type Output = G1Point;
+    fn mul(self, other: FieldScalar) -> G1Point {
         self.scalar_mul(&other.get_element())
     }
 }
 
-impl<'o> Mul<&'o JubjubScalar> for JubjubPoint {
-    type Output = JubjubPoint;
-    fn mul(self, other: &'o JubjubScalar) -> JubjubPoint {
+impl<'o> Mul<&'o FieldScalar> for G1Point {
+    type Output = G1Point;
+    fn mul(self, other: &'o FieldScalar) -> G1Point {
         self.scalar_mul(&other.get_element())
     }
 }
 
-impl<'o> Mul<&'o JubjubScalar> for &'o JubjubPoint {
-    type Output = JubjubPoint;
-    fn mul(self, other: &'o JubjubScalar) -> JubjubPoint {
+impl<'o> Mul<&'o FieldScalar> for &'o G1Point {
+    type Output = G1Point;
+    fn mul(self, other: &'o FieldScalar) -> G1Point {
         self.scalar_mul(&other.get_element())
     }
 }
 
-impl Add<JubjubPoint> for JubjubPoint {
-    type Output = JubjubPoint;
-    fn add(self, other: JubjubPoint) -> JubjubPoint {
+impl Add<G1Point> for G1Point {
+    type Output = G1Point;
+    fn add(self, other: G1Point) -> G1Point {
         self.add_point(&other.get_element())
     }
 }
 
-impl<'o> Add<&'o JubjubPoint> for JubjubPoint {
-    type Output = JubjubPoint;
-    fn add(self, other: &'o JubjubPoint) -> JubjubPoint {
+impl<'o> Add<&'o G1Point> for G1Point {
+    type Output = G1Point;
+    fn add(self, other: &'o G1Point) -> G1Point {
         self.add_point(&other.get_element())
     }
 }
 
-impl<'o> Add<&'o JubjubPoint> for &'o JubjubPoint {
-    type Output = JubjubPoint;
-    fn add(self, other: &'o JubjubPoint) -> JubjubPoint {
+impl<'o> Add<&'o G1Point> for &'o G1Point {
+    type Output = G1Point;
+    fn add(self, other: &'o G1Point) -> G1Point {
         self.add_point(&other.get_element())
     }
 }
 
 #[cfg(feature = "merkle")]
-impl Hashable for JubjubPoint {
+impl Hashable for G1Point {
     fn update_context(&self, context: &mut Sha3) {
         let bytes: Vec<u8> = self.pk_to_key_slice();
         context.input(&bytes[..]);
     }
 }
 
-impl Serialize for JubjubPoint {
+impl Serialize for G1Point {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -470,8 +446,8 @@ impl Serialize for JubjubPoint {
     }
 }
 
-impl<'de> Deserialize<'de> for JubjubPoint {
-    fn deserialize<D>(deserializer: D) -> Result<JubjubPoint, D::Error>
+impl<'de> Deserialize<'de> for G1Point {
+    fn deserialize<D>(deserializer: D) -> Result<G1Point, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -483,13 +459,13 @@ impl<'de> Deserialize<'de> for JubjubPoint {
 struct JubjubPointVisitor;
 
 impl<'de> Visitor<'de> for JubjubPointVisitor {
-    type Value = JubjubPoint;
+    type Value = G1Point;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("JubjubCurvePoint")
     }
 
-    fn visit_seq<V>(self, mut seq: V) -> Result<JubjubPoint, V::Error>
+    fn visit_seq<V>(self, mut seq: V) -> Result<G1Point, V::Error>
     where
         V: SeqAccess<'de>,
     {
@@ -498,10 +474,10 @@ impl<'de> Visitor<'de> for JubjubPointVisitor {
             .ok_or_else(|| panic!("deserialization failed"))?;
         let bytes_bn = BigInt::from_hex(bytes_str);
         let bytes = BigInt::to_vec(&bytes_bn);
-        Ok(JubjubPoint::from_bytes(&bytes[..]).expect("error deserializing point"))
+        Ok(G1Point::from_bytes(&bytes[..]).expect("error deserializing point"))
     }
 
-    fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<JubjubPoint, E::Error> {
+    fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<G1Point, E::Error> {
         let mut bytes_str: String = "".to_string();
 
         while let Some(key) = map.next_key::<&'de str>()? {
@@ -516,13 +492,13 @@ impl<'de> Visitor<'de> for JubjubPointVisitor {
         let bytes_bn = BigInt::from_hex(&bytes_str);
         let bytes = BigInt::to_vec(&bytes_bn);
 
-        Ok(JubjubPoint::from_bytes(&bytes[..]).expect("error deserializing point"))
+        Ok(G1Point::from_bytes(&bytes[..]).expect("error deserializing point"))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::JubjubPoint;
+    use super::G1Point;
     use crate::arithmetic::traits::Modulo;
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
@@ -536,23 +512,21 @@ mod tests {
         let pk = GE::generator();
         let s = serde_json::to_string(&pk).expect("Failed in serialization");
         let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-        let eight = ECScalar::from(&BigInt::from(8));
-        assert_eq!(des_pk, pk * &eight);
+
+        assert_eq!(des_pk, pk);
 
         let pk = GE::base_point2();
         let s = serde_json::to_string(&pk).expect("Failed in serialization");
         let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-        let eight = ECScalar::from(&BigInt::from(8));
-        assert_eq!(des_pk, pk * &eight);
+        assert_eq!(des_pk, pk);
     }
 
     #[test]
     fn bincode_pk() {
         let pk = GE::generator();
         let bin = bincode::serialize(&pk).unwrap();
-        let decoded: JubjubPoint = bincode::deserialize(bin.as_slice()).unwrap();
-        let eight = ECScalar::from(&BigInt::from(8));
-        assert_eq!(decoded, pk * &eight);
+        let decoded: G1Point = bincode::deserialize(bin.as_slice()).unwrap();
+        assert_eq!(decoded, pk);
     }
 
     #[test]
@@ -586,6 +560,15 @@ mod tests {
         let point_a = &base * &a;
         let point_b = &base * &b;
         let point_ab2 = point_a.sub_point(&point_b.get_element());
+        println!(
+            "point ab1: {:?}",
+            point_ab1.bytes_compressed_to_big_int().to_str_radix(16)
+        );
+        println!(
+            "point ab2: {:?}",
+            point_ab2.bytes_compressed_to_big_int().to_str_radix(16)
+        );
+
         assert_eq!(point_ab1, point_ab2);
     }
 
@@ -655,25 +638,6 @@ mod tests {
 
         assert_eq!(a_inv_bn_1, a_inv_bn_2);
     }
-    #[test]
-    fn test_from_bytes_2() {
-        let test_vec = [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 1, 2, 3, 4, 5,
-            6,
-        ];
-        let result = JubjubPoint::from_bytes(&test_vec);
-        assert!(result.is_ok())
-    }
-    #[test]
-    fn test_from_bytes_3() {
-        let test_vec = [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 1, 2, 3, 4, 5, 6,
-        ];
-        let result = JubjubPoint::from_bytes(&test_vec);
-        assert!(result.is_ok())
-    }
-
     #[test]
     fn test_scalar_mul_multiply_by_1() {
         let g: GE = ECPoint::generator();

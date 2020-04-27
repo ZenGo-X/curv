@@ -64,6 +64,17 @@ mod jubjubinstance {
 #[cfg(feature = "ec_jubjub")]
 pub use self::jubjubinstance::*;
 
+#[cfg(feature = "ec_bls12_381")]
+mod bls12_381_instance {
+    pub use crate::elliptic::curves::bls12_381::FE;
+    pub use crate::elliptic::curves::bls12_381::GE;
+    pub use crate::elliptic::curves::bls12_381::PK;
+    pub use crate::elliptic::curves::bls12_381::SK;
+}
+
+#[cfg(feature = "ec_bls12_381")]
+pub use self::bls12_381_instance::*;
+
 #[cfg(feature = "rust-gmp")]
 pub mod arithmetic;
 #[cfg(feature = "rust-gmp")]
