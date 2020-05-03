@@ -10,12 +10,13 @@ The library has a built in support for some useful operations/primitives such as
 
 ### Currently Supported Elliptic Curves  
 
-|        Curve         |   low level library    |    curve description       |    blockchain usage examples       |  
-|-------------------------------|------------------------|------------------------|------------------------|
-|    **Secp256k1**    |        [rust-secp256k1](https://github.com/rust-bitcoin/rust-secp256k1)            |      [bitcoin wiki](https://en.bitcoin.it/wiki/Secp256k1)           |      Bitcoin, Ethereum           |
-|    **Ed25519**    |        [cryptoxide](https://github.com/typed-io/cryptoxide/blob/master/src/curve25519.rs)            |      [BDLSY11](https://ed25519.cr.yp.to/ed25519-20110926.pdf)           |      Ripple, Tezos, Cardano           |
-|    **Jubjub**    |        [librustzcash](https://github.com/zcash/librustzcash)            |      [what is jubjub](https://z.cash/technology/jubjub/)          |      Zcash           |
-|    **Ristretto**    |        [curve25519-dalek](https://github.com/dalek-cryptography/curve25519-dalek)            |     [ristretto group](https://ristretto.group/)           |      not yet ;)           |
+|        Curve         |   low level library    |    curve description       |     
+|-------------------------------|------------------------|------------------------|
+|    **Secp256k1**    |        [rust-secp256k1](https://github.com/rust-bitcoin/rust-secp256k1)            |      [bitcoin wiki](https://en.bitcoin.it/wiki/Secp256k1)           |     
+|    **Ed25519**    |        [cryptoxide](https://github.com/typed-io/cryptoxide/blob/master/src/curve25519.rs)            |      [BDLSY11](https://ed25519.cr.yp.to/ed25519-20110926.pdf)           |      
+|    **Jubjub**    |        [librustzcash](https://github.com/zcash/librustzcash)            |      [what is jubjub](https://z.cash/technology/jubjub/)          |     
+|    **Ristretto**    |        [curve25519-dalek](https://github.com/dalek-cryptography/curve25519-dalek)            |     [ristretto group](https://ristretto.group/)           |      
+|    **BLS12-381**    |        [bls12-381](https://crates.io/crates/bls12_381)            |     [BLS12-381 For The Rest Of Us](https://hackmd.io/@benjaminion/bls12-381)           |     
 
 ### Security  
 The library was audited by [Kudelski security](https://www.kudelskisecurity.com/) on Feb19. The report can be found [here](https://github.com/KZen-networks/curv/tree/master/audit). No critical issue were found and all issues found were fixed.
@@ -33,6 +34,7 @@ a feature must be specified:
 - `cargo build --features=ec_ed25519` for ed25519
 - `cargo build --features=ec_jubjub` for jubjub
 - `cargo build --features=ec_ristretto` for ristretto
+- `cargo build --features=ec_bls12_381` for bls12-381 using G1 as group element
 
 ### Examples
 The library includes some basic examples to get you going. To run them: 
