@@ -280,12 +280,7 @@ impl ECPoint<PK, SK> for RistrettoCurvPoint {
     }
 
     fn y_coor(&self) -> Option<BigInt> {
-        let y_fe = SK::from_bytes_mod_order(self.ge.to_bytes());
-        let y_fe = RistrettoScalar {
-            purpose: "y_coor",
-            fe: y_fe,
-        };
-        Some(y_fe.to_big_int())
+        unimplemented!();
     }
 
     fn bytes_compressed_to_big_int(&self) -> BigInt {
