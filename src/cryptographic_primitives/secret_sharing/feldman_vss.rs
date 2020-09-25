@@ -41,7 +41,7 @@ impl VerifiableSS {
         let secret_shares = VerifiableSS::evaluate_polynomial(&poly, &index_vec);
 
         let G: GE = ECPoint::generator();
-        let commitments = (0..poly.len()).map(|i| G * poly[i]).collect::<Vec<GE>>();
+        let commitments = (0..poly.len()).map(|i| G * poly[i].clone()).collect::<Vec<GE>>();
         (
             VerifiableSS {
                 parameters: ShamirSecretSharing {
@@ -83,7 +83,7 @@ impl VerifiableSS {
 
     // returns vector of coefficients
     pub fn sample_polynomial(t: usize, coef0: &FE) -> Vec<FE> {
-        let mut coefficients = vec![*coef0];
+        let mut coefficients = vec![coef0.clone()];
         // sample the remaining coefficients randomly using secure randomness
         let random_coefficients: Vec<FE> = (0..t).map(|_| ECScalar::new_random()).collect();
         coefficients.extend(random_coefficients);
@@ -196,7 +196,7 @@ impl VerifiableSS {
         let mut comm_iterator = self.commitments.iter().rev();
         let head = comm_iterator.next().unwrap();
         let tail = comm_iterator;
-        let comm_to_point = tail.fold(head.clone(), |acc, x: &GE| *x + acc * index_fe);
+        let comm_to_point = tail.fold(head.clone(), |acc, x: &GE| *x + acc * index_fe.clone());
         comm_to_point
     }
 
@@ -218,7 +218,7 @@ impl VerifiableSS {
         let denum: FE = ECScalar::from(&BigInt::one());
         let num = (0..s_len).fold(num, |acc, i| {
             if s[i] != index {
-                acc * points[s[i]]
+                acc * points[s[i]].clone()
             } else {
                 acc
             }

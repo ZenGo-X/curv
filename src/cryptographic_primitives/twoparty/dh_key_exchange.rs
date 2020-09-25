@@ -37,7 +37,7 @@ impl Party1FirstMessage {
 
         let secret_share: FE = ECScalar::new_random();
 
-        let public_share = base * secret_share;
+        let public_share = base * secret_share.clone();
 
         let ec_key_pair = EcKeyPair {
             public_share,
@@ -48,7 +48,7 @@ impl Party1FirstMessage {
 
     pub fn first_with_fixed_secret_share(secret_share: FE) -> (Party1FirstMessage, EcKeyPair) {
         let base: GE = ECPoint::generator();
-        let public_share = base * secret_share;
+        let public_share = base * secret_share.clone();
 
         let ec_key_pair = EcKeyPair {
             public_share,
@@ -62,7 +62,7 @@ impl Party2FirstMessage {
     pub fn first() -> (Party2FirstMessage, EcKeyPair) {
         let base: GE = ECPoint::generator();
         let secret_share: FE = ECScalar::new_random();
-        let public_share = base * secret_share;
+        let public_share = base * secret_share.clone();
         let ec_key_pair = EcKeyPair {
             public_share,
             secret_share,
@@ -72,7 +72,7 @@ impl Party2FirstMessage {
 
     pub fn first_with_fixed_secret_share(secret_share: FE) -> (Party2FirstMessage, EcKeyPair) {
         let base: GE = ECPoint::generator();
-        let public_share = base * secret_share;
+        let public_share = base * secret_share.clone();
         let ec_key_pair = EcKeyPair {
             public_share,
             secret_share,
@@ -117,7 +117,7 @@ mod tests {
         let secret_party_2: FE = ECScalar::from(&BigInt::from(2));
 
         let (kg_party_two_first_message, kg_ec_key_pair_party2) =
-            Party2FirstMessage::first_with_fixed_secret_share(secret_party_2);
+            Party2FirstMessage::first_with_fixed_secret_share(secret_party_2.clone());
 
         assert_eq!(
             compute_pubkey(
@@ -135,7 +135,7 @@ mod tests {
                 &kg_ec_key_pair_party2,
                 &kg_party_one_first_message.public_share
             ),
-            g * secret_party_2
+            g * secret_party_2.clone()
         );
     }
 }

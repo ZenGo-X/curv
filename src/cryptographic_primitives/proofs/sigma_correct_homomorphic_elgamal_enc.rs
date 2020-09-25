@@ -47,16 +47,16 @@ impl HomoELGamalProof {
     pub fn prove(w: &HomoElGamalWitness, delta: &HomoElGamalStatement) -> HomoELGamalProof {
         let mut s1: FE = ECScalar::new_random();
         let mut s2: FE = ECScalar::new_random();
-        let mut A1 = delta.H * s1;
-        let mut A2 = delta.Y * s2;
-        let A3 = delta.G * s2;
+        let mut A1 = delta.H * s1.clone();
+        let mut A2 = delta.Y * s2.clone();
+        let A3 = delta.G * s2.clone();
         let T = A1 + A2;
         let e = HSha256::create_hash_from_ge(&[
             &T, &A3, &delta.G, &delta.H, &delta.Y, &delta.D, &delta.E,
         ]);
         // dealing with zero field element
-        let z1 = if w.x != FE::zero() { s1 + w.x * e } else { s1 };
-        let z2 = s2 + w.r * e;
+        let z1 = if w.x != FE::zero() { s1.clone() + w.x.clone() * e.clone() } else { s1.clone() };
+        let z2 = s2.clone() + w.r.clone() * e.clone();
         s1.zeroize();
         s2.zeroize();
         A1.zeroize();
@@ -67,10 +67,10 @@ impl HomoELGamalProof {
         let e = HSha256::create_hash_from_ge(&[
             &self.T, &self.A3, &delta.G, &delta.H, &delta.Y, &delta.D, &delta.E,
         ]);
-        let z1H_plus_z2Y = delta.H * self.z1 + delta.Y * self.z2;
-        let T_plus_eD = self.T + delta.D * e;
-        let z2G = delta.G * self.z2;
-        let A3_plus_eE = self.A3 + delta.E * e;
+        let z1H_plus_z2Y = delta.H * self.z1.clone() + delta.Y * self.z2.clone();
+        let T_plus_eD = self.T + delta.D * e.clone();
+        let z2G = delta.G * self.z2.clone();
+        let A3_plus_eE = self.A3 + delta.E * e.clone();
         if z1H_plus_z2Y == T_plus_eD && z2G == A3_plus_eE {
             Ok(())
         } else {

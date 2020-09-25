@@ -13,6 +13,7 @@ ec_ristretto = ["rust-gmp", "ecc" , "curve25519-dalek"]
 ec_ed25519 = ["rust-gmp", "ecc" , "cryptoxide"]
 ec_jubjub = ["rust-gmp", "ecc" , "pairing", "sapling-crypto"]
 ec_bls12_381 = ["rust-gmp", "ecc" , "bls12_381"]
+ec_p256 = ["rust-gmp" ,"ecc", "p256", "generic-array"]
 ecc = []
 merkle = ["rust-crypto", "merkle-sha3"]
 
@@ -69,6 +70,16 @@ optional = true
 [dependencies.cryptoxide]
 version = "0.1.2"
 optional = true
+
+[dependencies.p256]
+version = "0.5"
+features = ["ecdsa"]
+optional = true
+
+[dependencies.generic-array]
+version = "0.14"
+optional = true
+
 
 [dev-dependencies]
 bincode = "1.1"

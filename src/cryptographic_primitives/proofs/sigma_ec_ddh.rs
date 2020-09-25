@@ -54,11 +54,11 @@ pub trait NISigmaProof<T, W, S> {
 impl NISigmaProof<ECDDHProof, ECDDHWitness, ECDDHStatement> for ECDDHProof {
     fn prove(w: &ECDDHWitness, delta: &ECDDHStatement) -> ECDDHProof {
         let mut s: FE = ECScalar::new_random();
-        let a1 = delta.g1 * s;
-        let a2 = delta.g2 * s;
+        let a1 = delta.g1 * s.clone();
+        let a2 = delta.g2 * s.clone();
         let e =
             HSha256::create_hash_from_ge(&[&delta.g1, &delta.h1, &delta.g2, &delta.h2, &a1, &a2]);
-        let z = s + e * w.x;
+        let z = s.clone() + e * w.x.clone();
         s.zeroize();
         ECDDHProof { a1, a2, z }
     }
@@ -67,10 +67,10 @@ impl NISigmaProof<ECDDHProof, ECDDHWitness, ECDDHStatement> for ECDDHProof {
         let e = HSha256::create_hash_from_ge(&[
             &delta.g1, &delta.h1, &delta.g2, &delta.h2, &self.a1, &self.a2,
         ]);
-        let z_g1 = delta.g1 * self.z;
-        let z_g2 = delta.g2 * self.z;
-        let a1_plus_e_h1 = self.a1 + delta.h1 * e;
-        let a2_plus_e_h2 = self.a2 + delta.h2 * e;
+        let z_g1 = delta.g1 * self.z.clone();
+        let z_g2 = delta.g2 * self.z.clone();
+        let a1_plus_e_h1 = self.a1 + delta.h1 * e.clone();
+        let a2_plus_e_h2 = self.a2 + delta.h2 * e.clone();
         if z_g1 == a1_plus_e_h1 && z_g2 == a2_plus_e_h2 {
             Ok(())
         } else {
