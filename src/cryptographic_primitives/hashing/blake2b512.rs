@@ -54,14 +54,14 @@ mod tests {
     #[test]
     fn create_hash_from_ge_test() {
         let point = GE::base_point2();
-        let result1 =
-            Blake::create_hash_from_ge(&vec![&point, &GE::generator()], b"Zcash_RedJubjubH");
+        let result1 = Blake::create_hash_from_ge(&vec![&point, &GE::generator()], b"Zcash_RedJubjubH");
+        //assert_eq!(result1,1);
         assert!(result1.to_big_int().to_str_radix(2).len() > 240);
-        let result2 =
-            Blake::create_hash_from_ge(&vec![&GE::generator(), &point], b"Zcash_RedJubjubH");
+        //println!(" -------------------------------------------------------------------------------------------result1 {}",result1);
+        let result2 = Blake::create_hash_from_ge(&vec![&GE::generator(), &point], b"Zcash_RedJubjubH");
         assert_ne!(result1, result2);
-        let result3 =
-            Blake::create_hash_from_ge(&vec![&GE::generator(), &point], b"Zcash_RedJubjubH");
+        let result3 = Blake::create_hash_from_ge(&vec![&GE::generator(), &point], b"Zcash_RedJubjubH");
         assert_eq!(result2, result3);
     }
+
 }

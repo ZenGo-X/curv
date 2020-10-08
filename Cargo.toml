@@ -12,7 +12,9 @@ ec_secp256k1 = ["rust-gmp" ,"ecc", "secp256k1"]
 ec_ristretto = ["rust-gmp", "ecc" , "curve25519-dalek"]
 ec_ed25519 = ["rust-gmp", "ecc" , "cryptoxide"]
 ec_jubjub = ["rust-gmp", "ecc" , "pairing", "sapling-crypto"]
-ec_bls12_381 = ["rust-gmp", "ecc" , "bls12_381"]
+ec_g1 = ["rust-gmp", "ecc" , "bls12_381"]
+ec_g2 = ["rust-gmp","ecc", "bls12_381"]
+ec_pairing = ["rust-gmp", "ecc" , "bls12_381"]
 ecc = []
 merkle = ["rust-crypto", "merkle-sha3"]
 
@@ -27,6 +29,9 @@ hmac = "0.7.1"
 digest = "0.8.1"
 hex = "^0.3"
 blake2b_simd = "0.5.7"
+serde_json = "1.0"
+
+
 
 [dependencies.rust-crypto]
 version = "^0.2"
@@ -73,3 +78,4 @@ optional = true
 [dev-dependencies]
 bincode = "1.1"
 serde_json = "1.0"
+

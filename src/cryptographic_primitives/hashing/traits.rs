@@ -8,6 +8,7 @@
 use crate::BigInt;
 use crate::{FE, GE};
 
+
 pub trait Hash {
     fn create_hash(big_ints: &[&BigInt]) -> BigInt;
     fn create_hash_from_slice(byte_slice: &[u8]) -> BigInt;
@@ -18,3 +19,4 @@ pub trait KeyedHash {
     fn create_hmac(key: &BigInt, data: &[&BigInt]) -> BigInt;
     fn verify(key: &BigInt, data: &[&BigInt], code_bytes: [u8; 64]) -> Result<(), ()>;
 }
+

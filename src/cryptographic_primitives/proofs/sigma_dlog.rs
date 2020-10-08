@@ -34,7 +34,6 @@ pub struct DLogProof {
 
 pub trait ProveDLog {
     fn prove(sk: &FE) -> DLogProof;
-
     fn verify(proof: &DLogProof) -> Result<(), ProofError>;
 }
 
