@@ -8,7 +8,7 @@ use generic_array::typenum::U32;
 use generic_array::GenericArray;
 use p256::ecdsa::VerifyKey;
 use p256::elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint};
-use p256::{AffinePoint, EncodedPoint, NonZeroScalar, ProjectivePoint, Scalar, SecretKey};
+use p256::{AffinePoint, EncodedPoint, ProjectivePoint, Scalar};
 use rand::{Rng, thread_rng};
 use serde::de;
 use serde::de::Visitor;
@@ -19,10 +19,10 @@ use std::sync::atomic;
 use std::{fmt, ptr};
 use zeroize::Zeroize;
 
-pub type SK = SecretKey;
+pub type SK = Scalar;
 pub type PK = VerifyKey;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Secp256r1Scalar {
     purpose: &'static str,
     fe: SK,
@@ -58,15 +58,16 @@ impl ECScalar<SK> for Secp256r1Scalar {
     fn new_random() -> Secp256r1Scalar {
         let mut arr = [0u8; 32];
         thread_rng().fill(&mut arr[..]);
+        let gen_arr: GenericArray<u8, U32> = *GenericArray::from_slice(&arr);
         Secp256r1Scalar {
             purpose: "random",
-            fe: SK::from_bytes(&arr).unwrap(),
+            fe: Scalar::from_bytes_reduced(&gen_arr),
         }
     }
 
     fn zero() -> Secp256r1Scalar {
         let zero_arr = [0u8; 32];
-        let zero = unsafe { std::mem::transmute::<[u8; 32], SecretKey>(zero_arr) };
+        let zero = unsafe { std::mem::transmute::<[u8; 32], Scalar>(zero_arr) };
         Secp256r1Scalar {
             purpose: "zero",
             fe: zero,
@@ -92,10 +93,11 @@ impl ECScalar<SK> for Secp256r1Scalar {
             template.extend_from_slice(&v);
             v = template;
         }
+        let arr: GenericArray<u8, U32> = *GenericArray::from_slice(&v);
 
         Secp256r1Scalar {
             purpose: "from_big_int",
-            fe: SK::from_bytes(&v).unwrap(),
+            fe: Scalar::from_bytes_reduced(&arr),
         }
     }
 
@@ -113,42 +115,30 @@ impl ECScalar<SK> for Secp256r1Scalar {
     }
 
     fn add(&self, other: &SK) -> Secp256r1Scalar {
-        let scalar1 = Scalar::from_bytes_reduced(&self.get_element().to_bytes());
-        let scalar2 = Scalar::from_bytes_reduced(&other.to_bytes());
         Secp256r1Scalar {
             purpose: "add",
-            fe: SK::new(NonZeroScalar::new(scalar1 + scalar2).unwrap()),
+            fe: self.get_element() + other,
         }
     }
 
     fn mul(&self, other: &SK) -> Secp256r1Scalar {
-        let scalar1 = Scalar::from_bytes_reduced(&self.get_element().to_bytes());
-        let scalar2 = Scalar::from_bytes_reduced(&other.to_bytes());
         Secp256r1Scalar {
             purpose: "mul",
-            fe: SK::new(NonZeroScalar::new(scalar1 * scalar2).unwrap()),
+            fe: self.get_element() * other,
         }
     }
 
     fn sub(&self, other: &SK) -> Secp256r1Scalar {
-        let scalar1 = Scalar::from_bytes_reduced(&self.get_element().to_bytes());
-        let scalar2 = Scalar::from_bytes_reduced(&other.to_bytes());
         Secp256r1Scalar {
             purpose: "sub",
-            fe: SK::new(NonZeroScalar::new(scalar1 - scalar2).unwrap()),
+            fe: self.get_element() - other,
         }
     }
 
     fn invert(&self) -> Secp256r1Scalar {
-        let scalar = NonZeroScalar::new(
-            Scalar::from_bytes_reduced(&self.get_element().to_bytes())
-                .invert()
-                .unwrap(),
-        )
-        .unwrap();
         Secp256r1Scalar {
             purpose: "invert",
-            fe: SK::new(scalar),
+            fe: self.fe.invert().unwrap(),
         }
     }
 }

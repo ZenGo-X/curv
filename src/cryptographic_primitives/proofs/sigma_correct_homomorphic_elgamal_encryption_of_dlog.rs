@@ -51,13 +51,13 @@ impl HomoELGamalDlogProof {
     ) -> HomoELGamalDlogProof {
         let mut s1: FE = ECScalar::new_random();
         let mut s2: FE = ECScalar::new_random();
-        let A1 = delta.G * s1.clone();
-        let A2 = delta.Y * s2.clone();
-        let A3 = delta.G * s2.clone();
+        let A1 = delta.G * s1;
+        let A2 = delta.Y * s2;
+        let A3 = delta.G * s2;
         let e =
             HSha256::create_hash_from_ge(&[&A1, &A2, &A3, &delta.G, &delta.Y, &delta.D, &delta.E]);
-        let z1 = s1.clone() + e.clone() * w.x.clone();
-        let z2 = s2.clone() + e.clone() * w.r.clone();
+        let z1 = s1 + e * w.x;
+        let z2 = s2 + e * w.r;
         s1.zeroize();
         s2.zeroize();
         HomoELGamalDlogProof { A1, A2, A3, z1, z2 }
@@ -67,13 +67,13 @@ impl HomoELGamalDlogProof {
         let e = HSha256::create_hash_from_ge(&[
             &self.A1, &self.A2, &self.A3, &delta.G, &delta.Y, &delta.D, &delta.E,
         ]);
-        let z1G = delta.G * self.z1.clone();
-        let z2Y = delta.Y * self.z2.clone();
-        let z2G = delta.G * self.z2.clone();
-        let A1_plus_eQ = self.A1 + delta.Q * e.clone();
-        let A3_plus_eE = self.A3 + delta.E * e.clone();
+        let z1G = delta.G * self.z1;
+        let z2Y = delta.Y * self.z2;
+        let z2G = delta.G * self.z2;
+        let A1_plus_eQ = self.A1 + delta.Q * e;
+        let A3_plus_eE = self.A3 + delta.E * e;
         let D_minus_Q = delta.D.sub_point(&delta.Q.get_element());
-        let A2_plus_eDmQ = self.A2 + D_minus_Q * e.clone();
+        let A2_plus_eDmQ = self.A2 + D_minus_Q * e;
         if z1G == A1_plus_eQ && z2G == A3_plus_eE && z2Y == A2_plus_eDmQ {
             Ok(())
         } else {

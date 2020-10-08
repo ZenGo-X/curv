@@ -103,9 +103,9 @@ impl Party1FirstMessage {
         secret_share: FE,
     ) -> (Party1FirstMessage, CommWitness, EcKeyPair) {
         let base: GE = ECPoint::generator();
-        let public_share = base * secret_share.clone();
+        let public_share = base * secret_share;
 
-        let d_log_proof = DLogProof::prove(&secret_share.clone());
+        let d_log_proof = DLogProof::prove(&secret_share);
 
         let pk_commitment_blind_factor = BigInt::sample(SECURITY_BITS);
         let pk_commitment = HashCommitment::create_commitment_with_user_defined_randomness(
@@ -154,8 +154,8 @@ impl Party2FirstMessage {
     pub fn create() -> (Party2FirstMessage, EcKeyPair) {
         let base: GE = ECPoint::generator();
         let secret_share: FE = ECScalar::new_random();
-        let public_share = base * secret_share.clone();
-        let d_log_proof = DLogProof::prove(&secret_share.clone());
+        let public_share = base * secret_share;
+        let d_log_proof = DLogProof::prove(&secret_share);
         let ec_key_pair = EcKeyPair {
             public_share,
             secret_share,
@@ -171,8 +171,8 @@ impl Party2FirstMessage {
 
     pub fn create_with_fixed_secret_share(secret_share: FE) -> (Party2FirstMessage, EcKeyPair) {
         let base: GE = ECPoint::generator();
-        let public_share = base * secret_share.clone();
-        let d_log_proof = DLogProof::prove(&secret_share.clone());
+        let public_share = base * secret_share;
+        let d_log_proof = DLogProof::prove(&secret_share);
         let ec_key_pair = EcKeyPair {
             public_share,
             secret_share,

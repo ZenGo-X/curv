@@ -61,7 +61,7 @@ impl ProvePederesenBlind for PedersenBlindingProof {
         s.zeroize();
         PedersenBlindingProof {
             e,
-            m: m.clone(),
+            m: *m,
             a,
             com,
             z,
