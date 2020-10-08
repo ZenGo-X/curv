@@ -13,6 +13,7 @@ The library has a built in support for some useful operations/primitives such as
 |        Curve         |   low level library    |    curve description       |     
 |-------------------------------|------------------------|------------------------|
 |    **Secp256k1**    |        [rust-secp256k1](https://github.com/rust-bitcoin/rust-secp256k1)            |      [bitcoin wiki](https://en.bitcoin.it/wiki/Secp256k1)           |     
+|    **P-256**    |        [RustCrypto](https://crates.io/crates/p256)            |      [NIST.FIPS.186.4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf)           |     
 |    **Ed25519**    |        [cryptoxide](https://github.com/typed-io/cryptoxide/blob/master/src/curve25519.rs)            |      [BDLSY11](https://ed25519.cr.yp.to/ed25519-20110926.pdf)           |      
 |    **Jubjub**    |        [librustzcash](https://github.com/zcash/librustzcash)            |      [what is jubjub](https://z.cash/technology/jubjub/)          |     
 |    **Ristretto**    |        [curve25519-dalek](https://github.com/dalek-cryptography/curve25519-dalek)            |     [ristretto group](https://ristretto.group/)           |      
@@ -31,6 +32,7 @@ The library is not immune to side channel attacks but considerable effort was gi
 By default `cargo build` will build the library only for `BigInt` (used for example in [rust-paillier](https://github.com/KZen-networks/rust-paillier)). To add opertions for one of the elliptic curves 
 a feature must be specified:
 - `cargo build --features=ec_secp256k1` for secp256k1
+- `cargo build --features=ec_p256` for P-256
 - `cargo build --features=ec_ed25519` for ed25519
 - `cargo build --features=ec_jubjub` for jubjub
 - `cargo build --features=ec_ristretto` for ristretto
