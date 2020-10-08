@@ -9,7 +9,7 @@ use generic_array::GenericArray;
 use p256::ecdsa::VerifyKey;
 use p256::elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint};
 use p256::{AffinePoint, EncodedPoint, ProjectivePoint, Scalar};
-use rand::{Rng, thread_rng};
+use rand::{thread_rng, Rng};
 use serde::de;
 use serde::de::Visitor;
 use serde::ser::{Serialize, Serializer};
@@ -40,10 +40,12 @@ pub type FE = Secp256r1Scalar;
 Computed using a deterministic algorithm with the generator as input.
 See test_base_point2 */
 const BASE_POINT2_X: [u8; 32] = [
-    0x70, 0xf7, 0x2b, 0xba, 0xc4, 0x0e, 0x8a, 0x59, 0x4c, 0x91, 0xa7, 0xba, 0xc3, 0x76, 0x59, 0x27, 0x89, 0x10, 0x76, 0x4c, 0xd7, 0xc2, 0x0a, 0x7d, 0x65, 0xa5, 0x9a, 0x04, 0xb0, 0xac, 0x2a, 0xde
+    0x70, 0xf7, 0x2b, 0xba, 0xc4, 0x0e, 0x8a, 0x59, 0x4c, 0x91, 0xa7, 0xba, 0xc3, 0x76, 0x59, 0x27,
+    0x89, 0x10, 0x76, 0x4c, 0xd7, 0xc2, 0x0a, 0x7d, 0x65, 0xa5, 0x9a, 0x04, 0xb0, 0xac, 0x2a, 0xde,
 ];
 const BASE_POINT2_Y: [u8; 32] = [
-    0x30, 0xe2, 0xfe, 0xb3, 0x8d, 0x82, 0x4e, 0x0e, 0xa2, 0x95, 0x2f, 0x2a, 0x48, 0x5b, 0xbc, 0xdd, 0x4c, 0x72, 0x8a, 0x74, 0xf4, 0xfa, 0xc7, 0xdc, 0x0d, 0xc9, 0x90, 0x8d, 0x9a, 0x8d, 0xc1, 0xa4
+    0x30, 0xe2, 0xfe, 0xb3, 0x8d, 0x82, 0x4e, 0x0e, 0xa2, 0x95, 0x2f, 0x2a, 0x48, 0x5b, 0xbc, 0xdd,
+    0x4c, 0x72, 0x8a, 0x74, 0xf4, 0xfa, 0xc7, 0xdc, 0x0d, 0xc9, 0x90, 0x8d, 0x9a, 0x8d, 0xc1, 0xa4,
 ];
 
 impl Zeroize for Secp256r1Scalar {
@@ -437,7 +439,10 @@ impl Serialize for Secp256r1Point {
     where
         S: Serializer,
     {
-        serializer.serialize_str(&format!("{:0>66}", self.bytes_compressed_to_big_int().to_hex()))
+        serializer.serialize_str(&format!(
+            "{:0>66}",
+            self.bytes_compressed_to_big_int().to_hex()
+        ))
     }
 }
 
@@ -478,9 +483,9 @@ mod tests {
     use super::{BigInt, ErrorKey};
     use super::{Secp256r1Point, Secp256r1Scalar};
     use crate::arithmetic::traits::{Converter, Modulo, Samplable};
-    use crate::elliptic::curves::traits::{ECPoint, ECScalar};
     use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
     use crate::cryptographic_primitives::hashing::traits::Hash;
+    use crate::elliptic::curves::traits::{ECPoint, ECScalar};
 
     fn random_point() -> Secp256r1Point {
         let random_scalar: Secp256r1Scalar = Secp256r1Scalar::new_random();
@@ -721,9 +726,9 @@ mod tests {
     #[test]
     fn test_scalar_mul3() {
         let base_point = Secp256r1Point::generator();
-        let int: Secp256r1Scalar = ECScalar::from(
-            &BigInt::from_hex("7CF27B188D034F7E8A52380304B51AC3C08969E277F21B35A60B48FC47669978"),
-        );
+        let int: Secp256r1Scalar = ECScalar::from(&BigInt::from_hex(
+            "7CF27B188D034F7E8A52380304B51AC3C08969E277F21B35A60B48FC47669978",
+        ));
         let test = base_point * int;
         assert_eq!(
             test.x_coor().unwrap().to_hex(),
@@ -767,7 +772,8 @@ mod tests {
             Secp256r1Point::from_coor(
                 &base_point2.x_coor().unwrap(),
                 &base_point2.y_coor().unwrap()
-            ).get_element(),
+            )
+            .get_element(),
             base_point2.get_element()
         );
     }
