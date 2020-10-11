@@ -1,7 +1,6 @@
-use crate::g2_instance;
-use crate::bls12_381_instance;
-use crate::
+//use crate::bls12_381_instance;
 
-pub trait Pairing{
-    fn compute_pairing(element_1:bls12_381,element_2:g2);
+
+pub trait Pairing<T1,T2,T3>{
+    fn compute_pairing(element_1:&T1,element_2:&T2)->T3;
 }

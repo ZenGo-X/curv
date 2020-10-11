@@ -9,13 +9,13 @@
 use std::fmt::Debug;
 use std::str;
 pub const SECRET_KEY_SIZE: usize = 32;
-use super::traits::{ECPoint, ECScalar};
+use super::super::traits::{ECPoint, ECScalar};
 use crate::arithmetic::traits::Converter;
 use crate::cryptographic_primitives::hashing::hash_sha512::HSha512;
 use crate::cryptographic_primitives::hashing::traits::Hash;
 
-use bls12_381::G2Affine;
-use bls12_381::G2Projective;
+use bls12_381::G1Affine;
+use bls12_381::G1Projective;
 use bls12_381::Scalar;
 
 use serde::de;
@@ -23,14 +23,11 @@ use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
-use crate::arithmetic::traits::Modulo;
-use serde_json;
-
 use std::fmt;
 use std::ops::{Add, Mul};
 pub type SK = Scalar;
-// We use G2 only
-pub type PK = G2Affine;
+// We use G1 only
+pub type PK = G1Affine;
 
 use crate::arithmetic::traits::Samplable;
 use crate::BigInt;
@@ -53,11 +50,11 @@ pub struct FieldScalar {
     fe: SK,
 }
 #[derive(Clone, Copy)]
-pub struct G2Point {
+pub struct G1Point {
     purpose: &'static str,
     ge: PK,
 }
-pub type GE = G2Point;
+pub type GE = G1Point;
 pub type FE = FieldScalar;
 
 impl Zeroize for FieldScalar {
@@ -240,7 +237,7 @@ impl<'de> Visitor<'de> for BLS12_381ScalarVisitor {
     type Value = FieldScalar;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("g2")
+        formatter.write_str("g1")
     }
 
     fn visit_str<E: de::Error>(self, s: &str) -> Result<FieldScalar, E> {
@@ -249,7 +246,7 @@ impl<'de> Visitor<'de> for BLS12_381ScalarVisitor {
     }
 }
 
-impl Debug for G2Point {
+impl Debug for G1Point {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -260,37 +257,27 @@ impl Debug for G2Point {
     }
 }
 
-impl PartialEq for G2Point {
-    fn eq(&self, other: &G2Point) -> bool {
+impl PartialEq for G1Point {
+    fn eq(&self, other: &G1Point) -> bool {
         self.get_element() == other.get_element()
     }
 }
 
-impl G2Point {
-    pub fn base_point2() -> G2Point {
+impl G1Point {
+    pub fn base_point2() -> G1Point {
+        // 48 bytes
         let g: GE = ECPoint::generator();
-        let mut hash = HSha512::create_hash(&[&g.bytes_compressed_to_big_int()]);
-        hash = HSha512::create_hash(&[&hash]);
-        hash = HSha512::create_hash(&[&hash]);
-//        let mut bytes = BigInt::to_vec(&hash);
+        let hash = HSha512::create_hash(&[&g.bytes_compressed_to_big_int()]);
+        let hash = HSha512::create_hash(&[&hash]);
 
-//        let rand = BigInt::to_vec(&BigInt::sample(768));
         let mut bytes = BigInt::to_vec(&hash);
-        let end_vector_hash = HSha512::create_hash(&[&hash]);
-        let mut bytes_end = BigInt::to_vec(&end_vector_hash);
-
-       // println!("bytes -- {:?}",bytes);
-        bytes[47] = 184; //Fq must be canoncial + specific flags. This byte is the same as the one from the generator.
-        bytes[0] = 184;
-        bytes[63] = 184;
-//        bytes[95] = 151; //Fq must be canoncial + specific flags. This byte is the same as the one from the generator.
-
-        bytes.extend_from_slice(&bytes_end[0..32]);
+        bytes[47] = 151; //Fq must be canoncial + specific flags. This byte is the same as the one from the generator.
+        println!("------------------------------size {:?}", bytes);
 
         let h: GE = ECPoint::from_bytes(&bytes[..]).unwrap();
-        let bp2_proj: G2Projective = h.ge.into();
+        let bp2_proj: G1Projective = h.ge.into();
         let bp2_proj_in_g1 = bp2_proj.clear_cofactor();
-        G2Point {
+        G1Point {
             purpose: "base point 2",
             ge: bp2_proj_in_g1.into(),
         }
@@ -298,7 +285,7 @@ impl G2Point {
 }
 
 
-impl Zeroize for G2Point {
+impl Zeroize for G1Point {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, GE::generator()) };
         atomic::fence(atomic::Ordering::SeqCst);
@@ -306,43 +293,28 @@ impl Zeroize for G2Point {
     }
 }
 
-impl ECPoint<PK, SK> for G2Point {
-    fn generator() -> G2Point {
-        G2Point {
+impl ECPoint<PK, SK> for G1Point {
+    fn generator() -> G1Point {
+        G1Point {
             purpose: "base_fe",
-            ge: G2Affine::generator(),
+            ge: G1Affine::generator(),
         }
     }
 
     fn get_element(&self) -> PK {
         self.ge.clone()
     }
-/*
-    fn x_coor(&self) -> (Option<BigInt>,Option<BigInt>) {
-        let bytes = G2Affine::to_uncompressed(&self.ge);
-        let (x_coor_1,x_coor_2) = (&bytes[0..48],&bytes[48..96]);
-        let (bn_1,bn_2) = (BigInt::from(x_coor_1),BigInt::from(x_coor_2));
-        (Some(bn_1),Some(bn_2))
-    }
-
-    fn y_coor(&self) -> (Option<BigInt>,Option<BigInt>) {
-        let bytes = G2Affine::to_uncompressed(&self.ge);
-        let (y_coor_1,y_coor_2) = (&bytes[96..144],&bytes[144..192]);
-        let (bn_1,bn_2) = (BigInt::from(y_coor_1),BigInt::from(y_coor_2));
-        (Some(bn_1),Some(bn_2))
-    }
-*/
 
     fn x_coor(&self) -> Option<BigInt> {
-        let bytes = G2Affine::to_uncompressed(&self.ge);
-        let x_coor = &bytes[0..96];
+        let bytes = G1Affine::to_uncompressed(&self.ge);
+        let x_coor = &bytes[0..48];
         let bn = BigInt::from(x_coor);
         Some(bn)
     }
 
     fn y_coor(&self) -> Option<BigInt> {
-        let bytes = G2Affine::to_uncompressed(&self.ge);
-        let y_coor = &bytes[96..192];
+        let bytes = G1Affine::to_uncompressed(&self.ge);
+        let y_coor = &bytes[48..98];
         let bn = BigInt::from(y_coor);
         Some(bn)
     }
@@ -353,127 +325,119 @@ impl ECPoint<PK, SK> for G2Point {
         bn
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<G2Point, ErrorKey> {
-        //let mut bytes_array = [0u8; 96];
-        //println!("len = {:?}, bytes {:?}", bytes.len(), bytes);
-        //match bytes.len() {
-        //    0..=48 => {
-        //        (&mut bytes_array[48 - bytes.len()..]).copy_from_slice(bytes);
-        //    }
-        //    48..=96 => {
-        //        (&mut bytes_array[96 - bytes.len()..]).copy_from_slice(bytes);
-        //    }
-         //   _ => {
-         //       bytes_array.copy_from_slice(&bytes[..48]);
-         //   }
-        //}
-        //bytes_array[95] = 184;
-        let mut bytes_array = [0u8;96];
-        bytes_array[96 - bytes.len()..].copy_from_slice(bytes);
-        //bytes_array[0] = 184;
-        //println!("uncompressed {:?}", bytes_array);
-       // println!("from_uncompressed_unchecked {:?}", G2Affine::from_compressed_unchecked(&bytes_array));
-        //println!("bits: compression_flag_set {:?}, infinity_flag_set {:?}, sort_flag_set {:?}" ,(184>>7)&1,(184>>6)&1,(184>>5)&1 );
-        let pk = G2Point {
+    fn from_bytes(bytes: &[u8]) -> Result<G1Point, ErrorKey> {
+        let mut bytes_array_48 = [0u8; 48];
+        match bytes.len() {
+            0..=48 => {
+                (&mut bytes_array_48[48 - bytes.len()..]).copy_from_slice(bytes);
+            }
+            _ => {
+                bytes_array_48.copy_from_slice(&bytes[..48]);
+            }
+        }
+        println!("from_uncompressed_unchecked {:?}", G1Affine::from_compressed_unchecked(&bytes_array_48));
+        println!("bytes: {:?}, [{:?},{:?},{:?}] ", bytes_array_48[0],(bytes_array_48[0] >> 5) & 1,(bytes_array_48[0] >> 6) & 1,(bytes_array_48[0] >> 7) & 1);
+
+        let pk = G1Point {
             purpose: "random",
-            ge: G2Affine::from_compressed_unchecked(&bytes_array).unwrap(),
+            ge: G1Affine::from_compressed_unchecked(&bytes_array_48).unwrap(),
         };
         return Ok(pk);
     }
 
-    // in this case the opposite of from_bytes: takes compressed pk to 96 bytes.
+    // in this case the opposite of from_bytes: takes compressed pk to 48 bytes.
     fn pk_to_key_slice(&self) -> Vec<u8> {
-        let bytes = G2Affine::to_compressed(&self.ge);
+        let bytes = G1Affine::to_compressed(&self.ge);
         let mut compressed_vec = Vec::new();
         compressed_vec.extend_from_slice(&bytes[..]);
         compressed_vec
     }
 
-    fn scalar_mul(&self, fe: &SK) -> G2Point {
+    fn scalar_mul(&self, fe: &SK) -> G1Point {
         let res = &self.ge * fe;
-        let res_affine: G2Affine = res.into();
-        G2Point {
+        let res_affine: G1Affine = res.into();
+        G1Point {
             purpose: "scalar_point_mul",
             ge: res_affine,
         }
     }
 
-    fn add_point(&self, other: &PK) -> G2Point {
-        let ge_proj: G2Projective = self.ge.into();
+    fn add_point(&self, other: &PK) -> G1Point {
+        let ge_proj: G1Projective = self.ge.into();
         let res = other + &ge_proj;
-        G2Point {
+        G1Point {
             purpose: "combine",
             ge: res.into(),
         }
     }
 
-    fn sub_point(&self, other: &PK) -> G2Point {
-        let ge_proj: G2Projective = self.ge.into();
+    fn sub_point(&self, other: &PK) -> G1Point {
+        let ge_proj: G1Projective = self.ge.into();
         let res = &ge_proj - other;
 
-        G2Point {
+        G1Point {
             purpose: "sub",
             ge: res.into(),
         }
     }
 
-    fn from_coor(_x: &BigInt, _y: &BigInt) -> G2Point {
+    fn from_coor(_x: &BigInt, _y: &BigInt) -> G1Point {
         // TODO
         unimplemented!();
     }
 }
 
-impl Mul<FieldScalar> for G2Point {
-    type Output = G2Point;
-    fn mul(self, other: FieldScalar) -> G2Point {
+impl Mul<FieldScalar> for G1Point {
+    type Output = G1Point;
+    fn mul(self, other: FieldScalar) -> G1Point {
         self.scalar_mul(&other.get_element())
     }
 }
 
-impl<'o> Mul<&'o FieldScalar> for G2Point {
-    type Output = G2Point;
-    fn mul(self, other: &'o FieldScalar) -> G2Point {
+impl<'o> Mul<&'o FieldScalar> for G1Point {
+    type Output = G1Point;
+    fn mul(self, other: &'o FieldScalar) -> G1Point {
         self.scalar_mul(&other.get_element())
     }
 }
 
-impl<'o> Mul<&'o FieldScalar> for &'o G2Point {
-    type Output = G2Point;
-    fn mul(self, other: &'o FieldScalar) -> G2Point {
+impl<'o> Mul<&'o FieldScalar> for &'o G1Point {
+    type Output = G1Point;
+    fn mul(self, other: &'o FieldScalar) -> G1Point {
         self.scalar_mul(&other.get_element())
     }
 }
 
-impl Add<G2Point> for G2Point {
-    type Output = G2Point;
-    fn add(self, other: G2Point) -> G2Point {
+impl Add<G1Point> for G1Point {
+    type Output = G1Point;
+    fn add(self, other: G1Point) -> G1Point {
         self.add_point(&other.get_element())
     }
 }
 
-impl<'o> Add<&'o G2Point> for G2Point {
-    type Output = G2Point;
-    fn add(self, other: &'o G2Point) -> G2Point {
+impl<'o> Add<&'o G1Point> for G1Point {
+    type Output = G1Point;
+    fn add(self, other: &'o G1Point) -> G1Point {
         self.add_point(&other.get_element())
     }
 }
 
-impl<'o> Add<&'o G2Point> for &'o G2Point {
-    type Output = G2Point;
-    fn add(self, other: &'o G2Point) -> G2Point {
+impl<'o> Add<&'o G1Point> for &'o G1Point {
+    type Output = G1Point;
+    fn add(self, other: &'o G1Point) -> G1Point {
         self.add_point(&other.get_element())
     }
 }
 
 #[cfg(feature = "merkle")]
-impl Hashable for G2Point {
+impl Hashable for G1Point {
     fn update_context(&self, context: &mut Sha3) {
         let bytes: Vec<u8> = self.pk_to_key_slice();
         context.input(&bytes[..]);
     }
 }
 
-impl Serialize for G2Point {
+impl Serialize for G1Point {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -486,8 +450,8 @@ impl Serialize for G2Point {
     }
 }
 
-impl<'de> Deserialize<'de> for G2Point {
-    fn deserialize<D>(deserializer: D) -> Result<G2Point, D::Error>
+impl<'de> Deserialize<'de> for G1Point {
+    fn deserialize<D>(deserializer: D) -> Result<G1Point, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -499,13 +463,13 @@ impl<'de> Deserialize<'de> for G2Point {
 struct JubjubPointVisitor;
 
 impl<'de> Visitor<'de> for JubjubPointVisitor {
-    type Value = G2Point;
+    type Value = G1Point;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("JubjubCurvePoint")
     }
 
-    fn visit_seq<V>(self, mut seq: V) -> Result<G2Point, V::Error>
+    fn visit_seq<V>(self, mut seq: V) -> Result<G1Point, V::Error>
     where
         V: SeqAccess<'de>,
     {
@@ -514,10 +478,10 @@ impl<'de> Visitor<'de> for JubjubPointVisitor {
             .ok_or_else(|| panic!("deserialization failed"))?;
         let bytes_bn = BigInt::from_hex(bytes_str);
         let bytes = BigInt::to_vec(&bytes_bn);
-        Ok(G2Point::from_bytes(&bytes[..]).expect("error deserializing point"))
+        Ok(G1Point::from_bytes(&bytes[..]).expect("error deserializing point"))
     }
 
-    fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<G2Point, E::Error> {
+    fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<G1Point, E::Error> {
         let mut bytes_str: String = "".to_string();
 
         while let Some(key) = map.next_key::<&'de str>()? {
@@ -532,29 +496,29 @@ impl<'de> Visitor<'de> for JubjubPointVisitor {
         let bytes_bn = BigInt::from_hex(&bytes_str);
         let bytes = BigInt::to_vec(&bytes_bn);
 
-        Ok(G2Point::from_bytes(&bytes[..]).expect("error deserializing point"))
+        Ok(G1Point::from_bytes(&bytes[..]).expect("error deserializing point"))
     }
 }
 
 pub fn test_serde() {
     let pk = GE::generator();
-    //println!("generator! {:?}",BigInt::to_vec(&pk.bytes_compressed_to_big_int()));
     let s = serde_json::to_string(&pk).expect("Failed in serialization");
     let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-     println!("1111: my left {:?}, my right {:?} ",pk,des_pk);
-  //  assert_eq!(des_pk, pk);
+    println!("1: my left {:?}, my right {:?} ",pk,des_pk);
+    //  assert_eq!(des_pk, pk);
 
     let pk = GE::base_point2();
     let s = serde_json::to_string(&pk).expect("Failed in serialization");
     let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
 
-    println!("22222: my left : {:?}, my right{:?} ",pk,des_pk);
-  // assert_eq!(des_pk, pk);
+    println!("2: my left : {:?}, my right{:?} ",pk,des_pk);
+    // assert_eq!(des_pk, pk);
 }
-
-#[cfg(test)]
+//#[cfg(feature = "ec_g1")]
+//#[cfg(test)]
+#[cfg(all(test,feature = "ec_g1"))]
 mod tests {
-    use super::G2Point;
+    use super::G1Point;
     use crate::arithmetic::traits::Modulo;
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
@@ -563,30 +527,26 @@ mod tests {
     use bincode;
     use serde_json;
 
+    #[test]
+    fn test_serdes_pk() {
+        let pk = GE::generator();
+        let s = serde_json::to_string(&pk).expect("Failed in serialization");
+        let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
+      //  println!("my left {:?}, my right {:?} aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",pk,des_pk);
 
-      #[test]
-      fn test_serdes_pk() {
+        assert_eq!(des_pk, pk);
 
-          let pk = GE::generator();
-          let s = serde_json::to_string(&pk).expect("Failed in serialization");
-          let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-          println!("my left {:?}, my right {:?} aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",pk,des_pk);
-          assert_eq!(des_pk, pk);
-
-          let pk = GE::base_point2();
-          let s = serde_json::to_string(&pk).expect("Failed in serialization");
-          let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-
-          println!("my left: {:?}, my right {:?} bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",pk,des_pk);
-      //    assert_eq!(des_pk, pk);
-
-      }
+        let pk = GE::base_point2();
+        let s = serde_json::to_string(&pk).expect("Failed in serialization");
+        let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
+        assert_eq!(des_pk, pk);
+    }
 
     #[test]
     fn bincode_pk() {
         let pk = GE::generator();
         let bin = bincode::serialize(&pk).unwrap();
-        let decoded: G2Point = bincode::deserialize(bin.as_slice()).unwrap();
+        let decoded: G1Point = bincode::deserialize(bin.as_slice()).unwrap();
         assert_eq!(decoded, pk);
     }
 

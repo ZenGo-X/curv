@@ -56,26 +56,26 @@ mod jubjubinstance {
 #[cfg(feature = "ec_jubjub")]
 pub use self::jubjubinstance::*;
 
-#[cfg(feature = "ec_g1")]
+#[cfg(any(feature = "ec_g1",feature = "ec_bls12_381"))]
 mod bls12_381_instance {
-    pub use crate::elliptic::curves::bls12_381::FE;
-    pub use crate::elliptic::curves::bls12_381::GE;
-    pub use crate::elliptic::curves::bls12_381::PK;
-    pub use crate::elliptic::curves::bls12_381::SK;
+    pub use crate::elliptic::curves::bls12_381::g1::FE;
+    pub use crate::elliptic::curves::bls12_381::g1::GE;
+    pub use crate::elliptic::curves::bls12_381::g1::PK;
+    pub use crate::elliptic::curves::bls12_381::g1::SK;
 }
 
 
-#[cfg(feature = "ec_g1")]
+#[cfg(any(feature = "ec_g1",feature = "ec_bls12_381"))]
 pub use self::bls12_381_instance::*;
 
 
 
 #[cfg(feature = "ec_g2")]
 mod g2_instance {
-    pub use crate::elliptic::curves::g2::FE;
-    pub use crate::elliptic::curves::g2::GE;
-    pub use crate::elliptic::curves::g2::PK;
-    pub use crate::elliptic::curves::g2::SK;
+    pub use crate::elliptic::curves::bls12_381::g2::FE;
+    pub use crate::elliptic::curves::bls12_381::g2::GE;
+    pub use crate::elliptic::curves::bls12_381::g2::PK;
+    pub use crate::elliptic::curves::bls12_381::g2::SK;
 }
 
 #[cfg(feature = "ec_g2")]
