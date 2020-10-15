@@ -1,5 +1,5 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://travis-ci.com/KZen-networks/curv.svg?branch=master)](https://travis-ci.com/KZen-networks/curv)
+[![Build Status](https://travis-ci.com/ZenGo-X/curv.svg?branch=master)](https://travis-ci.com/KZen-networks/curv)
 
 Curv
 =====================================
@@ -13,6 +13,7 @@ The library has a built in support for some useful operations/primitives such as
 |        Curve         |   low level library    |    curve description       |     
 |-------------------------------|------------------------|------------------------|
 |    **Secp256k1**    |        [rust-secp256k1](https://github.com/rust-bitcoin/rust-secp256k1)            |      [bitcoin wiki](https://en.bitcoin.it/wiki/Secp256k1)           |     
+|    **P-256**    |        [RustCrypto](https://crates.io/crates/p256)            |      [NIST.FIPS.186.4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf)           |     
 |    **Ed25519**    |        [cryptoxide](https://github.com/typed-io/cryptoxide/blob/master/src/curve25519.rs)            |      [BDLSY11](https://ed25519.cr.yp.to/ed25519-20110926.pdf)           |      
 |    **Jubjub**    |        [librustzcash](https://github.com/zcash/librustzcash)            |      [what is jubjub](https://z.cash/technology/jubjub/)          |     
 |    **Ristretto**    |        [curve25519-dalek](https://github.com/dalek-cryptography/curve25519-dalek)            |     [ristretto group](https://ristretto.group/)           |      
@@ -31,6 +32,7 @@ The library is not immune to side channel attacks but considerable effort was gi
 By default `cargo build` will build the library only for `BigInt` (used for example in [rust-paillier](https://github.com/KZen-networks/rust-paillier)). To add opertions for one of the elliptic curves 
 a feature must be specified:
 - `cargo build --features=ec_secp256k1` for secp256k1
+- `cargo build --features=ec_p256` for P-256
 - `cargo build --features=ec_ed25519` for ed25519
 - `cargo build --features=ec_jubjub` for jubjub
 - `cargo build --features=ec_ristretto` for ristretto
@@ -53,7 +55,7 @@ Curv is released under the terms of the MIT license. See [LICENSE](LICENSE) for 
 
 
 ### Development Process
-We use several methods to communicate: You can open an issue, [reach out](mailto:github@kzencorp.com) by mail or join the KZen Research [Telegram]( https://t.me/kzen_research) for discussions on code and research. Changes are to be submitted as pull requests.
+We use several methods to communicate: You can open an issue, [reach out](mailto:github@kzencorp.com) by mail or join ZenGo X [Telegram]( https://t.me/zengo_x) for discussions on code and research. Changes are to be submitted as pull requests.
 
 ### Contact
 For any questions, feel free to [email us](mailto:github@kzencorp.com).

@@ -1,6 +1,6 @@
 [package]
 name = "curv"
-version = "0.2.6"
+version = "0.2.7"
 edition = "2018"
 
 [lib]
@@ -15,6 +15,7 @@ ec_jubjub = ["rust-gmp", "ecc" , "pairing", "sapling-crypto"]
 ec_g1 = ["rust-gmp", "ecc" , "bls12_381"]
 ec_g2 = ["rust-gmp","ecc", "bls12_381"]
 ec_bls12_381 = ["rust-gmp", "ecc" , "bls12_381"]
+ec_p256 = ["rust-gmp" ,"ecc", "p256", "generic-array"]
 ecc = []
 merkle = ["rust-crypto", "merkle-sha3"]
 
@@ -75,6 +76,16 @@ optional = true
 [dependencies.cryptoxide]
 version = "0.1.2"
 optional = true
+
+[dependencies.p256]
+version = "0.5"
+features = ["ecdsa"]
+optional = true
+
+[dependencies.generic-array]
+version = "0.14"
+optional = true
+
 
 [dev-dependencies]
 bincode = "1.1"

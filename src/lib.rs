@@ -68,6 +68,17 @@ mod bls12_381_instance {
 #[cfg(any(feature = "ec_g1",feature = "ec_bls12_381"))]
 pub use self::bls12_381_instance::*;
 
+#[cfg(feature = "ec_p256")]
+mod p256instance {
+    pub use crate::elliptic::curves::p256::FE;
+    pub use crate::elliptic::curves::p256::GE;
+    pub use crate::elliptic::curves::p256::PK;
+    pub use crate::elliptic::curves::p256::SK;
+}
+
+#[cfg(feature = "ec_p256")]
+pub use self::p256instance::*;
+
 
 
 #[cfg(feature = "ec_g2")]
