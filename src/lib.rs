@@ -7,7 +7,7 @@
 #[macro_use]
 extern crate serde_derive;
 
-//#[cfg(feature = "ecc")]
+#[cfg(feature = "ecc")]
 pub mod elliptic;
 
 #[cfg(feature = "ec_ristretto")]
@@ -21,7 +21,6 @@ mod curveristrettoinstance {
 #[cfg(feature = "ec_ristretto")]
 pub use self::curveristrettoinstance::*;
 
-
 #[cfg(feature = "ec_secp256k1")]
 mod secp256k1instance {
     pub use crate::elliptic::curves::secp256_k1::FE;
@@ -32,7 +31,6 @@ mod secp256k1instance {
 
 #[cfg(feature = "ec_secp256k1")]
 pub use self::secp256k1instance::*;
-
 
 #[cfg(feature = "ec_ed25519")]
 mod ed25519instance {
@@ -56,7 +54,7 @@ mod jubjubinstance {
 #[cfg(feature = "ec_jubjub")]
 pub use self::jubjubinstance::*;
 
-#[cfg(any(feature = "ec_g1",feature = "ec_bls12_381"))]
+#[cfg(any(feature = "ec_g1", feature = "ec_bls12_381"))]
 mod bls12_381_instance {
     pub use crate::elliptic::curves::bls12_381::g1::FE;
     pub use crate::elliptic::curves::bls12_381::g1::GE;
@@ -64,8 +62,7 @@ mod bls12_381_instance {
     pub use crate::elliptic::curves::bls12_381::g1::SK;
 }
 
-
-#[cfg(any(feature = "ec_g1",feature = "ec_bls12_381"))]
+#[cfg(any(feature = "ec_g1", feature = "ec_bls12_381"))]
 pub use self::bls12_381_instance::*;
 
 #[cfg(feature = "ec_p256")]
@@ -79,8 +76,6 @@ mod p256instance {
 #[cfg(feature = "ec_p256")]
 pub use self::p256instance::*;
 
-
-
 #[cfg(feature = "ec_g2")]
 mod g2_instance {
     pub use crate::elliptic::curves::bls12_381::g2::FE;
@@ -91,8 +86,6 @@ mod g2_instance {
 
 #[cfg(feature = "ec_g2")]
 pub use self::g2_instance::*;
-
-
 
 #[cfg(feature = "rust-gmp")]
 pub mod arithmetic;

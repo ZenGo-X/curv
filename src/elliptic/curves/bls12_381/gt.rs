@@ -214,8 +214,8 @@ impl<'o> Add<&'o FieldScalar> for FieldScalar {
 
 impl Serialize for FieldScalar {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         serializer.serialize_str(&self.to_big_int().to_hex())
     }
@@ -223,8 +223,8 @@ impl Serialize for FieldScalar {
 
 impl<'de> Deserialize<'de> for FieldScalar {
     fn deserialize<D>(deserializer: D) -> Result<FieldScalar, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         deserializer.deserialize_str(BLS12_381ScalarVisitor)
     }
@@ -245,33 +245,16 @@ impl<'de> Visitor<'de> for BLS12_381ScalarVisitor {
     }
 }
 
-/*
-impl Debug for GtPoint {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Point {{ purpose: {:?}, bytes: {:?} }}",
-            self.purpose,
-            self.ge.fmt();
-        )
-    }
-}
-*/
 impl PartialEq for GtPoint {
     fn eq(&self, other: &GtPoint) -> bool {
         self.get_element() == other.get_element()
     }
 }
 
-
-
-
 impl GtPoint {
-
     fn get_element(&self) -> PK {
         self.ge.clone()
     }
-
 
     fn scalar_mul(&self, fe: &SK) -> GtPoint {
         let res = &self.ge * fe;
@@ -299,11 +282,6 @@ impl GtPoint {
             purpose: "sub",
             ge: res.into(),
         }
-    }
-
-    fn from_coor(_x: &BigInt, _y: &BigInt) -> GtPoint {
-        // TODO
-        unimplemented!();
     }
 }
 
@@ -357,12 +335,10 @@ impl Hashable for GtPoint {
     }
 }
 
-
-
 impl<'de> Deserialize<'de> for GtPoint {
     fn deserialize<D>(deserializer: D) -> Result<GtPoint, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         const FIELDS: &[&str] = &["bytes_str"];
         deserializer.deserialize_struct("JujubPoint", FIELDS, JubjubPointVisitor)
@@ -377,18 +353,16 @@ impl<'de> Visitor<'de> for JubjubPointVisitor {
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("JubjubCurvePoint")
     }
+}
 
- }
-
-
-#[cfg(all(test,feature = "ec_gt"))]
+#[cfg(all(test, feature = "ec_gt"))]
 mod tests {
     use super::GtPoint;
+    use super::*;
     use crate::arithmetic::traits::Modulo;
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
-    use crate::{FE, GE};
     use bincode;
     use serde_json;
 
@@ -397,10 +371,7 @@ mod tests {
         let pk = GE::generator();
         let s = serde_json::to_string(&pk).expect("Failed in serialization");
         let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-        //  println!("my left {:?}, my right {:?} aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",pk,des_pk);
-
         assert_eq!(des_pk, pk);
-
         let pk = GE::base_point2();
         let s = serde_json::to_string(&pk).expect("Failed in serialization");
         let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");

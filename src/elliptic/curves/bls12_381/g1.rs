@@ -272,8 +272,6 @@ impl G1Point {
 
         let mut bytes = BigInt::to_vec(&hash);
         bytes[47] = 151; //Fq must be canoncial + specific flags. This byte is the same as the one from the generator.
-        println!("------------------------------size {:?}", bytes);
-
         let h: GE = ECPoint::from_bytes(&bytes[..]).unwrap();
         let bp2_proj: G1Projective = h.ge.into();
         let bp2_proj_in_g1 = bp2_proj.clear_cofactor();
@@ -283,7 +281,6 @@ impl G1Point {
         }
     }
 }
-
 
 impl Zeroize for G1Point {
     fn zeroize(&mut self) {
@@ -335,8 +332,6 @@ impl ECPoint<PK, SK> for G1Point {
                 bytes_array_48.copy_from_slice(&bytes[..48]);
             }
         }
-        println!("from_uncompressed_unchecked {:?}", G1Affine::from_compressed_unchecked(&bytes_array_48));
-        println!("bytes: {:?}, [{:?},{:?},{:?}] ", bytes_array_48[0],(bytes_array_48[0] >> 5) & 1,(bytes_array_48[0] >> 6) & 1,(bytes_array_48[0] >> 7) & 1);
 
         let pk = G1Point {
             purpose: "random",
@@ -504,19 +499,14 @@ pub fn test_serde() {
     let pk = GE::generator();
     let s = serde_json::to_string(&pk).expect("Failed in serialization");
     let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-    println!("1: my left {:?}, my right {:?} ",pk,des_pk);
-    //  assert_eq!(des_pk, pk);
-
+    assert_eq!(des_pk, pk);
     let pk = GE::base_point2();
     let s = serde_json::to_string(&pk).expect("Failed in serialization");
     let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-
-    println!("2: my left : {:?}, my right{:?} ",pk,des_pk);
-    // assert_eq!(des_pk, pk);
+    assert_eq!(des_pk, pk);
 }
-//#[cfg(feature = "ec_g1")]
-//#[cfg(test)]
-#[cfg(all(test,feature = "ec_g1"))]
+
+#[cfg(all(test, feature = "ec_g1"))]
 mod tests {
     use super::G1Point;
     use crate::arithmetic::traits::Modulo;
@@ -532,10 +522,7 @@ mod tests {
         let pk = GE::generator();
         let s = serde_json::to_string(&pk).expect("Failed in serialization");
         let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-      //  println!("my left {:?}, my right {:?} aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",pk,des_pk);
-
         assert_eq!(des_pk, pk);
-
         let pk = GE::base_point2();
         let s = serde_json::to_string(&pk).expect("Failed in serialization");
         let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");

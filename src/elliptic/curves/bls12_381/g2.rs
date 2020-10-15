@@ -9,21 +9,21 @@
 use std::fmt::Debug;
 use std::str;
 pub const SECRET_KEY_SIZE: usize = 32;
-use crate::elliptic::curves::traits::{ECPoint, ECScalar};
 use crate::arithmetic::traits::Converter;
 use crate::cryptographic_primitives::hashing::hash_sha512::HSha512;
 use crate::cryptographic_primitives::hashing::traits::Hash;
+use crate::elliptic::curves::traits::{ECPoint, ECScalar};
 
 use bls12_381::G2Affine;
 use bls12_381::G2Projective;
 use bls12_381::Scalar;
 
+use crate::arithmetic::traits::Modulo;
 use serde::de;
 use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
-use crate::arithmetic::traits::Modulo;
 use serde_json;
 
 use std::fmt;
@@ -272,21 +272,12 @@ impl G2Point {
         let mut hash = HSha512::create_hash(&[&g.bytes_compressed_to_big_int()]);
         hash = HSha512::create_hash(&[&hash]);
         hash = HSha512::create_hash(&[&hash]);
-//        let mut bytes = BigInt::to_vec(&hash);
-
-//        let rand = BigInt::to_vec(&BigInt::sample(768));
         let mut bytes = BigInt::to_vec(&hash);
         let end_vector_hash = HSha512::create_hash(&[&hash]);
         let bytes_end = BigInt::to_vec(&end_vector_hash);
-
-       // println!("bytes -- {:?}",bytes);
         bytes[47] = 184; //Fq must be canoncial + specific flags. This byte is the same as the one from the generator.
         bytes[0] = 184;
-        bytes[63] = 184;
-//        bytes[95] = 151; //Fq must be canoncial + specific flags. This byte is the same as the one from the generator.
-
         bytes.extend_from_slice(&bytes_end[0..32]);
-
         let h: GE = ECPoint::from_bytes(&bytes[..]).unwrap();
         let bp2_proj: G2Projective = h.ge.into();
         let bp2_proj_in_g1 = bp2_proj.clear_cofactor();
@@ -296,7 +287,6 @@ impl G2Point {
         }
     }
 }
-
 
 impl Zeroize for G2Point {
     fn zeroize(&mut self) {
@@ -339,26 +329,8 @@ impl ECPoint<PK, SK> for G2Point {
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<G2Point, ErrorKey> {
-        //let mut bytes_array = [0u8; 96];
-        //println!("len = {:?}, bytes {:?}", bytes.len(), bytes);
-        //match bytes.len() {
-        //    0..=48 => {
-        //        (&mut bytes_array[48 - bytes.len()..]).copy_from_slice(bytes);
-        //    }
-        //    48..=96 => {
-        //        (&mut bytes_array[96 - bytes.len()..]).copy_from_slice(bytes);
-        //    }
-         //   _ => {
-         //       bytes_array.copy_from_slice(&bytes[..48]);
-         //   }
-        //}
-        //bytes_array[95] = 184;
-        let mut bytes_array = [0u8;96];
+        let mut bytes_array = [0u8; 96];
         bytes_array[96 - bytes.len()..].copy_from_slice(bytes);
-        //bytes_array[0] = 184;
-        //println!("uncompressed {:?}", bytes_array);
-       // println!("from_uncompressed_unchecked {:?}", G2Affine::from_compressed_unchecked(&bytes_array));
-        //println!("bits: compression_flag_set {:?}, infinity_flag_set {:?}, sort_flag_set {:?}" ,(184>>7)&1,(184>>6)&1,(184>>5)&1 );
         let pk = G2Point {
             purpose: "random",
             ge: G2Affine::from_compressed_unchecked(&bytes_array).unwrap(),
@@ -521,23 +493,7 @@ impl<'de> Visitor<'de> for JubjubPointVisitor {
     }
 }
 
-pub fn test_serde() {
-    let pk = GE::generator();
-    //println!("generator! {:?}",BigInt::to_vec(&pk.bytes_compressed_to_big_int()));
-    let s = serde_json::to_string(&pk).expect("Failed in serialization");
-    let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-     println!("1111: my left {:?}, my right {:?} ",pk,des_pk);
-  //  assert_eq!(des_pk, pk);
-
-    let pk = GE::base_point2();
-    let s = serde_json::to_string(&pk).expect("Failed in serialization");
-    let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-
-    println!("22222: my left : {:?}, my right{:?} ",pk,des_pk);
-  // assert_eq!(des_pk, pk);
-}
-
-#[cfg(all(test,feature = "ec_g2"))]
+#[cfg(all(test, feature = "ec_g2"))]
 mod tests {
     use super::G2Point;
     use crate::arithmetic::traits::Modulo;
@@ -548,24 +504,17 @@ mod tests {
     use bincode;
     use serde_json;
 
-
-      #[test]
-      fn test_serdes_pk() {
-
-          let pk = GE::generator();
-          let s = serde_json::to_string(&pk).expect("Failed in serialization");
-          let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-          println!("my left {:?}, my right {:?} aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",pk,des_pk);
-          assert_eq!(des_pk, pk);
-
-          let pk = GE::base_point2();
-          let s = serde_json::to_string(&pk).expect("Failed in serialization");
-          let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-
-          println!("my left: {:?}, my right {:?} bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",pk,des_pk);
-      //    assert_eq!(des_pk, pk);
-
-      }
+    #[test]
+    fn test_serdes_pk() {
+        let pk = GE::generator();
+        let s = serde_json::to_string(&pk).expect("Failed in serialization");
+        let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
+        assert_eq!(des_pk, pk);
+        let pk = GE::base_point2();
+        let s = serde_json::to_string(&pk).expect("Failed in serialization");
+        let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
+        assert_eq!(des_pk, pk);
+    }
 
     #[test]
     fn bincode_pk() {
