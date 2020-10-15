@@ -277,7 +277,7 @@ impl G2Point {
 //        let rand = BigInt::to_vec(&BigInt::sample(768));
         let mut bytes = BigInt::to_vec(&hash);
         let end_vector_hash = HSha512::create_hash(&[&hash]);
-        let mut bytes_end = BigInt::to_vec(&end_vector_hash);
+        let bytes_end = BigInt::to_vec(&end_vector_hash);
 
        // println!("bytes -- {:?}",bytes);
         bytes[47] = 184; //Fq must be canoncial + specific flags. This byte is the same as the one from the generator.

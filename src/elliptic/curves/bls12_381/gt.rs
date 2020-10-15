@@ -273,8 +273,6 @@ impl GtPoint {
     }
 
 
-
-
     fn scalar_mul(&self, fe: &SK) -> GtPoint {
         let res = &self.ge * fe;
         let res_affine: Gt = res.into();
