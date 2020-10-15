@@ -48,7 +48,7 @@ mod tests{
     }
 
     #[test]
-    fn check_pairing(){
+    fn basic_pairing(){
         let a:GE1 = ECPoint::generator();
         let b:GE2 = ECPoint::generator();
         let res = bls_pairing::compute_pairing(&a,&b);
@@ -59,5 +59,11 @@ mod tests{
             multi_miller_loop(&[(&a.get_element(), &prep)]).final_exponentiation()
         );
 
+    }
+
+    fn equating_powers(){
+        let a:GE1 = ECPoint::generator();
+        let b:GE2 = ECPoint::generator();
+        let res = bls_pairing::compute_pairing(&a.,&b);
     }
 }
