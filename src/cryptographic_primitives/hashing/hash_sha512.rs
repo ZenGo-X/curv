@@ -103,21 +103,7 @@ mod tests {
         );
     }
 
-    #[test]
-    fn create_sha512_from_ge_test_for_all_curves() {
-        #[cfg(feature = "ec_secp256k1")]
-        create_sha512_from_ge_test::<crate::elliptic::curves::secp256_k1::GE>();
-        #[cfg(feature = "ec_ristretto")]
-        create_sha512_from_ge_test::<crate::elliptic::curves::curve_ristretto::GE>();
-        #[cfg(feature = "ec_ed25519")]
-        create_sha512_from_ge_test::<crate::elliptic::curves::ed25519::GE>();
-        #[cfg(feature = "ec_jubjub")]
-        create_sha512_from_ge_test::<crate::elliptic::curves::curve_jubjub::GE>();
-        #[cfg(feature = "ec_bls12_381")]
-        create_sha512_from_ge_test::<crate::elliptic::curves::bls12_381::GE>();
-        #[cfg(feature = "ec_p256")]
-        create_sha512_from_ge_test::<crate::elliptic::curves::p256::GE>();
-    }
+    crate::test_for_all_curves!(create_sha512_from_ge_test);
 
     fn create_sha512_from_ge_test<P>()
     where P: ECPoint,

@@ -93,3 +93,42 @@ pub enum ErrorKey {
 pub enum ErrorSS {
     VerifyShareError,
 }
+
+#[cfg(test)]
+#[macro_export]
+macro_rules! test_for_all_curves {
+    ($fn: ident) => {
+        paste::paste!{
+            #[cfg(feature = "ec_secp256k1")]
+            #[test]
+            fn [<$fn _secp256k1>]() {
+                $fn::<crate::elliptic::curves::secp256_k1::GE>()
+            }
+            #[cfg(feature = "ec_ristretto")]
+            #[test]
+            fn [<$fn _ristretto>]() {
+                $fn::<crate::elliptic::curves::curve_ristretto::GE>()
+            }
+            #[cfg(feature = "ec_ed25519")]
+            #[test]
+            fn [<$fn _ed25519>]() {
+                $fn::<crate::elliptic::curves::ed25519::GE>()
+            }
+            #[cfg(feature = "ec_jubjub")]
+            #[test]
+            fn [<$fn _jubjub>]() {
+                $fn::<crate::elliptic::curves::curve_jubjub::GE>()
+            }
+            #[cfg(feature = "ec_bls12_381")]
+            #[test]
+            fn [<$fn _bls12_381>]() {
+                $fn::<crate::elliptic::curves::bls12_381::GE>()
+            }
+            #[cfg(feature = "ec_p256")]
+            #[test]
+            fn [<$fn _p256>]() {
+                $fn::<crate::elliptic::curves::p256::GE>()
+            }
+        }
+    };
+}

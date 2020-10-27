@@ -63,24 +63,12 @@ impl<P: ECPoint> MT256<P> {
 
 #[cfg(test)]
 mod tests {
-    use crate::cryptographic_primitives::hashing::merkle_tree::MT256;
     use crate::elliptic::curves::traits::ECPoint;
+    use super::MT256;
 
-    #[test]
-    fn test_mt_functionality_four_leaves_for_all_curves() {
-        #[cfg(feature = "ec_secp256k1")]
-        test_mt_functionality_four_leaves::<crate::elliptic::curves::secp256_k1::GE>();
-        #[cfg(feature = "ec_ristretto")]
-        test_mt_functionality_four_leaves::<crate::elliptic::curves::curve_ristretto::GE>();
-        #[cfg(feature = "ec_ed25519")]
-        test_mt_functionality_four_leaves::<crate::elliptic::curves::ed25519::GE>();
-        #[cfg(feature = "ec_jubjub")]
-        test_mt_functionality_four_leaves::<crate::elliptic::curves::curve_jubjub::GE>();
-        #[cfg(feature = "ec_bls12_381")]
-        test_mt_functionality_four_leaves::<crate::elliptic::curves::bls12_381::GE>();
-        #[cfg(feature = "ec_p256")]
-        test_mt_functionality_four_leaves::<crate::elliptic::curves::p256::GE>();
-    }
+    use crate::test_for_all_curves;
+
+    test_for_all_curves!(test_mt_functionality_four_leaves);
 
     fn test_mt_functionality_four_leaves<P: ECPoint>() {
         let ge1: P = ECPoint::generator();
@@ -96,21 +84,7 @@ mod tests {
         assert!(valid_proof);
     }
 
-    #[test]
-    fn test_mt_functionality_three_leaves_for_all_curves() {
-        #[cfg(feature = "ec_secp256k1")]
-        test_mt_functionality_three_leaves::<crate::elliptic::curves::secp256_k1::GE>();
-        #[cfg(feature = "ec_ristretto")]
-        test_mt_functionality_three_leaves::<crate::elliptic::curves::curve_ristretto::GE>();
-        #[cfg(feature = "ec_ed25519")]
-        test_mt_functionality_three_leaves::<crate::elliptic::curves::ed25519::GE>();
-        #[cfg(feature = "ec_jubjub")]
-        test_mt_functionality_three_leaves::<crate::elliptic::curves::curve_jubjub::GE>();
-        #[cfg(feature = "ec_bls12_381")]
-        test_mt_functionality_three_leaves::<crate::elliptic::curves::bls12_381::GE>();
-        #[cfg(feature = "ec_p256")]
-        test_mt_functionality_three_leaves::<crate::elliptic::curves::p256::GE>();
-    }
+    test_for_all_curves!(test_mt_functionality_three_leaves);
 
     fn test_mt_functionality_three_leaves<P: ECPoint>() {
         let ge1: P = ECPoint::generator();

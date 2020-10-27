@@ -239,23 +239,10 @@ where P: ECPoint + PartialEq + Clone,
 
 #[cfg(test)]
 mod tests {
-    use crate::cryptographic_primitives::secret_sharing::feldman_vss::*;
+    use crate::test_for_all_curves;
+    use super::*;
 
-    #[test]
-    fn test_secret_sharing_3_out_of_5_at_indices_for_all_curves() {
-        #[cfg(feature = "ec_secp256k1")]
-        test_secret_sharing_3_out_of_5_at_indices::<crate::elliptic::curves::secp256_k1::GE>();
-        #[cfg(feature = "ec_ristretto")]
-        test_secret_sharing_3_out_of_5_at_indices::<crate::elliptic::curves::curve_ristretto::GE>();
-        #[cfg(feature = "ec_ed25519")]
-        test_secret_sharing_3_out_of_5_at_indices::<crate::elliptic::curves::ed25519::GE>();
-        #[cfg(feature = "ec_jubjub")]
-        test_secret_sharing_3_out_of_5_at_indices::<crate::elliptic::curves::curve_jubjub::GE>();
-        #[cfg(feature = "ec_bls12_381")]
-        test_secret_sharing_3_out_of_5_at_indices::<crate::elliptic::curves::bls12_381::GE>();
-        #[cfg(feature = "ec_p256")]
-        test_secret_sharing_3_out_of_5_at_indices::<crate::elliptic::curves::p256::GE>();
-    }
+    test_for_all_curves!(test_secret_sharing_3_out_of_5_at_indices);
 
     fn test_secret_sharing_3_out_of_5_at_indices<P>()
     where P: ECPoint + PartialEq + Clone,
@@ -276,21 +263,7 @@ mod tests {
         assert_eq!(secret, secret_reconstructed);
     }
 
-    #[test]
-    fn test_secret_sharing_3_out_of_5_for_all_curves() {
-        #[cfg(feature = "ec_secp256k1")]
-        test_secret_sharing_3_out_of_5::<crate::elliptic::curves::secp256_k1::GE>();
-        #[cfg(feature = "ec_ristretto")]
-        test_secret_sharing_3_out_of_5::<crate::elliptic::curves::curve_ristretto::GE>();
-        #[cfg(feature = "ec_ed25519")]
-        test_secret_sharing_3_out_of_5::<crate::elliptic::curves::ed25519::GE>();
-        #[cfg(feature = "ec_jubjub")]
-        test_secret_sharing_3_out_of_5::<crate::elliptic::curves::curve_jubjub::GE>();
-        #[cfg(feature = "ec_bls12_381")]
-        test_secret_sharing_3_out_of_5::<crate::elliptic::curves::bls12_381::GE>();
-        #[cfg(feature = "ec_p256")]
-        test_secret_sharing_3_out_of_5::<crate::elliptic::curves::p256::GE>();
-    }
+    test_for_all_curves!(test_secret_sharing_3_out_of_5);
 
     fn test_secret_sharing_3_out_of_5<P>()
     where P: ECPoint + PartialEq + Clone,
@@ -336,21 +309,7 @@ mod tests {
         assert_eq!(w, secret_reconstructed);
     }
 
-    #[test]
-    fn test_secret_sharing_3_out_of_7_for_all_curves() {
-        #[cfg(feature = "ec_secp256k1")]
-        test_secret_sharing_3_out_of_7::<crate::elliptic::curves::secp256_k1::GE>();
-        #[cfg(feature = "ec_ristretto")]
-        test_secret_sharing_3_out_of_7::<crate::elliptic::curves::curve_ristretto::GE>();
-        #[cfg(feature = "ec_ed25519")]
-        test_secret_sharing_3_out_of_7::<crate::elliptic::curves::ed25519::GE>();
-        #[cfg(feature = "ec_jubjub")]
-        test_secret_sharing_3_out_of_7::<crate::elliptic::curves::curve_jubjub::GE>();
-        #[cfg(feature = "ec_bls12_381")]
-        test_secret_sharing_3_out_of_7::<crate::elliptic::curves::bls12_381::GE>();
-        #[cfg(feature = "ec_p256")]
-        test_secret_sharing_3_out_of_7::<crate::elliptic::curves::p256::GE>();
-    }
+    test_for_all_curves!(test_secret_sharing_3_out_of_7);
 
     fn test_secret_sharing_3_out_of_7<P>()
     where P: ECPoint + PartialEq + Clone,
@@ -391,21 +350,7 @@ mod tests {
         assert_eq!(w, secret_reconstructed);
     }
 
-    #[test]
-    fn test_secret_sharing_1_out_of_2_for_all_curves() {
-        #[cfg(feature = "ec_secp256k1")]
-            test_secret_sharing_1_out_of_2::<crate::elliptic::curves::secp256_k1::GE>();
-        #[cfg(feature = "ec_ristretto")]
-            test_secret_sharing_1_out_of_2::<crate::elliptic::curves::curve_ristretto::GE>();
-        #[cfg(feature = "ec_ed25519")]
-            test_secret_sharing_1_out_of_2::<crate::elliptic::curves::ed25519::GE>();
-        #[cfg(feature = "ec_jubjub")]
-            test_secret_sharing_1_out_of_2::<crate::elliptic::curves::curve_jubjub::GE>();
-        #[cfg(feature = "ec_bls12_381")]
-            test_secret_sharing_1_out_of_2::<crate::elliptic::curves::bls12_381::GE>();
-        #[cfg(feature = "ec_p256")]
-            test_secret_sharing_1_out_of_2::<crate::elliptic::curves::p256::GE>();
-    }
+    test_for_all_curves!(test_secret_sharing_1_out_of_2);
 
     fn test_secret_sharing_1_out_of_2<P>()
     where P: ECPoint + PartialEq + Clone,
@@ -438,21 +383,7 @@ mod tests {
         assert_eq!(w, secret_reconstructed);
     }
 
-    #[test]
-    fn test_secret_sharing_1_out_of_3_for_all_curves() {
-        #[cfg(feature = "ec_secp256k1")]
-        test_secret_sharing_1_out_of_3::<crate::elliptic::curves::secp256_k1::GE>();
-        #[cfg(feature = "ec_ristretto")]
-        test_secret_sharing_1_out_of_3::<crate::elliptic::curves::curve_ristretto::GE>();
-        #[cfg(feature = "ec_ed25519")]
-        test_secret_sharing_1_out_of_3::<crate::elliptic::curves::ed25519::GE>();
-        #[cfg(feature = "ec_jubjub")]
-        test_secret_sharing_1_out_of_3::<crate::elliptic::curves::curve_jubjub::GE>();
-        #[cfg(feature = "ec_bls12_381")]
-        test_secret_sharing_1_out_of_3::<crate::elliptic::curves::bls12_381::GE>();
-        #[cfg(feature = "ec_p256")]
-        test_secret_sharing_1_out_of_3::<crate::elliptic::curves::p256::GE>();
-    }
+    test_for_all_curves!(test_secret_sharing_1_out_of_3);
 
     fn test_secret_sharing_1_out_of_3<P>()
     where P: ECPoint + PartialEq + Clone + std::fmt::Debug,
