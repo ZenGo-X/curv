@@ -6,12 +6,12 @@
 */
 
 use crate::BigInt;
-use crate::{FE, GE};
+use crate::elliptic::curves::traits::ECPoint;
 
 pub trait Hash {
     fn create_hash(big_ints: &[&BigInt]) -> BigInt;
     fn create_hash_from_slice(byte_slice: &[u8]) -> BigInt;
-    fn create_hash_from_ge(ge_vec: &[&GE]) -> FE;
+    fn create_hash_from_ge<P: ECPoint>(ge_vec: &[&P]) -> P::Scalar;
 }
 
 pub trait KeyedHash {

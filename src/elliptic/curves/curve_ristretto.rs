@@ -64,7 +64,9 @@ impl Zeroize for RistrettoScalar {
     }
 }
 
-impl ECScalar<SK> for RistrettoScalar {
+impl ECScalar for RistrettoScalar {
+    type SecretKey = SK;
+
     fn new_random() -> RistrettoScalar {
         RistrettoScalar {
             purpose: "random",
@@ -242,8 +244,20 @@ impl PartialEq for RistrettoCurvPoint {
     }
 }
 
-impl RistrettoCurvPoint {
-    pub fn base_point2() -> RistrettoCurvPoint {
+impl Zeroize for RistrettoCurvPoint {
+    fn zeroize(&mut self) {
+        unsafe { ptr::write_volatile(self, GE::generator()) };
+        atomic::fence(atomic::Ordering::SeqCst);
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
+    }
+}
+
+impl ECPoint for RistrettoCurvPoint {
+    type SecretKey = SK;
+    type PublicKey = PK;
+    type Scalar = RistrettoScalar;
+
+    fn base_point2() -> RistrettoCurvPoint {
         let g: GE = ECPoint::generator();
         let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
         let bytes = BigInt::to_vec(&hash);
@@ -253,17 +267,7 @@ impl RistrettoCurvPoint {
             ge: h.get_element(),
         }
     }
-}
 
-impl Zeroize for RistrettoCurvPoint {
-    fn zeroize(&mut self) {
-        unsafe { ptr::write_volatile(self, GE::generator()) };
-        atomic::fence(atomic::Ordering::SeqCst);
-        atomic::compiler_fence(atomic::Ordering::SeqCst);
-    }
-}
-
-impl ECPoint<PK, SK> for RistrettoCurvPoint {
     fn generator() -> RistrettoCurvPoint {
         RistrettoCurvPoint {
             purpose: "base_fe",
@@ -484,15 +488,16 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
 
 #[cfg(test)]
 mod tests {
-
-    use super::RistrettoCurvPoint;
+    use super::{RistrettoCurvPoint, RistrettoScalar};
     use crate::arithmetic::traits::Converter;
     use crate::arithmetic::traits::Modulo;
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
-    use crate::{FE, GE};
     use serde_json;
+
+    type GE = RistrettoCurvPoint;
+    type FE = RistrettoScalar;
 
     #[test]
     fn test_serdes_pk() {

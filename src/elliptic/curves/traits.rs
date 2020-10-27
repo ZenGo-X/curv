@@ -8,34 +8,42 @@
 use crate::BigInt;
 use crate::ErrorKey;
 
-pub trait ECScalar<SK> {
+pub trait ECScalar {
+    type SecretKey;
+
     fn new_random() -> Self;
     fn zero() -> Self;
-    fn get_element(&self) -> SK;
-    fn set_element(&mut self, element: SK);
+    fn get_element(&self) -> Self::SecretKey;
+    fn set_element(&mut self, element: Self::SecretKey);
     fn from(n: &BigInt) -> Self;
     fn to_big_int(&self) -> BigInt;
     fn q() -> BigInt;
-    fn add(&self, other: &SK) -> Self;
-    fn mul(&self, other: &SK) -> Self;
-    fn sub(&self, other: &SK) -> Self;
+    fn add(&self, other: &Self::SecretKey) -> Self;
+    fn mul(&self, other: &Self::SecretKey) -> Self;
+    fn sub(&self, other: &Self::SecretKey) -> Self;
     fn invert(&self) -> Self;
 }
 
 // TODO: add a fn is_point
-pub trait ECPoint<PK, SK>
+pub trait ECPoint
 where
     Self: Sized,
 {
+    type SecretKey;
+    type PublicKey;
+
+    type Scalar: ECScalar<SecretKey = Self::SecretKey>;
+
+    fn base_point2() -> Self;
     fn generator() -> Self;
-    fn get_element(&self) -> PK;
+    fn get_element(&self) -> Self::PublicKey;
     fn x_coor(&self) -> Option<BigInt>;
     fn y_coor(&self) -> Option<BigInt>;
     fn bytes_compressed_to_big_int(&self) -> BigInt;
     fn from_bytes(bytes: &[u8]) -> Result<Self, ErrorKey>;
     fn pk_to_key_slice(&self) -> Vec<u8>;
-    fn scalar_mul(&self, fe: &SK) -> Self;
-    fn add_point(&self, other: &PK) -> Self;
-    fn sub_point(&self, other: &PK) -> Self;
+    fn scalar_mul(&self, fe: &Self::SecretKey) -> Self;
+    fn add_point(&self, other: &Self::PublicKey) -> Self;
+    fn sub_point(&self, other: &Self::PublicKey) -> Self;
     fn from_coor(x: &BigInt, y: &BigInt) -> Self;
 }

@@ -58,7 +58,9 @@ impl Zeroize for Ed25519Scalar {
         atomic::compiler_fence(atomic::Ordering::SeqCst);
     }
 }
-impl ECScalar<SK> for Ed25519Scalar {
+impl ECScalar for Ed25519Scalar {
+    type SecretKey = SK;
+
     // we chose to multiply by 8 (co-factor) all group elements to work in the prime order sub group.
     // each random fe is having its 3 first bits zeroed
     fn new_random() -> Ed25519Scalar {
@@ -268,8 +270,12 @@ impl Zeroize for Ed25519Point {
     }
 }
 
-impl Ed25519Point {
-    pub fn base_point2() -> Ed25519Point {
+impl ECPoint for Ed25519Point {
+    type SecretKey = SK;
+    type PublicKey = PK;
+    type Scalar = Ed25519Scalar;
+
+    fn base_point2() -> Ed25519Point {
         let g: GE = ECPoint::generator();
         let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
         let hash = HSha256::create_hash(&[&hash]);
@@ -280,8 +286,7 @@ impl Ed25519Point {
             ge: h.get_element(),
         }
     }
-}
-impl ECPoint<PK, SK> for Ed25519Point {
+
     fn generator() -> Ed25519Point {
         let vec_1: [u8; 32];
         vec_1 = [
@@ -594,13 +599,15 @@ pub fn expmod(b: &BigInt, e: &BigInt, m: &BigInt) -> BigInt {
 #[cfg(feature = "ec_ed25519")]
 #[cfg(test)]
 mod tests {
-    use super::Ed25519Point;
+    use super::{Ed25519Point, Ed25519Scalar};
     use crate::arithmetic::traits::{Converter, Modulo};
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
-    use crate::{FE, GE};
     use serde_json;
+
+    type GE = Ed25519Point;
+    type FE = Ed25519Scalar;
 
     #[test]
     fn test_serdes_pk() {

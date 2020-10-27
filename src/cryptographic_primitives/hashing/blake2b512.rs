@@ -6,7 +6,7 @@
 */
 use crate::arithmetic::traits::Converter;
 use crate::elliptic::curves::traits::{ECPoint, ECScalar};
-use crate::{BigInt, FE, GE};
+use crate::BigInt;
 use blake2b_simd::Params;
 
 pub struct Blake;
@@ -22,7 +22,7 @@ impl Blake {
         BigInt::from(digest.finalize().as_ref())
     }
 
-    pub fn create_hash_from_ge(ge_vec: &[&GE], persona: &[u8]) -> FE {
+    pub fn create_hash_from_ge<P: ECPoint>(ge_vec: &[&P], persona: &[u8]) -> P::Scalar {
         let mut digest = Params::new().hash_length(64).personal(persona).to_state();
         //  let mut digest = Blake2b::with_params(64, &[], &[], persona);
 
@@ -41,7 +41,6 @@ mod tests {
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
-    use crate::GE;
 
     #[test]
     // Very basic test here, TODO: suggest better testing
@@ -52,16 +51,34 @@ mod tests {
     }
 
     #[test]
-    fn create_hash_from_ge_test() {
-        let point = GE::base_point2();
+    fn create_hash_from_ge_test_for_all_curves() {
+        #[cfg(feature = "ec_secp256k1")]
+        create_hash_from_ge_test::<crate::elliptic::curves::secp256_k1::GE>();
+        #[cfg(feature = "ec_ristretto")]
+        create_hash_from_ge_test::<crate::elliptic::curves::curve_ristretto::GE>();
+        #[cfg(feature = "ec_ed25519")]
+        create_hash_from_ge_test::<crate::elliptic::curves::ed25519::GE>();
+        #[cfg(feature = "ec_jubjub")]
+        create_hash_from_ge_test::<crate::elliptic::curves::curve_jubjub::GE>();
+        #[cfg(feature = "ec_bls12_381")]
+        create_hash_from_ge_test::<crate::elliptic::curves::bls12_381::GE>();
+        #[cfg(feature = "ec_p256")]
+        create_hash_from_ge_test::<crate::elliptic::curves::p256::GE>();
+    }
+
+    fn create_hash_from_ge_test<P>()
+    where P: ECPoint,
+          P::Scalar: PartialEq + std::fmt::Debug,
+    {
+        let point = P::base_point2();
         let result1 =
-            Blake::create_hash_from_ge(&vec![&point, &GE::generator()], b"Zcash_RedJubjubH");
+            Blake::create_hash_from_ge(&vec![&point, &P::generator()], b"Zcash_RedJubjubH");
         assert!(result1.to_big_int().to_str_radix(2).len() > 240);
         let result2 =
-            Blake::create_hash_from_ge(&vec![&GE::generator(), &point], b"Zcash_RedJubjubH");
+            Blake::create_hash_from_ge(&vec![&P::generator(), &point], b"Zcash_RedJubjubH");
         assert_ne!(result1, result2);
         let result3 =
-            Blake::create_hash_from_ge(&vec![&GE::generator(), &point], b"Zcash_RedJubjubH");
+            Blake::create_hash_from_ge(&vec![&P::generator(), &point], b"Zcash_RedJubjubH");
         assert_eq!(result2, result3);
     }
 }

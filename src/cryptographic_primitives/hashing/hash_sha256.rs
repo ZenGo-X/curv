@@ -13,8 +13,6 @@ use digest::Digest;
 use sha2::Sha256;
 
 use crate::BigInt;
-use crate::{FE, GE};
-
 pub struct HSha256;
 
 impl Hash for HSha256 {
@@ -29,7 +27,7 @@ impl Hash for HSha256 {
         BigInt::from(&result_hex[..])
     }
 
-    fn create_hash_from_ge(ge_vec: &[&GE]) -> FE {
+    fn create_hash_from_ge<P: ECPoint>(ge_vec: &[&P]) -> P::Scalar {
         let mut hasher = Sha256::new();
         for value in ge_vec {
             hasher.input(&value.pk_to_key_slice());
@@ -55,7 +53,6 @@ mod tests {
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
-    use crate::GE;
     extern crate hex;
     extern crate sha2;
     use crate::arithmetic::traits::Converter;
@@ -116,13 +113,31 @@ mod tests {
     }
 
     #[test]
-    fn create_sha256_from_ge_test() {
-        let point = GE::base_point2();
-        let result1 = HSha256::create_hash_from_ge(&vec![&point, &GE::generator()]);
+    fn create_sha256_from_ge_test_for_all_curves() {
+        #[cfg(feature = "ec_secp256k1")]
+        create_sha256_from_ge_test::<crate::elliptic::curves::secp256_k1::GE>();
+        #[cfg(feature = "ec_ristretto")]
+        create_sha256_from_ge_test::<crate::elliptic::curves::curve_ristretto::GE>();
+        #[cfg(feature = "ec_ed25519")]
+        create_sha256_from_ge_test::<crate::elliptic::curves::ed25519::GE>();
+        #[cfg(feature = "ec_jubjub")]
+        create_sha256_from_ge_test::<crate::elliptic::curves::curve_jubjub::GE>();
+        #[cfg(feature = "ec_bls12_381")]
+        create_sha256_from_ge_test::<crate::elliptic::curves::bls12_381::GE>();
+        #[cfg(feature = "ec_p256")]
+        create_sha256_from_ge_test::<crate::elliptic::curves::p256::GE>();
+    }
+
+    fn create_sha256_from_ge_test<P>()
+    where P: ECPoint,
+          P::Scalar: PartialEq + std::fmt::Debug,
+    {
+        let point = P::base_point2();
+        let result1 = HSha256::create_hash_from_ge(&vec![&point, &P::generator()]);
         assert!(result1.to_big_int().to_str_radix(2).len() > 240);
-        let result2 = HSha256::create_hash_from_ge(&vec![&GE::generator(), &point]);
+        let result2 = HSha256::create_hash_from_ge(&vec![&P::generator(), &point]);
         assert_ne!(result1, result2);
-        let result3 = HSha256::create_hash_from_ge(&vec![&GE::generator(), &point]);
+        let result3 = HSha256::create_hash_from_ge(&vec![&P::generator(), &point]);
         assert_eq!(result2, result3);
     }
 }
