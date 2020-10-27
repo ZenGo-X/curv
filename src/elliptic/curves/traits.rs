@@ -5,10 +5,12 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
+use std::ops::{Add, Mul};
+
 use crate::BigInt;
 use crate::ErrorKey;
 
-pub trait ECScalar {
+pub trait ECScalar: Mul<Output=Self> + Add<Output=Self> + Sized {
     type SecretKey;
 
     fn new_random() -> Self;
@@ -25,7 +27,7 @@ pub trait ECScalar {
 }
 
 // TODO: add a fn is_point
-pub trait ECPoint
+pub trait ECPoint: Mul<<Self as ECPoint>::Scalar, Output=Self> + Add<Output = Self>
 where
     Self: Sized,
 {

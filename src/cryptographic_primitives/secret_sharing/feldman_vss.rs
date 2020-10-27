@@ -29,8 +29,6 @@ pub struct VerifiableSS<P> {
 impl<P> VerifiableSS<P>
 where P: ECPoint + PartialEq + Clone,
       P::Scalar: Clone,
-      for<'a> &'a P: std::ops::Mul<&'a <P as ECPoint>::Scalar, Output=P> + std::ops::Add<&'a P, Output = P>,
-      for<'a> P::Scalar: std::ops::Mul<&'a P::Scalar, Output = P::Scalar>,
 {
     pub fn reconstruct_limit(&self) -> usize {
         self.parameters.threshold + 1
@@ -44,7 +42,7 @@ where P: ECPoint + PartialEq + Clone,
         let secret_shares = VerifiableSS::<P>::evaluate_polynomial(&poly, &index_vec);
 
         let G: P = ECPoint::generator();
-        let commitments = (0..poly.len()).map(|i| &G * &poly[i]).collect::<Vec<P>>();
+        let commitments = (0..poly.len()).map(|i| G.clone() * poly[i].clone()).collect::<Vec<P>>();
         (
             VerifiableSS {
                 parameters: ShamirSecretSharing {
@@ -66,11 +64,11 @@ where P: ECPoint + PartialEq + Clone,
     ) -> (VerifiableSS<P>, Vec<P::Scalar>) {
         assert_eq!(n, index_vec.len());
         let poly = VerifiableSS::<P>::sample_polynomial(t, secret);
-        let secret_shares = VerifiableSS::evaluate_polynomial(&poly, index_vec);
+        let secret_shares = VerifiableSS::<P>::evaluate_polynomial(&poly, index_vec);
 
         let G: P = ECPoint::generator();
         let commitments = (0..poly.len())
-            .map(|i| &G * &poly[i])
+            .map(|i| G.clone() * poly[i].clone())
             .collect::<Vec<P>>();
         (
             VerifiableSS {
@@ -99,7 +97,7 @@ where P: ECPoint + PartialEq + Clone,
             .map(|point| {
                 let point_bn = BigInt::from(index_vec[point] as u32);
 
-                VerifiableSS::mod_evaluate_polynomial(coefficients, ECScalar::from(&point_bn))
+                VerifiableSS::<P>::mod_evaluate_polynomial(coefficients, ECScalar::from(&point_bn))
             })
             .collect()
     }
@@ -128,7 +126,7 @@ where P: ECPoint + PartialEq + Clone,
                 ECScalar::from(&index_bn)
             })
             .collect::<Vec<P::Scalar>>();
-        VerifiableSS::lagrange_interpolation_at_zero(&points, &shares)
+        VerifiableSS::<P>::lagrange_interpolation_at_zero(&points, &shares)
     }
 
     // Performs a Lagrange interpolation in field Zp at the origin
@@ -156,7 +154,7 @@ where P: ECPoint + PartialEq + Clone,
                     let denum: P::Scalar = ECScalar::from(&BigInt::one());
                     let num = points.iter().zip(0..vec_len).fold(num, |acc, x| {
                         if i != x.1 {
-                            acc * x.0
+                            acc * x.0.clone()
                         } else {
                             acc
                         }
@@ -164,13 +162,13 @@ where P: ECPoint + PartialEq + Clone,
                     let denum = points.iter().zip(0..vec_len).fold(denum, |acc, x| {
                         if i != x.1 {
                             let xj_sub_xi = x.0.sub(&xi.get_element());
-                            acc * &xj_sub_xi
+                            acc * xj_sub_xi
                         } else {
                             acc
                         }
                     });
                     let denum = denum.invert();
-                    num * &denum * &yi
+                    num * denum * yi.clone()
                 })
                 .collect::<Vec<P::Scalar>>();
         let mut lag_coef_iter = lag_coef.iter();
@@ -181,7 +179,7 @@ where P: ECPoint + PartialEq + Clone,
 
     pub fn validate_share(&self, secret_share: &P::Scalar, index: usize) -> Result<(), ErrorSS> {
         let G: P = ECPoint::generator();
-        let ss_point = &G * secret_share;
+        let ss_point = G * secret_share.clone();
         self.validate_share_public(&ss_point, index)
     }
 
@@ -199,7 +197,7 @@ where P: ECPoint + PartialEq + Clone,
         let mut comm_iterator = self.commitments.iter().rev();
         let head = comm_iterator.next().unwrap();
         let tail = comm_iterator;
-        let comm_to_point = tail.fold(head.clone(), |acc, x: &P| x + &(&acc * &index_fe));
+        let comm_to_point = tail.fold(head.clone(), |acc, x: &P| x.clone() + acc * index_fe.clone());
         comm_to_point.clone()
     }
 
@@ -221,7 +219,7 @@ where P: ECPoint + PartialEq + Clone,
         let denum: P::Scalar = ECScalar::from(&BigInt::one());
         let num = (0..s_len).fold(num, |acc, i| {
             if s[i] != index {
-                acc * &points[s[i]]
+                acc * points[s[i]].clone()
             } else {
                 acc
             }
@@ -229,13 +227,13 @@ where P: ECPoint + PartialEq + Clone,
         let denum = (0..s_len).fold(denum, |acc, i| {
             if s[i] != index {
                 let xj_sub_xi = points[s[i]].sub(&xi.get_element());
-                acc * &xj_sub_xi
+                acc * xj_sub_xi
             } else {
                 acc
             }
         });
         let denum = denum.invert();
-        num * &denum
+        num * denum
     }
 }
 
@@ -262,8 +260,6 @@ mod tests {
     fn test_secret_sharing_3_out_of_5_at_indices<P>()
     where P: ECPoint + PartialEq + Clone,
           P::Scalar: Clone + PartialEq + std::fmt::Debug,
-          for<'a> &'a P: std::ops::Mul<&'a <P as ECPoint>::Scalar, Output=P> + std::ops::Add<&'a P, Output = P>,
-          for<'a> P::Scalar: std::ops::Mul<&'a P::Scalar, Output = P::Scalar>,
     {
         let secret: P::Scalar = ECScalar::new_random();
         let parties = [1, 2, 4, 5, 6];
@@ -299,8 +295,6 @@ mod tests {
     fn test_secret_sharing_3_out_of_5<P>()
     where P: ECPoint + PartialEq + Clone,
           P::Scalar: Clone + PartialEq + std::fmt::Debug,
-          for<'a> &'a P: std::ops::Mul<&'a <P as ECPoint>::Scalar, Output=P> + std::ops::Add<&'a P, Output = P>,
-          for<'a> P::Scalar: std::ops::Mul<&'a P::Scalar, Output = P::Scalar> + std::ops::Add<Output = P::Scalar>,
     {
         let secret: P::Scalar = ECScalar::new_random();
 
@@ -323,7 +317,7 @@ mod tests {
         assert!(valid1.is_ok());
 
         let g: P = ECPoint::generator();
-        let share1_public = &g * &secret_shares[0];
+        let share1_public = g * secret_shares[0].clone();
         let valid1_public = vss_scheme.validate_share_public(&share1_public, 1);
         assert!(valid1_public.is_ok());
 
@@ -334,11 +328,11 @@ mod tests {
         let l2 = vss_scheme.map_share_to_new_params(2, &s);
         let l3 = vss_scheme.map_share_to_new_params(3, &s);
         let l4 = vss_scheme.map_share_to_new_params(4, &s);
-        let w = l0 * &secret_shares[0]
-            + l1 * &secret_shares[1]
-            + l2 * &secret_shares[2]
-            + l3 * &secret_shares[3]
-            + l4 * &secret_shares[4];
+        let w = l0 * secret_shares[0].clone()
+            + l1 * secret_shares[1].clone()
+            + l2 * secret_shares[2].clone()
+            + l3 * secret_shares[3].clone()
+            + l4 * secret_shares[4].clone();
         assert_eq!(w, secret_reconstructed);
     }
 
@@ -361,12 +355,10 @@ mod tests {
     fn test_secret_sharing_3_out_of_7<P>()
     where P: ECPoint + PartialEq + Clone,
           P::Scalar: Clone + PartialEq + std::fmt::Debug,
-          for<'a> &'a P: std::ops::Mul<&'a <P as ECPoint>::Scalar, Output=P> + std::ops::Add<&'a P, Output = P>,
-          for<'a> P::Scalar: std::ops::Mul<&'a P::Scalar, Output = P::Scalar> + std::ops::Add<Output = P::Scalar>,
     {
         let secret: P::Scalar = ECScalar::new_random();
 
-        let (vss_scheme, secret_shares) = VerifiableSS::share(3, 7, &secret);
+        let (vss_scheme, secret_shares) = VerifiableSS::<P>::share(3, 7, &secret);
 
         let mut shares_vec = Vec::new();
         shares_vec.push(secret_shares[0].clone());
@@ -391,11 +383,11 @@ mod tests {
         let l3 = vss_scheme.map_share_to_new_params(3, &s);
         let l4 = vss_scheme.map_share_to_new_params(4, &s);
         let l6 = vss_scheme.map_share_to_new_params(6, &s);
-        let w = l0 * &secret_shares[0]
-            + l1 * &secret_shares[1]
-            + l3 * &secret_shares[3]
-            + l4 * &secret_shares[4]
-            + l6 * &secret_shares[6];
+        let w = l0 * secret_shares[0].clone()
+            + l1 * secret_shares[1].clone()
+            + l3 * secret_shares[3].clone()
+            + l4 * secret_shares[4].clone()
+            + l6 * secret_shares[6].clone();
         assert_eq!(w, secret_reconstructed);
     }
 
@@ -418,8 +410,6 @@ mod tests {
     fn test_secret_sharing_1_out_of_2<P>()
     where P: ECPoint + PartialEq + Clone,
           P::Scalar: Clone + PartialEq + std::fmt::Debug,
-          for<'a> &'a P: std::ops::Mul<&'a <P as ECPoint>::Scalar, Output=P> + std::ops::Add<&'a P, Output = P>,
-          for<'a> P::Scalar: std::ops::Mul<&'a P::Scalar, Output = P::Scalar> + std::ops::Add<Output = P::Scalar>,
     {
         let secret: P::Scalar = ECScalar::new_random();
 
@@ -444,7 +434,7 @@ mod tests {
         let l0 = vss_scheme.map_share_to_new_params(0, &s);
         let l1 = vss_scheme.map_share_to_new_params(1, &s);
 
-        let w = l0 * &secret_shares[0] + l1 * &secret_shares[1];
+        let w = l0 * secret_shares[0].clone() + l1 * secret_shares[1].clone();
         assert_eq!(w, secret_reconstructed);
     }
 
@@ -467,8 +457,6 @@ mod tests {
     fn test_secret_sharing_1_out_of_3<P>()
     where P: ECPoint + PartialEq + Clone + std::fmt::Debug,
           P::Scalar: Clone + PartialEq + std::fmt::Debug,
-          for<'a> &'a P: std::ops::Mul<&'a <P as ECPoint>::Scalar, Output=P> + std::ops::Add<&'a P, Output = P>,
-          for<'a> P::Scalar: std::ops::Mul<&'a P::Scalar, Output = P::Scalar> + std::ops::Add<Output = P::Scalar>,
     {
         let secret: P::Scalar = ECScalar::new_random();
 
@@ -479,16 +467,16 @@ mod tests {
         shares_vec.push(secret_shares[1].clone());
 
         // test commitment to point and sum of commitments
-        let (vss_scheme2, secret_shares2) = VerifiableSS::share(1, 3, &secret);
+        let (vss_scheme2, secret_shares2) = VerifiableSS::<P>::share(1, 3, &secret);
         let sum = secret_shares[0].clone() + secret_shares2[0].clone();
         let point_comm1 = vss_scheme.get_point_commitment(1);
         let point_comm2 = vss_scheme.get_point_commitment(2);
         let g: P = ECPoint::generator();
-        let g_sum = &g * &sum;
-        assert_eq!(&g * &secret_shares[0], point_comm1.clone());
-        assert_eq!(&g * &secret_shares[1], point_comm2.clone());
+        let g_sum = g.clone() * sum;
+        assert_eq!(g.clone() * secret_shares[0].clone(), point_comm1.clone());
+        assert_eq!(g.clone() * secret_shares[1].clone(), point_comm2.clone());
         let point1_sum_com =
-            &vss_scheme.get_point_commitment(1) + &vss_scheme2.get_point_commitment(1);
+            vss_scheme.get_point_commitment(1) + vss_scheme2.get_point_commitment(1);
         assert_eq!(point1_sum_com, g_sum);
 
         //test reconstruction
@@ -506,7 +494,7 @@ mod tests {
         let l0 = vss_scheme.map_share_to_new_params(0, &s);
         let l2 = vss_scheme.map_share_to_new_params(2, &s);
 
-        let w = l0 * &secret_shares[0] + l2 * &secret_shares[2];
+        let w = l0 * secret_shares[0].clone() + l2 * secret_shares[2].clone();
         assert_eq!(w, secret_reconstructed);
     }
 }
