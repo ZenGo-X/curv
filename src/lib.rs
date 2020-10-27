@@ -97,35 +97,47 @@ pub enum ErrorSS {
 #[cfg(test)]
 #[macro_export]
 macro_rules! test_for_all_curves {
+    (#[should_panic] $fn: ident) => {
+        crate::test_for_all_curves!([#[should_panic]] $fn);
+    };
     ($fn: ident) => {
+        crate::test_for_all_curves!([] $fn);
+    };
+    ([$($attrs:tt)*] $fn: ident) => {
         paste::paste!{
             #[cfg(feature = "ec_secp256k1")]
             #[test]
+            $($attrs)*
             fn [<$fn _secp256k1>]() {
                 $fn::<crate::elliptic::curves::secp256_k1::GE>()
             }
             #[cfg(feature = "ec_ristretto")]
             #[test]
+            $($attrs)*
             fn [<$fn _ristretto>]() {
                 $fn::<crate::elliptic::curves::curve_ristretto::GE>()
             }
             #[cfg(feature = "ec_ed25519")]
             #[test]
+            $($attrs)*
             fn [<$fn _ed25519>]() {
                 $fn::<crate::elliptic::curves::ed25519::GE>()
             }
             #[cfg(feature = "ec_jubjub")]
             #[test]
+            $($attrs)*
             fn [<$fn _jubjub>]() {
                 $fn::<crate::elliptic::curves::curve_jubjub::GE>()
             }
             #[cfg(feature = "ec_bls12_381")]
             #[test]
+            $($attrs)*
             fn [<$fn _bls12_381>]() {
                 $fn::<crate::elliptic::curves::bls12_381::GE>()
             }
             #[cfg(feature = "ec_p256")]
             #[test]
+            $($attrs)*
             fn [<$fn _p256>]() {
                 $fn::<crate::elliptic::curves::p256::GE>()
             }
