@@ -27,7 +27,7 @@ pub struct HomoELGamalProof<P: ECPoint> {
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct HomoElGamalWitness<S> {
+pub struct HomoElGamalWitness<S: ECScalar> {
     pub r: S,
     pub x: S,
 }
