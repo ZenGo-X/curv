@@ -7,20 +7,29 @@
 
 use std::fmt::Debug;
 
+use derivative::Derivative;
+use serde::{Serialize, Deserialize};
+use zeroize::Zeroize;
+
 use crate::cryptographic_primitives::proofs::sigma_valid_pedersen::PedersenProof;
 use crate::cryptographic_primitives::proofs::sigma_valid_pedersen::ProvePederesen;
 use crate::cryptographic_primitives::proofs::sigma_valid_pedersen_blind::PedersenBlindingProof;
 use crate::cryptographic_primitives::proofs::sigma_valid_pedersen_blind::ProvePederesenBlind;
 use crate::elliptic::curves::traits::*;
-use zeroize::Zeroize;
 
 /// based on How To Simulate It – A Tutorial on the Simulation
 /// Proof Technique. protocol 7.3: Multiple coin tossing. which provide simulatble constant round
 /// coin toss
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct Party1FirstMessage<P>
+#[derive(Derivative)]
+#[derive(Serialize, Deserialize)]
+#[derivative(Clone(bound="PedersenProof<P>: Clone"))]
+#[derivative(Debug(bound="PedersenProof<P>: Debug"))]
+#[derivative(PartialEq(bound="PedersenProof<P>: PartialEq"))]
+#[serde(bound(serialize="PedersenProof<P>: Serialize"))]
+#[serde(bound(deserialize="PedersenProof<P>:  Deserialize<'de>"))]
+pub struct Party1FirstMessage<P: ECPoint>
 {
-    pub proof: P,
+    pub proof: PedersenProof<P>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -32,11 +41,11 @@ pub struct Party1SecondMessage<P: ECPoint> {
     pub proof: PedersenBlindingProof<P>,
     pub seed: P::Scalar,
 }
-impl<P> Party1FirstMessage<PedersenProof<P>>
+impl<P> Party1FirstMessage<P>
     where P: ECPoint + Clone,
           P::Scalar: Zeroize,
 {
-    pub fn commit() -> (Party1FirstMessage<PedersenProof<P>>, P::Scalar, P::Scalar) {
+    pub fn commit() -> (Party1FirstMessage<P>, P::Scalar, P::Scalar) {
         let seed: P::Scalar = ECScalar::new_random();
         let blinding: P::Scalar = ECScalar::new_random();
         let proof = PedersenProof::prove(&seed, &blinding);
@@ -94,7 +103,7 @@ mod tests {
     where P: ECPoint + Clone + Debug,
           P::Scalar: PartialEq + Clone + Debug + Zeroize,
     {
-        let (party1_first_message, m1, r1) = Party1FirstMessage::<PedersenProof<P>>::commit();
+        let (party1_first_message, m1, r1) = Party1FirstMessage::<P>::commit();
         let party2_first_message = Party2FirstMessage::share(&party1_first_message.proof);
         let (party1_second_message, random1) =
             Party1SecondMessage::<P>::reveal(&party2_first_message.seed, &m1, &r1);

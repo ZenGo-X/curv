@@ -22,6 +22,7 @@ hmac = "0.7.1"
 digest = "0.8.1"
 hex = "^0.3"
 blake2b_simd = "0.5.7"
+derivative = "2.1.1"
 
 [dependencies.rust-crypto]
 version = "^0.2"
