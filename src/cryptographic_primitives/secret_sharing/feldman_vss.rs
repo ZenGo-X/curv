@@ -27,7 +27,7 @@ pub struct VerifiableSS<P> {
 }
 
 impl<P> VerifiableSS<P>
-where P: ECPoint + PartialEq + Clone,
+where P: ECPoint + Clone,
       P::Scalar: Clone,
 {
     pub fn reconstruct_limit(&self) -> usize {
@@ -245,7 +245,7 @@ mod tests {
     test_for_all_curves!(test_secret_sharing_3_out_of_5_at_indices);
 
     fn test_secret_sharing_3_out_of_5_at_indices<P>()
-    where P: ECPoint + PartialEq + Clone,
+    where P: ECPoint + Clone,
           P::Scalar: Clone + PartialEq + std::fmt::Debug,
     {
         let secret: P::Scalar = ECScalar::new_random();
@@ -266,7 +266,7 @@ mod tests {
     test_for_all_curves!(test_secret_sharing_3_out_of_5);
 
     fn test_secret_sharing_3_out_of_5<P>()
-    where P: ECPoint + PartialEq + Clone,
+    where P: ECPoint + Clone,
           P::Scalar: Clone + PartialEq + std::fmt::Debug,
     {
         let secret: P::Scalar = ECScalar::new_random();
@@ -312,7 +312,7 @@ mod tests {
     test_for_all_curves!(test_secret_sharing_3_out_of_7);
 
     fn test_secret_sharing_3_out_of_7<P>()
-    where P: ECPoint + PartialEq + Clone,
+    where P: ECPoint + Clone,
           P::Scalar: Clone + PartialEq + std::fmt::Debug,
     {
         let secret: P::Scalar = ECScalar::new_random();
@@ -353,7 +353,7 @@ mod tests {
     test_for_all_curves!(test_secret_sharing_1_out_of_2);
 
     fn test_secret_sharing_1_out_of_2<P>()
-    where P: ECPoint + PartialEq + Clone,
+    where P: ECPoint + Clone,
           P::Scalar: Clone + PartialEq + std::fmt::Debug,
     {
         let secret: P::Scalar = ECScalar::new_random();
@@ -386,7 +386,7 @@ mod tests {
     test_for_all_curves!(test_secret_sharing_1_out_of_3);
 
     fn test_secret_sharing_1_out_of_3<P>()
-    where P: ECPoint + PartialEq + Clone + std::fmt::Debug,
+    where P: ECPoint + Clone + std::fmt::Debug,
           P::Scalar: Clone + PartialEq + std::fmt::Debug,
     {
         let secret: P::Scalar = ECScalar::new_random();

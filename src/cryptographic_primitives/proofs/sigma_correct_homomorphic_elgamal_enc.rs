@@ -42,7 +42,7 @@ pub struct HomoElGamalStatement<P> {
 }
 
 impl<P> HomoELGamalProof<P>
-where P: ECPoint + PartialEq + Clone + Zeroize,
+where P: ECPoint + Clone + Zeroize,
       P::Scalar: PartialEq + Clone + Zeroize,
 {
     pub fn prove(w: &HomoElGamalWitness<P::Scalar>, delta: &HomoElGamalStatement<P>) -> HomoELGamalProof<P> {
@@ -87,7 +87,7 @@ mod tests {
 
     test_for_all_curves!(test_correct_general_homo_elgamal);
     fn test_correct_general_homo_elgamal<P>()
-    where P: ECPoint + PartialEq + Clone + Zeroize,
+    where P: ECPoint + Clone + Zeroize,
           P::Scalar: PartialEq + Clone + Zeroize,
     {
         let witness = HomoElGamalWitness::<P::Scalar> {
@@ -108,7 +108,7 @@ mod tests {
 
     test_for_all_curves!(test_correct_homo_elgamal);
     fn test_correct_homo_elgamal<P: ECPoint>()
-    where P: ECPoint + PartialEq + Clone + Zeroize,
+    where P: ECPoint + Clone + Zeroize,
           P::Scalar: PartialEq + Clone + Zeroize,
     {
         let witness = HomoElGamalWitness {
@@ -133,7 +133,7 @@ mod tests {
 
     test_for_all_curves!(#[should_panic] test_wrong_homo_elgamal);
     fn test_wrong_homo_elgamal<P: ECPoint>()
-    where P: ECPoint + PartialEq + Clone + Zeroize,
+    where P: ECPoint + Clone + Zeroize,
           P::Scalar: PartialEq + Clone + Zeroize,
     {
         // test for E = (r+1)G

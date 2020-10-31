@@ -27,7 +27,7 @@ pub trait ECScalar: Mul<Output=Self> + Add<Output=Self> + Sized {
 }
 
 // TODO: add a fn is_point
-pub trait ECPoint: Mul<<Self as ECPoint>::Scalar, Output=Self> + Add<Output = Self>
+pub trait ECPoint: Mul<<Self as ECPoint>::Scalar, Output=Self> + Add<Output = Self> + PartialEq
 where
     Self: Sized,
 {
