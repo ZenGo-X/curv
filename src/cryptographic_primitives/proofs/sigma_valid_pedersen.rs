@@ -11,7 +11,6 @@ use crate::cryptographic_primitives::commitments::traits::Commitment;
 use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use crate::cryptographic_primitives::hashing::traits::Hash;
 use crate::elliptic::curves::traits::*;
-use crate::{FE, GE};
 use zeroize::Zeroize;
 
 /// protocol for proving that Pedersen commitment c was constructed correctly which is the same as
@@ -24,34 +23,40 @@ use zeroize::Zeroize;
 ///
 /// verifier checks that z1*G + z2*H  = A1 + A2 + ec
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct PedersenProof {
-    e: FE,
-    a1: GE,
-    a2: GE,
-    pub com: GE,
-    z1: FE,
-    z2: FE,
+pub struct PedersenProof<P: ECPoint> {
+    e: P::Scalar,
+    a1: P,
+    a2: P,
+    pub com: P,
+    z1: P::Scalar,
+    z2: P::Scalar,
 }
 
 pub trait ProvePederesen {
-    fn prove(m: &FE, r: &FE) -> PedersenProof;
+    type EC: ECPoint;
 
-    fn verify(proof: &PedersenProof) -> Result<(), ProofError>;
+    fn prove(m: &<Self::EC as ECPoint>::Scalar, r: &<Self::EC as ECPoint>::Scalar) -> PedersenProof<Self::EC>;
+
+    fn verify(proof: &PedersenProof<Self::EC>) -> Result<(), ProofError>;
 }
 
-impl ProvePederesen for PedersenProof {
-    fn prove(m: &FE, r: &FE) -> PedersenProof {
-        let g: GE = ECPoint::generator();
-        let h = GE::base_point2();
-        let mut s1: FE = ECScalar::new_random();
-        let mut s2: FE = ECScalar::new_random();
+impl<P> ProvePederesen for PedersenProof<P>
+where P: ECPoint + Clone,
+      P::Scalar: Zeroize,
+{
+    type EC = P;
+    fn prove(m: &P::Scalar, r: &P::Scalar) -> PedersenProof<P> {
+        let g: P = ECPoint::generator();
+        let h: P = ECPoint::base_point2();
+        let mut s1: P::Scalar = ECScalar::new_random();
+        let mut s2: P::Scalar = ECScalar::new_random();
         let a1 = g.scalar_mul(&s1.get_element());
         let a2 = h.scalar_mul(&s2.get_element());
-        let com = PedersenCommitment::create_commitment_with_user_defined_randomness(
+        let com: P = PedersenCommitment::create_commitment_with_user_defined_randomness(
             &m.to_big_int(),
             &r.to_big_int(),
         );
-        let g: GE = ECPoint::generator();
+        let g: P = ECPoint::generator();
         let challenge = HSha256::create_hash(&[
             &g.bytes_compressed_to_big_int(),
             &h.bytes_compressed_to_big_int(),
@@ -60,7 +65,7 @@ impl ProvePederesen for PedersenProof {
             &a2.bytes_compressed_to_big_int(),
         ]);
 
-        let e: FE = ECScalar::from(&challenge);
+        let e: P::Scalar = ECScalar::from(&challenge);
 
         let em = e.mul(&m.get_element());
         let z1 = s1.add(&em.get_element());
@@ -79,9 +84,9 @@ impl ProvePederesen for PedersenProof {
         }
     }
 
-    fn verify(proof: &PedersenProof) -> Result<(), ProofError> {
-        let g: GE = ECPoint::generator();
-        let h = GE::base_point2();
+    fn verify(proof: &PedersenProof<P>) -> Result<(), ProofError> {
+        let g: P = ECPoint::generator();
+        let h: P = ECPoint::base_point2();
         let challenge = HSha256::create_hash(&[
             &g.bytes_compressed_to_big_int(),
             &h.bytes_compressed_to_big_int(),
@@ -89,13 +94,13 @@ impl ProvePederesen for PedersenProof {
             &proof.a1.bytes_compressed_to_big_int(),
             &proof.a2.bytes_compressed_to_big_int(),
         ]);
-        let e: FE = ECScalar::from(&challenge);
+        let e: P::Scalar = ECScalar::from(&challenge);
 
         let z1g = g.scalar_mul(&proof.z1.get_element());
         let z2h = h.scalar_mul(&proof.z2.get_element());
         let lhs = z1g.add_point(&z2h.get_element());
         let rhs = proof.a1.add_point(&proof.a2.get_element());
-        let com_clone = proof.com;
+        let com_clone = proof.com.clone();
         let ecom = com_clone.scalar_mul(&e.get_element());
         let rhs = rhs.add_point(&ecom.get_element());
 
@@ -109,14 +114,16 @@ impl ProvePederesen for PedersenProof {
 
 #[cfg(test)]
 mod tests {
-    use crate::cryptographic_primitives::proofs::sigma_valid_pedersen::*;
-    use crate::FE;
+    use super::*;
 
-    #[test]
-    fn test_pedersen_proof() {
-        let m: FE = ECScalar::new_random();
-        let r: FE = ECScalar::new_random();
-        let pedersen_proof = PedersenProof::prove(&m, &r);
+    crate::test_for_all_curves!(test_pedersen_proof);
+    fn test_pedersen_proof<P>()
+    where P: ECPoint + Clone,
+          P::Scalar: Zeroize,
+    {
+        let m: P::Scalar = ECScalar::new_random();
+        let r: P::Scalar = ECScalar::new_random();
+        let pedersen_proof = PedersenProof::<P>::prove(&m, &r);
         PedersenProof::verify(&pedersen_proof).expect("error pedersen");
     }
 }
