@@ -5,17 +5,17 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-// /// This is an implementation of string coin tossing of a string, to generate a random string between
-// ///two non-trusting parties. Based on the
-// /// the protocol and proof analysis  in "How To Simulate It – A Tutorial on the Simulation
-// r/// Proof Technique∗" (https://eprint.iacr.org/2016/046.pdf)
+/// This is an implementation of string coin tossing of a string, to generate a random string between
+///two non-trusting parties. Based on the
+/// the protocol and proof analysis  in "How To Simulate It – A Tutorial on the Simulation
+/// Proof Technique∗" (https://eprint.iacr.org/2016/046.pdf)
 pub mod coin_flip_optimal_rounds;
 
-// ///This is an implementation of a Diffie Hellman Key Exchange.
-// /// Party1 private key is "x",
-// /// Party2 private key is "y",
-// /// The shared secret is Q = xyG
-// pub mod dh_key_exchange;
+///This is an implementation of a Diffie Hellman Key Exchange.
+/// Party1 private key is "x",
+/// Party2 private key is "y",
+/// The shared secret is Q = xyG
+pub mod dh_key_exchange;
 
 // ///This is an implementation of a Diffie Hellman Key Exchange.
 // /// Party1 private key is "x",
