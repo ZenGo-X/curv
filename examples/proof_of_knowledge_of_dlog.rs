@@ -12,10 +12,10 @@ use zeroize::Zeroize;
 /// notice: this library includes other more complex sigma protocol.
 /// see proofs folder for more details
 
-
 pub fn dlog_proof<P>()
-where P: ECPoint + Clone,
-      P::Scalar: Zeroize,
+where
+    P: ECPoint + Clone,
+    P::Scalar: Zeroize,
 {
     use curv::cryptographic_primitives::proofs::sigma_dlog::*;
     use curv::elliptic::curves::traits::ECScalar;
@@ -34,10 +34,10 @@ fn main() {
     match curve_name.as_ref().map(|s| s.as_str()) {
         Some("secp256k1") => dlog_proof::<curv::elliptic::curves::secp256_k1::GE>(),
         Some("ristretto") => dlog_proof::<curv::elliptic::curves::curve_ristretto::GE>(),
-        Some("ed25519")   => dlog_proof::<curv::elliptic::curves::ed25519::GE>(),
-        Some("jubjub")    => dlog_proof::<curv::elliptic::curves::curve_jubjub::GE>(),
+        Some("ed25519") => dlog_proof::<curv::elliptic::curves::ed25519::GE>(),
+        Some("jubjub") => dlog_proof::<curv::elliptic::curves::curve_jubjub::GE>(),
         Some("bls12_381") => dlog_proof::<curv::elliptic::curves::bls12_381::GE>(),
-        Some("p256")      => dlog_proof::<curv::elliptic::curves::p256::GE>(),
+        Some("p256") => dlog_proof::<curv::elliptic::curves::p256::GE>(),
         Some(unknown_curve) => eprintln!("Unknown curve: {}", unknown_curve),
         None => eprintln!("Missing curve name"),
     }

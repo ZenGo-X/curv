@@ -13,11 +13,10 @@
 /// The variant below is to protect not only from man in the middle but also from malicious
 /// Alice or Bob that can bias the result. The details of the protocol can be found in
 /// https://eprint.iacr.org/2017/552.pdf protocol 3.1 first 3 steps.
-
 use std::fmt::Debug;
 
 use derivative::Derivative;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::arithmetic::traits::Samplable;
 use crate::cryptographic_primitives::commitments::hash_commitment::HashCommitment;
@@ -36,12 +35,11 @@ pub struct EcKeyPair<P: ECPoint> {
     secret_share: P::Scalar,
 }
 
-#[derive(Serialize, Deserialize)]
-#[derive(Derivative)]
-#[derivative(Clone(bound="P: Clone, P::Scalar: Clone"))]
-#[derivative(Debug(bound="P: Debug, P::Scalar: Debug"))]
-#[serde(bound(serialize="P: Serialize, P::Scalar: Serialize"))]
-#[serde(bound(deserialize="P: Deserialize<'de>, P::Scalar: Deserialize<'de>"))]
+#[derive(Serialize, Deserialize, Derivative)]
+#[derivative(Clone(bound = "P: Clone, P::Scalar: Clone"))]
+#[derivative(Debug(bound = "P: Debug, P::Scalar: Debug"))]
+#[serde(bound(serialize = "P: Serialize, P::Scalar: Serialize"))]
+#[serde(bound(deserialize = "P: Deserialize<'de>, P::Scalar: Deserialize<'de>"))]
 pub struct CommWitness<P: ECPoint> {
     pub pk_commitment_blind_factor: BigInt,
     pub zk_pok_blind_factor: BigInt,
@@ -54,22 +52,20 @@ pub struct Party1FirstMessage {
     pub pk_commitment: BigInt,
     pub zk_pok_commitment: BigInt,
 }
-#[derive(Serialize, Deserialize)]
-#[derive(Derivative)]
-#[derivative(Clone(bound="P: Clone, P::Scalar: Clone"))]
-#[derivative(Debug(bound="P: Debug, P::Scalar: Debug"))]
-#[serde(bound(serialize="P: Serialize, P::Scalar: Serialize"))]
-#[serde(bound(deserialize="P: Deserialize<'de>, P::Scalar: Deserialize<'de>"))]
+#[derive(Serialize, Deserialize, Derivative)]
+#[derivative(Clone(bound = "P: Clone, P::Scalar: Clone"))]
+#[derivative(Debug(bound = "P: Debug, P::Scalar: Debug"))]
+#[serde(bound(serialize = "P: Serialize, P::Scalar: Serialize"))]
+#[serde(bound(deserialize = "P: Deserialize<'de>, P::Scalar: Deserialize<'de>"))]
 pub struct Party2FirstMessage<P: ECPoint> {
     pub d_log_proof: DLogProof<P>,
     pub public_share: P,
 }
 
-#[derive(Serialize, Deserialize)]
-#[derive(Derivative)]
-#[derivative(Debug(bound="P: Debug, P::Scalar: Debug"))]
-#[serde(bound(serialize="P: Serialize, P::Scalar: Serialize"))]
-#[serde(bound(deserialize="P: Deserialize<'de>, P::Scalar: Deserialize<'de>"))]
+#[derive(Serialize, Deserialize, Derivative)]
+#[derivative(Debug(bound = "P: Debug, P::Scalar: Debug"))]
+#[serde(bound(serialize = "P: Serialize, P::Scalar: Serialize"))]
+#[serde(bound(deserialize = "P: Deserialize<'de>, P::Scalar: Deserialize<'de>"))]
 pub struct Party1SecondMessage<P: ECPoint> {
     pub comm_witness: CommWitness<P>,
 }
@@ -79,8 +75,9 @@ pub struct Party2SecondMessage {}
 
 impl Party1FirstMessage {
     pub fn create_commitments<P>() -> (Party1FirstMessage, CommWitness<P>, EcKeyPair<P>)
-    where P: ECPoint + Clone,
-          P::Scalar: Zeroize,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Zeroize,
     {
         let base: P = ECPoint::generator();
 
@@ -125,8 +122,9 @@ impl Party1FirstMessage {
     pub fn create_commitments_with_fixed_secret_share<P>(
         secret_share: P::Scalar,
     ) -> (Party1FirstMessage, CommWitness<P>, EcKeyPair<P>)
-    where P: ECPoint + Clone,
-          P::Scalar: Zeroize + Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Zeroize + Clone,
     {
         let base: P = ECPoint::generator();
         let public_share = base * secret_share.clone();
@@ -168,8 +166,9 @@ impl Party1FirstMessage {
 }
 
 impl<P> Party1SecondMessage<P>
-where P: ECPoint + Clone,
-      P::Scalar: Zeroize,
+where
+    P: ECPoint + Clone,
+    P::Scalar: Zeroize,
 {
     pub fn verify_and_decommit(
         comm_witness: CommWitness<P>,
@@ -180,8 +179,9 @@ where P: ECPoint + Clone,
     }
 }
 impl<P> Party2FirstMessage<P>
-where P: ECPoint + Clone,
-      P::Scalar: Zeroize + Clone,
+where
+    P: ECPoint + Clone,
+    P::Scalar: Zeroize + Clone,
 {
     pub fn create() -> (Party2FirstMessage<P>, EcKeyPair<P>) {
         let base: P = ECPoint::generator();
@@ -201,7 +201,9 @@ where P: ECPoint + Clone,
         )
     }
 
-    pub fn create_with_fixed_secret_share(secret_share: P::Scalar) -> (Party2FirstMessage<P>, EcKeyPair<P>) {
+    pub fn create_with_fixed_secret_share(
+        secret_share: P::Scalar,
+    ) -> (Party2FirstMessage<P>, EcKeyPair<P>) {
         let base: P = ECPoint::generator();
         let public_share = base * secret_share.clone();
         let d_log_proof = DLogProof::prove(&secret_share);
@@ -224,8 +226,9 @@ impl Party2SecondMessage {
         party_one_first_message: &Party1FirstMessage,
         party_one_second_message: &Party1SecondMessage<P>,
     ) -> Result<Party2SecondMessage, ProofError>
-    where P: ECPoint + Clone,
-          P::Scalar: Zeroize,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Zeroize,
     {
         let party_one_pk_commitment = &party_one_first_message.pk_commitment;
         let party_one_zk_pok_commitment = &party_one_first_message.zk_pok_commitment;
@@ -264,8 +267,9 @@ impl Party2SecondMessage {
     }
 }
 pub fn compute_pubkey<P>(local_share: &EcKeyPair<P>, other_share_public_share: &P) -> P
-where P: ECPoint + Clone,
-      P::Scalar: Clone,
+where
+    P: ECPoint + Clone,
+    P::Scalar: Clone,
 {
     other_share_public_share.clone() * local_share.secret_share.clone()
 }
@@ -276,8 +280,9 @@ mod tests {
 
     crate::test_for_all_curves!(test_dh_key_exchange);
     fn test_dh_key_exchange<P>()
-    where P: ECPoint + Clone + Debug,
-          P::Scalar: Zeroize + Clone,
+    where
+        P: ECPoint + Clone + Debug,
+        P::Scalar: Zeroize + Clone,
     {
         let (kg_party_one_first_message, kg_comm_witness, kg_ec_key_pair_party1) =
             Party1FirstMessage::create_commitments::<P>();

@@ -30,8 +30,9 @@ pub struct Party2FirstMessage<P: ECPoint> {
 pub struct Party2SecondMessage {}
 
 impl<P> Party1FirstMessage<P>
-where P: ECPoint + Clone,
-      P::Scalar: Clone,
+where
+    P: ECPoint + Clone,
+    P::Scalar: Clone,
 {
     pub fn first() -> (Party1FirstMessage<P>, EcKeyPair<P>) {
         let base: P = ECPoint::generator();
@@ -47,7 +48,9 @@ where P: ECPoint + Clone,
         (Party1FirstMessage { public_share }, ec_key_pair)
     }
 
-    pub fn first_with_fixed_secret_share(secret_share: P::Scalar) -> (Party1FirstMessage<P>, EcKeyPair<P>) {
+    pub fn first_with_fixed_secret_share(
+        secret_share: P::Scalar,
+    ) -> (Party1FirstMessage<P>, EcKeyPair<P>) {
         let base: P = ECPoint::generator();
         let public_share = base * secret_share.clone();
 
@@ -60,8 +63,9 @@ where P: ECPoint + Clone,
 }
 
 impl<P> Party2FirstMessage<P>
-where P: ECPoint + Clone,
-      P::Scalar: Clone,
+where
+    P: ECPoint + Clone,
+    P::Scalar: Clone,
 {
     pub fn first() -> (Party2FirstMessage<P>, EcKeyPair<P>) {
         let base: P = ECPoint::generator();
@@ -74,7 +78,9 @@ where P: ECPoint + Clone,
         (Party2FirstMessage { public_share }, ec_key_pair)
     }
 
-    pub fn first_with_fixed_secret_share(secret_share: P::Scalar) -> (Party2FirstMessage<P>, EcKeyPair<P>) {
+    pub fn first_with_fixed_secret_share(
+        secret_share: P::Scalar,
+    ) -> (Party2FirstMessage<P>, EcKeyPair<P>) {
         let base: P = ECPoint::generator();
         let public_share = base * secret_share.clone();
         let ec_key_pair = EcKeyPair {
@@ -86,8 +92,9 @@ where P: ECPoint + Clone,
 }
 
 pub fn compute_pubkey<P>(local_share: &EcKeyPair<P>, other_share_public_share: &P) -> P
-where P: ECPoint + Clone,
-      P::Scalar: Clone,
+where
+    P: ECPoint + Clone,
+    P::Scalar: Clone,
 {
     other_share_public_share.clone() * local_share.secret_share.clone()
 }
@@ -98,13 +105,14 @@ mod tests {
 
     use crate::cryptographic_primitives::twoparty::dh_key_exchange::*;
     use crate::elliptic::curves::traits::ECScalar;
-    use crate::BigInt;
     use crate::test_for_all_curves;
+    use crate::BigInt;
 
     test_for_all_curves!(test_dh_key_exchange_random_shares);
     fn test_dh_key_exchange_random_shares<P>()
-    where P: ECPoint + Clone + Debug,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone + Debug,
+        P::Scalar: Clone,
     {
         let (kg_party_one_first_message, kg_ec_key_pair_party1) = Party1FirstMessage::<P>::first();
         let (kg_party_two_first_message, kg_ec_key_pair_party2) = Party2FirstMessage::<P>::first();
@@ -123,8 +131,9 @@ mod tests {
 
     test_for_all_curves!(test_dh_key_exchange_fixed_shares);
     fn test_dh_key_exchange_fixed_shares<P>()
-    where P: ECPoint + Clone + Debug,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone + Debug,
+        P::Scalar: Clone,
     {
         let secret_party_1: P::Scalar = ECScalar::from(&BigInt::one());
         let (kg_party_one_first_message, kg_ec_key_pair_party1) =

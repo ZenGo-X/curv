@@ -16,8 +16,9 @@ use curv::elliptic::curves::traits::ECPoint;
 /// cargo run --example verifiable_secret_sharing --features ecc -- ed25519
 
 pub fn secret_sharing_3_out_of_5<P>()
-where P: ECPoint + Clone,
-      P::Scalar: PartialEq + Clone + Debug
+where
+    P: ECPoint + Clone,
+    P::Scalar: PartialEq + Clone + Debug,
 {
     use curv::cryptographic_primitives::secret_sharing::feldman_vss::VerifiableSS;
     use curv::elliptic::curves::traits::ECScalar;
@@ -66,11 +67,13 @@ fn main() {
     let curve_name = std::env::args().nth(1);
     match curve_name.as_ref().map(|s| s.as_str()) {
         Some("secp256k1") => secret_sharing_3_out_of_5::<curv::elliptic::curves::secp256_k1::GE>(),
-        Some("ristretto") => secret_sharing_3_out_of_5::<curv::elliptic::curves::curve_ristretto::GE>(),
-        Some("ed25519")   => secret_sharing_3_out_of_5::<curv::elliptic::curves::ed25519::GE>(),
-        Some("jubjub")    => secret_sharing_3_out_of_5::<curv::elliptic::curves::curve_jubjub::GE>(),
+        Some("ristretto") => {
+            secret_sharing_3_out_of_5::<curv::elliptic::curves::curve_ristretto::GE>()
+        }
+        Some("ed25519") => secret_sharing_3_out_of_5::<curv::elliptic::curves::ed25519::GE>(),
+        Some("jubjub") => secret_sharing_3_out_of_5::<curv::elliptic::curves::curve_jubjub::GE>(),
         Some("bls12_381") => secret_sharing_3_out_of_5::<curv::elliptic::curves::bls12_381::GE>(),
-        Some("p256")      => secret_sharing_3_out_of_5::<curv::elliptic::curves::p256::GE>(),
+        Some("p256") => secret_sharing_3_out_of_5::<curv::elliptic::curves::p256::GE>(),
         Some(unknown_curve) => eprintln!("Unknown curve: {}", unknown_curve),
         None => eprintln!("Missing curve name"),
     }

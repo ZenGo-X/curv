@@ -14,8 +14,9 @@ use curv::elliptic::curves::traits::ECPoint;
 /// dh_key_exchange_variant_with_pok_comm.rs
 
 pub fn ecdh<P>()
-where P: ECPoint + Clone + Debug,
-      P::Scalar: Clone,
+where
+    P: ECPoint + Clone + Debug,
+    P::Scalar: Clone,
 {
     use curv::cryptographic_primitives::twoparty::dh_key_exchange::{
         compute_pubkey, Party1FirstMessage, Party2FirstMessage,
@@ -41,10 +42,10 @@ fn main() {
     match curve_name.as_ref().map(|s| s.as_str()) {
         Some("secp256k1") => ecdh::<curv::elliptic::curves::secp256_k1::GE>(),
         Some("ristretto") => ecdh::<curv::elliptic::curves::curve_ristretto::GE>(),
-        Some("ed25519")   => ecdh::<curv::elliptic::curves::ed25519::GE>(),
-        Some("jubjub")    => ecdh::<curv::elliptic::curves::curve_jubjub::GE>(),
+        Some("ed25519") => ecdh::<curv::elliptic::curves::ed25519::GE>(),
+        Some("jubjub") => ecdh::<curv::elliptic::curves::curve_jubjub::GE>(),
         Some("bls12_381") => ecdh::<curv::elliptic::curves::bls12_381::GE>(),
-        Some("p256")      => ecdh::<curv::elliptic::curves::p256::GE>(),
+        Some("p256") => ecdh::<curv::elliptic::curves::p256::GE>(),
         Some(unknown_curve) => eprintln!("Unknown curve: {}", unknown_curve),
         None => eprintln!("Missing curve name"),
     }

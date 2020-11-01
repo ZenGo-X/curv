@@ -38,7 +38,10 @@ impl<P: ECPoint> MT256<P> {
             .collect::<Vec<[u8; 32]>>();
         let tree = MerkleTree::from_vec::<[u8; 32]>(digest, vec_bytes);
 
-        MT256 { tree, _ph: PhantomData }
+        MT256 {
+            tree,
+            _ph: PhantomData,
+        }
     }
 
     pub fn gen_proof_for_ge(&self, value: &P) -> Proof<[u8; 32]> {
@@ -63,8 +66,8 @@ impl<P: ECPoint> MT256<P> {
 
 #[cfg(test)]
 mod tests {
-    use crate::elliptic::curves::traits::ECPoint;
     use super::MT256;
+    use crate::elliptic::curves::traits::ECPoint;
 
     use crate::test_for_all_curves;
 

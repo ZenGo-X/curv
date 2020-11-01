@@ -58,7 +58,7 @@ impl Zeroize for Secp256r1Scalar {
 
 impl ECScalar for Secp256r1Scalar {
     type SecretKey = SK;
-    
+
     fn new_random() -> Secp256r1Scalar {
         let mut arr = [0u8; 32];
         thread_rng().fill(&mut arr[..]);

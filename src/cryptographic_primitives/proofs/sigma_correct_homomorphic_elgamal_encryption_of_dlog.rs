@@ -43,8 +43,9 @@ pub struct HomoElGamalDlogStatement<P: ECPoint> {
 }
 
 impl<P> HomoELGamalDlogProof<P>
-where P: ECPoint + Clone,
-      P::Scalar: Zeroize + Clone,
+where
+    P: ECPoint + Clone,
+    P::Scalar: Zeroize + Clone,
 {
     pub fn prove(
         w: &HomoElGamalDlogWitness<P::Scalar>,
@@ -90,8 +91,9 @@ mod tests {
 
     test_for_all_curves!(test_correct_homo_elgamal);
     fn test_correct_homo_elgamal<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Zeroize + Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Zeroize + Clone,
     {
         let witness = HomoElGamalDlogWitness::<P::Scalar> {
             r: ECScalar::new_random(),
@@ -109,10 +111,14 @@ mod tests {
     }
 
     // TODO: add more fail scenarios
-    test_for_all_curves!(#[should_panic] test_wrong_homo_elgamal);
+    test_for_all_curves!(
+        #[should_panic]
+        test_wrong_homo_elgamal
+    );
     fn test_wrong_homo_elgamal<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Zeroize + Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Zeroize + Clone,
     {
         // test for Q = (x+1)G
         let witness = HomoElGamalDlogWitness::<P::Scalar> {

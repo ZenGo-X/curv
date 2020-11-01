@@ -8,7 +8,7 @@
 use std::fmt::Debug;
 
 use derivative::Derivative;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use zeroize::Zeroize;
 
 use crate::cryptographic_primitives::proofs::sigma_valid_pedersen::PedersenProof;
@@ -20,15 +20,13 @@ use crate::elliptic::curves::traits::*;
 /// based on How To Simulate It – A Tutorial on the Simulation
 /// Proof Technique. protocol 7.3: Multiple coin tossing. which provide simulatble constant round
 /// coin toss
-#[derive(Derivative)]
-#[derive(Serialize, Deserialize)]
-#[derivative(Clone(bound="PedersenProof<P>: Clone"))]
-#[derivative(Debug(bound="PedersenProof<P>: Debug"))]
-#[derivative(PartialEq(bound="PedersenProof<P>: PartialEq"))]
-#[serde(bound(serialize="PedersenProof<P>: Serialize"))]
-#[serde(bound(deserialize="PedersenProof<P>:  Deserialize<'de>"))]
-pub struct Party1FirstMessage<P: ECPoint>
-{
+#[derive(Derivative, Serialize, Deserialize)]
+#[derivative(Clone(bound = "PedersenProof<P>: Clone"))]
+#[derivative(Debug(bound = "PedersenProof<P>: Debug"))]
+#[derivative(PartialEq(bound = "PedersenProof<P>: PartialEq"))]
+#[serde(bound(serialize = "PedersenProof<P>: Serialize"))]
+#[serde(bound(deserialize = "PedersenProof<P>:  Deserialize<'de>"))]
+pub struct Party1FirstMessage<P: ECPoint> {
     pub proof: PedersenProof<P>,
 }
 
@@ -42,8 +40,9 @@ pub struct Party1SecondMessage<P: ECPoint> {
     pub seed: P::Scalar,
 }
 impl<P> Party1FirstMessage<P>
-    where P: ECPoint + Clone,
-          P::Scalar: Zeroize,
+where
+    P: ECPoint + Clone,
+    P::Scalar: Zeroize,
 {
     pub fn commit() -> (Party1FirstMessage<P>, P::Scalar, P::Scalar) {
         let seed: P::Scalar = ECScalar::new_random();
@@ -53,8 +52,9 @@ impl<P> Party1FirstMessage<P>
     }
 }
 impl<P> Party2FirstMessage<P>
-where P: ECPoint + Clone,
-      P::Scalar: Zeroize + Clone,
+where
+    P: ECPoint + Clone,
+    P::Scalar: Zeroize + Clone,
 {
     pub fn share(proof: &PedersenProof<P>) -> Party2FirstMessage<P> {
         PedersenProof::verify(&proof).expect("{(m,r),c} proof failed");
@@ -63,8 +63,9 @@ where P: ECPoint + Clone,
     }
 }
 impl<P> Party1SecondMessage<P>
-where P: ECPoint + Clone,
-      P::Scalar: Zeroize + Clone,
+where
+    P: ECPoint + Clone,
+    P::Scalar: Zeroize + Clone,
 {
     pub fn reveal(
         party2seed: &P::Scalar,
@@ -84,9 +85,14 @@ where P: ECPoint + Clone,
 }
 
 // party2 finalize
-pub fn finalize<P>(proof: &PedersenBlindingProof<P>, party2seed: &P::Scalar, party1comm: &P) -> P::Scalar
-where P: ECPoint + Clone + Debug,
-      P::Scalar: Zeroize + Clone,
+pub fn finalize<P>(
+    proof: &PedersenBlindingProof<P>,
+    party2seed: &P::Scalar,
+    party1comm: &P,
+) -> P::Scalar
+where
+    P: ECPoint + Clone + Debug,
+    P::Scalar: Zeroize + Clone,
 {
     PedersenBlindingProof::<P>::verify(&proof).expect("{r,(m,c)} proof failed");
     assert_eq!(&proof.com, party1comm);
@@ -100,8 +106,9 @@ mod tests {
 
     crate::test_for_all_curves!(test_coin_toss);
     pub fn test_coin_toss<P>()
-    where P: ECPoint + Clone + Debug,
-          P::Scalar: PartialEq + Clone + Debug + Zeroize,
+    where
+        P: ECPoint + Clone + Debug,
+        P::Scalar: PartialEq + Clone + Debug + Zeroize,
     {
         let (party1_first_message, m1, r1) = Party1FirstMessage::<P>::commit();
         let party2_first_message = Party2FirstMessage::share(&party1_first_message.proof);

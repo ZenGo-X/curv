@@ -5,8 +5,8 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
-use crate::BigInt;
 use crate::elliptic::curves::traits::ECPoint;
+use crate::BigInt;
 
 pub trait Hash {
     fn create_hash(big_ints: &[&BigInt]) -> BigInt;

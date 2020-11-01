@@ -53,8 +53,9 @@ mod tests {
     crate::test_for_all_curves!(create_hash_from_ge_test);
 
     fn create_hash_from_ge_test<P>()
-    where P: ECPoint,
-          P::Scalar: PartialEq + std::fmt::Debug,
+    where
+        P: ECPoint,
+        P::Scalar: PartialEq + std::fmt::Debug,
     {
         let point = P::base_point2();
         let result1 =

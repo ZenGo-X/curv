@@ -51,8 +51,9 @@ pub trait NISigmaProof<T, W, S> {
 }
 
 impl<P> NISigmaProof<ECDDHProof<P>, ECDDHWitness<P::Scalar>, ECDDHStatement<P>> for ECDDHProof<P>
-where P: ECPoint + Clone,
-      P::Scalar: Zeroize + Clone,
+where
+    P: ECPoint + Clone,
+    P::Scalar: Zeroize + Clone,
 {
     fn prove(w: &ECDDHWitness<P::Scalar>, delta: &ECDDHStatement<P>) -> ECDDHProof<P> {
         let mut s: P::Scalar = ECScalar::new_random();
@@ -89,8 +90,9 @@ mod tests {
 
     test_for_all_curves!(test_ecddh_proof);
     fn test_ecddh_proof<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Zeroize + Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Zeroize + Clone,
     {
         let x: P::Scalar = ECScalar::new_random();
         let g1: P = ECPoint::generator();
@@ -103,10 +105,14 @@ mod tests {
         assert!(proof.verify(&delta).is_ok());
     }
 
-    test_for_all_curves!(#[should_panic] test_wrong_ecddh_proof);
+    test_for_all_curves!(
+        #[should_panic]
+        test_wrong_ecddh_proof
+    );
     fn test_wrong_ecddh_proof<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Zeroize + Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Zeroize + Clone,
     {
         let x: P::Scalar = ECScalar::new_random();
         let g1: P = ECPoint::generator();

@@ -35,14 +35,18 @@ pub struct PedersenProof<P: ECPoint> {
 pub trait ProvePederesen {
     type EC: ECPoint;
 
-    fn prove(m: &<Self::EC as ECPoint>::Scalar, r: &<Self::EC as ECPoint>::Scalar) -> PedersenProof<Self::EC>;
+    fn prove(
+        m: &<Self::EC as ECPoint>::Scalar,
+        r: &<Self::EC as ECPoint>::Scalar,
+    ) -> PedersenProof<Self::EC>;
 
     fn verify(proof: &PedersenProof<Self::EC>) -> Result<(), ProofError>;
 }
 
 impl<P> ProvePederesen for PedersenProof<P>
-where P: ECPoint + Clone,
-      P::Scalar: Zeroize,
+where
+    P: ECPoint + Clone,
+    P::Scalar: Zeroize,
 {
     type EC = P;
     fn prove(m: &P::Scalar, r: &P::Scalar) -> PedersenProof<P> {
@@ -118,8 +122,9 @@ mod tests {
 
     crate::test_for_all_curves!(test_pedersen_proof);
     fn test_pedersen_proof<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Zeroize,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Zeroize,
     {
         let m: P::Scalar = ECScalar::new_random();
         let r: P::Scalar = ECScalar::new_random();

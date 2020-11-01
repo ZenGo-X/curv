@@ -502,7 +502,7 @@ impl<'de> Visitor<'de> for JubjubPointVisitor {
 
 #[cfg(test)]
 mod tests {
-    use super::{G1Point, FieldScalar};
+    use super::{FieldScalar, G1Point};
     use crate::arithmetic::traits::Modulo;
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;

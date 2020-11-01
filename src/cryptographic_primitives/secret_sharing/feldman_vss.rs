@@ -27,8 +27,9 @@ pub struct VerifiableSS<P> {
 }
 
 impl<P> VerifiableSS<P>
-where P: ECPoint + Clone,
-      P::Scalar: Clone,
+where
+    P: ECPoint + Clone,
+    P::Scalar: Clone,
 {
     pub fn reconstruct_limit(&self) -> usize {
         self.parameters.threshold + 1
@@ -42,7 +43,9 @@ where P: ECPoint + Clone,
         let secret_shares = VerifiableSS::<P>::evaluate_polynomial(&poly, &index_vec);
 
         let G: P = ECPoint::generator();
-        let commitments = (0..poly.len()).map(|i| G.clone() * poly[i].clone()).collect::<Vec<P>>();
+        let commitments = (0..poly.len())
+            .map(|i| G.clone() * poly[i].clone())
+            .collect::<Vec<P>>();
         (
             VerifiableSS {
                 parameters: ShamirSecretSharing {
@@ -145,32 +148,31 @@ where P: ECPoint + Clone,
         assert_eq!(points.len(), vec_len);
         // Lagrange interpolation for point 0
         // let mut acc = 0i64;
-        let lag_coef =
-            (0..vec_len)
-                .map(|i| {
-                    let xi = &points[i];
-                    let yi = &values[i];
-                    let num: P::Scalar = ECScalar::from(&BigInt::one());
-                    let denum: P::Scalar = ECScalar::from(&BigInt::one());
-                    let num = points.iter().zip(0..vec_len).fold(num, |acc, x| {
-                        if i != x.1 {
-                            acc * x.0.clone()
-                        } else {
-                            acc
-                        }
-                    });
-                    let denum = points.iter().zip(0..vec_len).fold(denum, |acc, x| {
-                        if i != x.1 {
-                            let xj_sub_xi = x.0.sub(&xi.get_element());
-                            acc * xj_sub_xi
-                        } else {
-                            acc
-                        }
-                    });
-                    let denum = denum.invert();
-                    num * denum * yi.clone()
-                })
-                .collect::<Vec<P::Scalar>>();
+        let lag_coef = (0..vec_len)
+            .map(|i| {
+                let xi = &points[i];
+                let yi = &values[i];
+                let num: P::Scalar = ECScalar::from(&BigInt::one());
+                let denum: P::Scalar = ECScalar::from(&BigInt::one());
+                let num = points.iter().zip(0..vec_len).fold(num, |acc, x| {
+                    if i != x.1 {
+                        acc * x.0.clone()
+                    } else {
+                        acc
+                    }
+                });
+                let denum = points.iter().zip(0..vec_len).fold(denum, |acc, x| {
+                    if i != x.1 {
+                        let xj_sub_xi = x.0.sub(&xi.get_element());
+                        acc * xj_sub_xi
+                    } else {
+                        acc
+                    }
+                });
+                let denum = denum.invert();
+                num * denum * yi.clone()
+            })
+            .collect::<Vec<P::Scalar>>();
         let mut lag_coef_iter = lag_coef.iter();
         let head = lag_coef_iter.next().unwrap();
         let tail = lag_coef_iter;
@@ -197,7 +199,9 @@ where P: ECPoint + Clone,
         let mut comm_iterator = self.commitments.iter().rev();
         let head = comm_iterator.next().unwrap();
         let tail = comm_iterator;
-        let comm_to_point = tail.fold(head.clone(), |acc, x: &P| x.clone() + acc * index_fe.clone());
+        let comm_to_point = tail.fold(head.clone(), |acc, x: &P| {
+            x.clone() + acc * index_fe.clone()
+        });
         comm_to_point.clone()
     }
 
@@ -239,18 +243,20 @@ where P: ECPoint + Clone,
 
 #[cfg(test)]
 mod tests {
-    use crate::test_for_all_curves;
     use super::*;
+    use crate::test_for_all_curves;
 
     test_for_all_curves!(test_secret_sharing_3_out_of_5_at_indices);
 
     fn test_secret_sharing_3_out_of_5_at_indices<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone + PartialEq + std::fmt::Debug,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone + PartialEq + std::fmt::Debug,
     {
         let secret: P::Scalar = ECScalar::new_random();
         let parties = [1, 2, 4, 5, 6];
-        let (vss_scheme, secret_shares) = VerifiableSS::<P>::share_at_indices(3, 5, &secret, &parties);
+        let (vss_scheme, secret_shares) =
+            VerifiableSS::<P>::share_at_indices(3, 5, &secret, &parties);
 
         let mut shares_vec = Vec::new();
         shares_vec.push(secret_shares[0].clone());
@@ -266,8 +272,9 @@ mod tests {
     test_for_all_curves!(test_secret_sharing_3_out_of_5);
 
     fn test_secret_sharing_3_out_of_5<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone + PartialEq + std::fmt::Debug,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone + PartialEq + std::fmt::Debug,
     {
         let secret: P::Scalar = ECScalar::new_random();
 
@@ -312,8 +319,9 @@ mod tests {
     test_for_all_curves!(test_secret_sharing_3_out_of_7);
 
     fn test_secret_sharing_3_out_of_7<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone + PartialEq + std::fmt::Debug,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone + PartialEq + std::fmt::Debug,
     {
         let secret: P::Scalar = ECScalar::new_random();
 
@@ -353,8 +361,9 @@ mod tests {
     test_for_all_curves!(test_secret_sharing_1_out_of_2);
 
     fn test_secret_sharing_1_out_of_2<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone + PartialEq + std::fmt::Debug,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone + PartialEq + std::fmt::Debug,
     {
         let secret: P::Scalar = ECScalar::new_random();
 
@@ -386,8 +395,9 @@ mod tests {
     test_for_all_curves!(test_secret_sharing_1_out_of_3);
 
     fn test_secret_sharing_1_out_of_3<P>()
-    where P: ECPoint + Clone + std::fmt::Debug,
-          P::Scalar: Clone + PartialEq + std::fmt::Debug,
+    where
+        P: ECPoint + Clone + std::fmt::Debug,
+        P::Scalar: Clone + PartialEq + std::fmt::Debug,
     {
         let secret: P::Scalar = ECScalar::new_random();
 

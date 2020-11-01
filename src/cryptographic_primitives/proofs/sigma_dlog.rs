@@ -39,8 +39,9 @@ pub trait ProveDLog {
 }
 
 impl<P> ProveDLog for DLogProof<P>
-where P: ECPoint + Clone,
-      P::Scalar: Zeroize,
+where
+    P: ECPoint + Clone,
+    P::Scalar: Zeroize,
 {
     type EC = P;
 
@@ -99,8 +100,9 @@ mod tests {
 
     crate::test_for_all_curves!(test_dlog_proof);
     fn test_dlog_proof<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Zeroize,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Zeroize,
     {
         let witness: P::Scalar = ECScalar::new_random();
         let dlog_proof = DLogProof::<P>::prove(&witness);

@@ -33,13 +33,17 @@ pub struct PedersenBlindingProof<P: ECPoint> {
 pub trait ProvePederesenBlind {
     type EC: ECPoint;
 
-    fn prove(m: &<Self::EC as ECPoint>::Scalar, r: &<Self::EC as ECPoint>::Scalar) -> PedersenBlindingProof<Self::EC>;
+    fn prove(
+        m: &<Self::EC as ECPoint>::Scalar,
+        r: &<Self::EC as ECPoint>::Scalar,
+    ) -> PedersenBlindingProof<Self::EC>;
 
     fn verify(proof: &PedersenBlindingProof<Self::EC>) -> Result<(), ProofError>;
 }
 impl<P> ProvePederesenBlind for PedersenBlindingProof<P>
-where P: ECPoint + Clone,
-      P::Scalar: Zeroize + Clone,
+where
+    P: ECPoint + Clone,
+    P::Scalar: Zeroize + Clone,
 {
     type EC = P;
 
@@ -109,8 +113,9 @@ mod tests {
 
     crate::test_for_all_curves!(test_pedersen_blind_proof);
     fn test_pedersen_blind_proof<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Zeroize + Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Zeroize + Clone,
     {
         let m: P::Scalar = ECScalar::new_random();
         let r: P::Scalar = ECScalar::new_random();

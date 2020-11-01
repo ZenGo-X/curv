@@ -21,7 +21,8 @@ use crate::BigInt;
 pub struct PedersenCommitment<P>(PhantomData<P>);
 
 impl<P> Commitment<P> for PedersenCommitment<P>
-where P: ECPoint
+where
+    P: ECPoint,
 {
     fn create_commitment_with_user_defined_randomness(
         message: &BigInt,

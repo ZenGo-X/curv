@@ -1,7 +1,7 @@
 #![cfg(feature = "ecc")]
 
-use curv::BigInt;
 use curv::elliptic::curves::traits::ECPoint;
+use curv::BigInt;
 
 /// Pedesen Commitment:
 /// compute c = mG + rH
@@ -15,7 +15,8 @@ use curv::elliptic::curves::traits::ECPoint;
 /// notice: this library includes also hash based commitments
 
 pub fn ped_com<P>(message: &BigInt)
-where P: ECPoint
+where
+    P: ECPoint,
 {
     use curv::arithmetic::traits::Samplable;
     use curv::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
@@ -38,10 +39,10 @@ fn main() {
     match curve_name.as_ref().map(|s| s.as_str()) {
         Some("secp256k1") => ped_com::<curv::elliptic::curves::secp256_k1::GE>(&_message_bn),
         Some("ristretto") => ped_com::<curv::elliptic::curves::curve_ristretto::GE>(&_message_bn),
-        Some("ed25519")   => ped_com::<curv::elliptic::curves::ed25519::GE>(&_message_bn),
-        Some("jubjub")    => ped_com::<curv::elliptic::curves::curve_jubjub::GE>(&_message_bn),
+        Some("ed25519") => ped_com::<curv::elliptic::curves::ed25519::GE>(&_message_bn),
+        Some("jubjub") => ped_com::<curv::elliptic::curves::curve_jubjub::GE>(&_message_bn),
         Some("bls12_381") => ped_com::<curv::elliptic::curves::bls12_381::GE>(&_message_bn),
-        Some("p256")      => ped_com::<curv::elliptic::curves::p256::GE>(&_message_bn),
+        Some("p256") => ped_com::<curv::elliptic::curves::p256::GE>(&_message_bn),
         Some(unknown_curve) => eprintln!("Unknown curve: {}", unknown_curve),
         None => eprintln!("Missing curve name"),
     }

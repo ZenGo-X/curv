@@ -42,10 +42,14 @@ pub struct HomoElGamalStatement<P> {
 }
 
 impl<P> HomoELGamalProof<P>
-where P: ECPoint + Clone + Zeroize,
-      P::Scalar: PartialEq + Clone + Zeroize,
+where
+    P: ECPoint + Clone + Zeroize,
+    P::Scalar: PartialEq + Clone + Zeroize,
 {
-    pub fn prove(w: &HomoElGamalWitness<P::Scalar>, delta: &HomoElGamalStatement<P>) -> HomoELGamalProof<P> {
+    pub fn prove(
+        w: &HomoElGamalWitness<P::Scalar>,
+        delta: &HomoElGamalStatement<P>,
+    ) -> HomoELGamalProof<P> {
         let mut s1: P::Scalar = ECScalar::new_random();
         let mut s2: P::Scalar = ECScalar::new_random();
         let mut A1 = delta.H.clone() * s1.clone();
@@ -56,7 +60,11 @@ where P: ECPoint + Clone + Zeroize,
             &T, &A3, &delta.G, &delta.H, &delta.Y, &delta.D, &delta.E,
         ]);
         // dealing with zero field element
-        let z1 = if w.x != P::Scalar::zero() { s1.clone() + w.x.clone() * e.clone() } else { s1.clone() };
+        let z1 = if w.x != P::Scalar::zero() {
+            s1.clone() + w.x.clone() * e.clone()
+        } else {
+            s1.clone()
+        };
         let z2 = s2.clone() + w.r.clone() * e;
         s1.zeroize();
         s2.zeroize();
@@ -82,13 +90,14 @@ where P: ECPoint + Clone + Zeroize,
 
 #[cfg(test)]
 mod tests {
-    use crate::test_for_all_curves;
     use super::*;
+    use crate::test_for_all_curves;
 
     test_for_all_curves!(test_correct_general_homo_elgamal);
     fn test_correct_general_homo_elgamal<P>()
-    where P: ECPoint + Clone + Zeroize,
-          P::Scalar: PartialEq + Clone + Zeroize,
+    where
+        P: ECPoint + Clone + Zeroize,
+        P::Scalar: PartialEq + Clone + Zeroize,
     {
         let witness = HomoElGamalWitness::<P::Scalar> {
             r: ECScalar::new_random(),
@@ -108,8 +117,9 @@ mod tests {
 
     test_for_all_curves!(test_correct_homo_elgamal);
     fn test_correct_homo_elgamal<P: ECPoint>()
-    where P: ECPoint + Clone + Zeroize,
-          P::Scalar: PartialEq + Clone + Zeroize,
+    where
+        P: ECPoint + Clone + Zeroize,
+        P::Scalar: PartialEq + Clone + Zeroize,
     {
         let witness = HomoElGamalWitness {
             r: P::Scalar::new_random(),
@@ -131,10 +141,14 @@ mod tests {
         assert!(proof.verify(&delta).is_ok());
     }
 
-    test_for_all_curves!(#[should_panic] test_wrong_homo_elgamal);
+    test_for_all_curves!(
+        #[should_panic]
+        test_wrong_homo_elgamal
+    );
     fn test_wrong_homo_elgamal<P: ECPoint>()
-    where P: ECPoint + Clone + Zeroize,
-          P::Scalar: PartialEq + Clone + Zeroize,
+    where
+        P: ECPoint + Clone + Zeroize,
+        P::Scalar: PartialEq + Clone + Zeroize,
     {
         // test for E = (r+1)G
         let witness = HomoElGamalWitness::<P::Scalar> {
