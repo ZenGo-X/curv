@@ -3,16 +3,10 @@ cache: cargo
 rust:
   - nightly
 
-env:
-  - CURVE=ec_secp256k1
-  - CURVE=ec_ed25519
-  - CURVE=ec_ristretto
-  - CURVE=ec_jubjub
-
 before_script:
   - rustup component add rustfmt-preview
   - cargo fmt --all -- --check
 
 script:
-  - cargo build --verbose --features $CURVE
-  - cargo test --verbose --features $CURVE
+  - cargo build --verbose --features ecc
+  - cargo test --verbose --features ecc
