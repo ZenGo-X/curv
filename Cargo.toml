@@ -56,7 +56,8 @@ version = "0.12.0"
 features = ["rand", "serde"]
 
 [dependencies.curve25519-dalek]
-version = "1.0.1"
+git = "https://github.com/Zengo-X/curve25519-dalek"
+tag = "1.0.3-subtle2.2.2"
 
 [dependencies.cryptoxide]
 version = "0.1.0"
