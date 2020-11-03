@@ -80,3 +80,16 @@ optional = true
 bincode = "1.1"
 serde_json = "1.0"
 paste = "1.0.2"
+
+[[example]]
+name = "diffie_hellman_key_exchange"
+required-features = ["ecc"]
+[[example]]
+name = "pedersen_commitment"
+required-features = ["ecc"]
+[[example]]
+name = "proof_of_knowledge_of_dlog"
+required-features = ["ecc"]
+[[example]]
+name = "verifiable_secret_sharing"
+required-features = ["ecc"]
