@@ -30,25 +30,14 @@ pub struct PedersenBlindingProof<P: ECPoint> {
     pub com: P,
     z: P::Scalar,
 }
-pub trait ProvePederesenBlind {
-    type EC: ECPoint;
 
-    fn prove(
-        m: &<Self::EC as ECPoint>::Scalar,
-        r: &<Self::EC as ECPoint>::Scalar,
-    ) -> PedersenBlindingProof<Self::EC>;
-
-    fn verify(proof: &PedersenBlindingProof<Self::EC>) -> Result<(), ProofError>;
-}
-impl<P> ProvePederesenBlind for PedersenBlindingProof<P>
+impl<P> PedersenBlindingProof<P>
 where
     P: ECPoint + Clone,
     P::Scalar: Zeroize + Clone,
 {
-    type EC = P;
-
     //TODO: add self verification to prover proof
-    fn prove(m: &P::Scalar, r: &P::Scalar) -> PedersenBlindingProof<P> {
+    pub fn prove(m: &P::Scalar, r: &P::Scalar) -> PedersenBlindingProof<P> {
         let h: P = ECPoint::base_point2();
         let mut s: P::Scalar = ECScalar::new_random();
         let a = h.scalar_mul(&s.get_element());
@@ -78,7 +67,7 @@ where
         }
     }
 
-    fn verify(proof: &PedersenBlindingProof<P>) -> Result<(), ProofError> {
+    pub fn verify(proof: &PedersenBlindingProof<P>) -> Result<(), ProofError> {
         let g: P = ECPoint::generator();
         let h: P = ECPoint::base_point2();
         let challenge = HSha256::create_hash(&[

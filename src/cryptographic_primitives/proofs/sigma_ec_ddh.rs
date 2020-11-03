@@ -43,19 +43,12 @@ pub struct ECDDHWitness<S: ECScalar> {
     pub x: S,
 }
 
-// TODO: move to super and use in other sigma protocols
-pub trait NISigmaProof<T, W, S> {
-    fn prove(w: &W, delta: &S) -> T;
-
-    fn verify(&self, delta: &S) -> Result<(), ProofError>;
-}
-
-impl<P> NISigmaProof<ECDDHProof<P>, ECDDHWitness<P::Scalar>, ECDDHStatement<P>> for ECDDHProof<P>
+impl<P> ECDDHProof<P>
 where
     P: ECPoint + Clone,
     P::Scalar: Zeroize + Clone,
 {
-    fn prove(w: &ECDDHWitness<P::Scalar>, delta: &ECDDHStatement<P>) -> ECDDHProof<P> {
+    pub fn prove(w: &ECDDHWitness<P::Scalar>, delta: &ECDDHStatement<P>) -> ECDDHProof<P> {
         let mut s: P::Scalar = ECScalar::new_random();
         let a1 = delta.g1.clone() * s.clone();
         let a2 = delta.g2.clone() * s.clone();
@@ -66,7 +59,7 @@ where
         ECDDHProof { a1, a2, z }
     }
 
-    fn verify(&self, delta: &ECDDHStatement<P>) -> Result<(), ProofError> {
+    pub fn verify(&self, delta: &ECDDHStatement<P>) -> Result<(), ProofError> {
         let e = HSha256::create_hash_from_ge(&[
             &delta.g1, &delta.h1, &delta.g2, &delta.h2, &self.a1, &self.a2,
         ]);

@@ -30,22 +30,12 @@ pub struct DLogProof<P: ECPoint> {
     pub challenge_response: P::Scalar,
 }
 
-pub trait ProveDLog {
-    type EC: ECPoint;
-
-    fn prove(sk: &<Self::EC as ECPoint>::Scalar) -> DLogProof<Self::EC>;
-
-    fn verify(proof: &DLogProof<Self::EC>) -> Result<(), ProofError>;
-}
-
-impl<P> ProveDLog for DLogProof<P>
+impl<P> DLogProof<P>
 where
     P: ECPoint + Clone,
     P::Scalar: Zeroize,
 {
-    type EC = P;
-
-    fn prove(sk: &P::Scalar) -> DLogProof<P> {
+    pub fn prove(sk: &P::Scalar) -> DLogProof<P> {
         let base_point: P = ECPoint::generator();
         let generator_x = base_point.bytes_compressed_to_big_int();
         let mut sk_t_rand_commitment: P::Scalar = ECScalar::new_random();
@@ -68,7 +58,7 @@ where
         }
     }
 
-    fn verify(proof: &DLogProof<P>) -> Result<(), ProofError> {
+    pub fn verify(proof: &DLogProof<P>) -> Result<(), ProofError> {
         let ec_point: P = ECPoint::generator();
         let challenge = HSha256::create_hash(&[
             &proof.pk_t_rand_commitment.bytes_compressed_to_big_int(),

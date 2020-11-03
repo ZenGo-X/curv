@@ -32,24 +32,12 @@ pub struct PedersenProof<P: ECPoint> {
     z2: P::Scalar,
 }
 
-pub trait ProvePederesen {
-    type EC: ECPoint;
-
-    fn prove(
-        m: &<Self::EC as ECPoint>::Scalar,
-        r: &<Self::EC as ECPoint>::Scalar,
-    ) -> PedersenProof<Self::EC>;
-
-    fn verify(proof: &PedersenProof<Self::EC>) -> Result<(), ProofError>;
-}
-
-impl<P> ProvePederesen for PedersenProof<P>
+impl<P> PedersenProof<P>
 where
     P: ECPoint + Clone,
     P::Scalar: Zeroize,
 {
-    type EC = P;
-    fn prove(m: &P::Scalar, r: &P::Scalar) -> PedersenProof<P> {
+    pub fn prove(m: &P::Scalar, r: &P::Scalar) -> PedersenProof<P> {
         let g: P = ECPoint::generator();
         let h: P = ECPoint::base_point2();
         let mut s1: P::Scalar = ECScalar::new_random();
@@ -88,7 +76,7 @@ where
         }
     }
 
-    fn verify(proof: &PedersenProof<P>) -> Result<(), ProofError> {
+    pub fn verify(proof: &PedersenProof<P>) -> Result<(), ProofError> {
         let g: P = ECPoint::generator();
         let h: P = ECPoint::base_point2();
         let challenge = HSha256::create_hash(&[

@@ -12,9 +12,7 @@ use serde::{Deserialize, Serialize};
 use zeroize::Zeroize;
 
 use crate::cryptographic_primitives::proofs::sigma_valid_pedersen::PedersenProof;
-use crate::cryptographic_primitives::proofs::sigma_valid_pedersen::ProvePederesen;
 use crate::cryptographic_primitives::proofs::sigma_valid_pedersen_blind::PedersenBlindingProof;
-use crate::cryptographic_primitives::proofs::sigma_valid_pedersen_blind::ProvePederesenBlind;
 use crate::elliptic::curves::traits::*;
 
 /// based on How To Simulate It – A Tutorial on the Simulation
