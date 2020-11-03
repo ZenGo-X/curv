@@ -8,6 +8,7 @@ env:
   - CURVE=ec_ed25519
   - CURVE=ec_ristretto
   - CURVE=ec_jubjub
+  - CURVE=ec_secp256r1
 
 before_script:
   - rustup component add rustfmt-preview

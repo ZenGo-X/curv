@@ -17,4 +17,7 @@ pub mod ed25519;
 pub mod p256;
 #[cfg(feature = "ec_secp256k1")]
 pub mod secp256_k1;
+#[cfg(feature = "ec_secp256r1")]
+pub mod secp256_r1;
+
 pub mod traits;

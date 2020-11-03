@@ -22,6 +22,15 @@ mod secp256k1instance {
 #[cfg(feature = "ec_secp256k1")]
 pub use self::secp256k1instance::*;
 
+#[cfg(feature = "ec_secp256r1")]
+mod secp256r1instance {
+    pub use crate::elliptic::curves::secp256_r1::FE;
+    pub use crate::elliptic::curves::secp256_r1::GE;
+}
+
+#[cfg(feature = "ec_secp256r1")]
+pub use self::secp256r1instance::*;
+
 #[cfg(feature = "ec_ristretto")]
 mod curveristrettoinstance {
     pub use crate::elliptic::curves::curve_ristretto::FE;

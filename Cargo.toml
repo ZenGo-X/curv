@@ -12,6 +12,7 @@ ec_secp256k1 = ["rust-gmp" ,"ecc", "secp256k1"]
 ec_ristretto = ["rust-gmp", "ecc" , "curve25519-dalek"]
 ec_ed25519 = ["rust-gmp", "ecc" , "cryptoxide"]
 ec_jubjub = ["rust-gmp", "ecc" , "pairing", "sapling-crypto"]
+ec_secp256r1 = ["rust-gmp", "ecc", "ring"]
 ec_bls12_381 = ["rust-gmp", "ecc" , "bls12_381"]
 ec_p256 = ["rust-gmp" ,"ecc", "p256", "generic-array"]
 ecc = []
@@ -28,6 +29,11 @@ hmac = "0.7.1"
 digest = "0.8.1"
 hex = "^0.3"
 blake2b_simd = "0.5.7"
+
+[dependencies.ring]
+git = "https://github.com/KZen-networks/ring.git"
+branch = "feature/p256"
+optional = true
 
 [dependencies.rust-crypto]
 version = "^0.2"

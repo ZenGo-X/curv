@@ -117,10 +117,15 @@ mod tests {
 
     #[test]
     fn create_sha256_from_ge_test() {
+        println!("create_sha256_from_ge_test #1");
         let point = GE::base_point2();
+        println!("create_sha256_from_ge_test #2");
         let result1 = HSha256::create_hash_from_ge(&vec![&point, &GE::generator()]);
+        println!("create_sha256_from_ge_test #3");
         assert!(result1.to_big_int().to_str_radix(2).len() > 240);
+        println!("create_sha256_from_ge_test #4");
         let result2 = HSha256::create_hash_from_ge(&vec![&GE::generator(), &point]);
+        println!("create_sha256_from_ge_test #5");
         assert_ne!(result1, result2);
         let result3 = HSha256::create_hash_from_ge(&vec![&GE::generator(), &point]);
         assert_eq!(result2, result3);
