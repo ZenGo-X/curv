@@ -18,8 +18,6 @@
 
 use super::traits::{ECPoint, ECScalar};
 use crate::arithmetic::traits::{Converter, Modulo};
-use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
-use crate::cryptographic_primitives::hashing::traits::Hash;
 use crate::BigInt;
 use crate::ErrorKey;
 
