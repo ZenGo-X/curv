@@ -1,5 +1,3 @@
-#![cfg(feature = "ecc")]
-
 use std::fmt::Debug;
 
 use curv::elliptic::curves::traits::ECPoint;
@@ -11,9 +9,9 @@ use curv::elliptic::curves::traits::ECPoint;
 /// implementation details: The code is using FE and GE. Each party is given an index from 1,..,n and a secret share of type FE.
 /// The index of the party is also the point on the polynomial where we treat this number as u32 but converting it to FE internally.
 /// TO RUN:
-/// cargo run --example verifiable_secret_sharing --features ecc -- CURVE_NAME
+/// cargo run --example verifiable_secret_sharing -- CURVE_NAME
 /// CURVE_NAME is any of the supported curves: i.e.:
-/// cargo run --example verifiable_secret_sharing --features ecc -- ed25519
+/// cargo run --example verifiable_secret_sharing -- ed25519
 
 pub fn secret_sharing_3_out_of_5<P>()
 where

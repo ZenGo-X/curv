@@ -37,13 +37,6 @@ use std::ptr;
 use std::sync::{atomic, Once};
 use zeroize::Zeroize;
 
-#[cfg(feature = "merkle")]
-use crypto::digest::Digest;
-#[cfg(feature = "merkle")]
-use crypto::sha3::Sha3;
-#[cfg(feature = "merkle")]
-use merkle::Hashable;
-
 /* X coordinate of a point of unknown discrete logarithm.
 Computed using a deterministic algorithm with the generator as input.
 See test_base_point2 */

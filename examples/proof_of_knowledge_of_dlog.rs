@@ -1,13 +1,11 @@
-#![cfg(feature = "ecc")]
-
 use curv::elliptic::curves::traits::ECPoint;
 use zeroize::Zeroize;
 
 /// Sigma protocol for proof of knowledge of discrete log
 /// TO RUN:
-/// cargo run --example proof_of_knowledge_of_dlog --features ecc -- CURVE_NAME
+/// cargo run --example proof_of_knowledge_of_dlog -- CURVE_NAME
 /// CURVE_NAME is any of the supported curves: i.e.:
-/// cargo run --example proof_of_knowledge_of_dlog --features ecc -- jubjub
+/// cargo run --example proof_of_knowledge_of_dlog -- jubjub
 ///
 /// notice: this library includes other more complex sigma protocol.
 /// see proofs folder for more details

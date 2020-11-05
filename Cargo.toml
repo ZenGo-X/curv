@@ -6,11 +6,6 @@ edition = "2018"
 [lib]
 crate-type = ["lib"]
 
-[features]
-default = ["rust-gmp"]
-ecc = ["rust-gmp", "secp256k1", "curve25519-dalek", "cryptoxide", "pairing", "sapling-crypto", "bls12_381", "p256", "generic-array"]
-merkle = ["rust-crypto", "merkle-sha3"]
-
 [dependencies]
 rand = "0.6"
 serde = "1.0"
@@ -26,70 +21,45 @@ derivative = "2.1.1"
 
 [dependencies.rust-crypto]
 version = "^0.2"
-optional = true
 
 [dependencies.merkle-sha3]
 version = "^0.1"
-optional = true
 
 
 [dependencies.bls12_381]
 version = "0.1.1"
-optional = true
 
 [dependencies.sapling-crypto]
 git = "https://github.com/omershlo/librustzcash.git"
 rev = "3e667406323430813f6dbae2a60b5a83046fa20a"
-optional = true
 
 [dependencies.pairing]
 git = "https://github.com/omershlo/librustzcash.git"
 rev = "3e667406323430813f6dbae2a60b5a83046fa20a"
-optional = true
 
 [dependencies.rust-gmp]
 version = "0.5.0"
 features = ["serde_support"]
 git = "https://github.com/KZen-networks/rust-gmp"
-optional = true
 
 [dependencies.secp256k1]
 version = "0.15.3"
 features = ["serde"]
-optional = true
 
 [dependencies.curve25519-dalek]
 version = "1.2.3"
-optional = true
 
 [dependencies.cryptoxide]
 version = "0.1.2"
-optional = true
 
 [dependencies.p256]
 version = "0.5"
 features = ["ecdsa"]
-optional = true
 
 [dependencies.generic-array]
 version = "0.14"
-optional = true
-
 
 [dev-dependencies]
 bincode = "1.1"
 serde_json = "1.0"
 paste = "1.0.2"
-
-[[example]]
-name = "diffie_hellman_key_exchange"
-required-features = ["ecc"]
-[[example]]
-name = "pedersen_commitment"
-required-features = ["ecc"]
-[[example]]
-name = "proof_of_knowledge_of_dlog"
-required-features = ["ecc"]
-[[example]]
-name = "verifiable_secret_sharing"
-required-features = ["ecc"]

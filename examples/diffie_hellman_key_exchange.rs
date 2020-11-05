@@ -1,14 +1,12 @@
-#![cfg(feature = "ecc")]
-
 use std::fmt::Debug;
 
 use curv::elliptic::curves::traits::ECPoint;
 
 /// Diffie Hellman Key Exchange:
 /// TO RUN:
-/// cargo run --example diffie_hellman_key_exchange --features ecc -- CURVE_NAME
+/// cargo run --example diffie_hellman_key_exchange -- CURVE_NAME
 /// CURVE_NAME is any of the supported curves: i.e.:
-/// cargo run --example diffie_hellman_key_exchange --features ecc -- secp256k1
+/// cargo run --example diffie_hellman_key_exchange -- secp256k1
 ///
 /// notice: this library includes also a more involved ECDH scheme. see
 /// dh_key_exchange_variant_with_pok_comm.rs

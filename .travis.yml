@@ -8,5 +8,5 @@ before_script:
   - cargo fmt --all -- --check
 
 script:
-  - cargo build --verbose --features ecc
-  - cargo test --verbose --features ecc
+  - cargo build --verbose
+  - cargo test --verbose
