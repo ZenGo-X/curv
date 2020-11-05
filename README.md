@@ -17,7 +17,6 @@ serialize/deserialize support to be used in higher level code to implement netwo
 |    **Secp256k1**    |        [rust-secp256k1](https://github.com/rust-bitcoin/rust-secp256k1)            |      [bitcoin wiki](https://en.bitcoin.it/wiki/Secp256k1)           |     
 |    **P-256**    |        [RustCrypto](https://crates.io/crates/p256)            |      [NIST.FIPS.186.4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf)           |     
 |    **Ed25519**    |        [cryptoxide](https://github.com/typed-io/cryptoxide/blob/master/src/curve25519.rs)            |      [BDLSY11](https://ed25519.cr.yp.to/ed25519-20110926.pdf)           |      
-|    **Jubjub**    |        [librustzcash](https://github.com/zcash/librustzcash)            |      [what is jubjub](https://z.cash/technology/jubjub/)          |     
 |    **Ristretto**    |        [curve25519-dalek](https://github.com/dalek-cryptography/curve25519-dalek)            |     [ristretto group](https://ristretto.group/)           |      
 |    **BLS12-381**    |        [bls12-381](https://crates.io/crates/bls12_381)            |     [BLS12-381 For The Rest Of Us](https://hackmd.io/@benjaminion/bls12-381)           |     
 
@@ -46,15 +45,10 @@ for example: `cargo run --example proof_of_knowledge_of_dlog -- jubjub`
 ### Docs 
 To build docs, use `cargo doc --no-deps`.
 
-### Adding New Elliptic Curve
-To add support for new elliptic curve simply fill in the `ECScalar` and `ECPoint` [traits](https://github.com/KZen-networks/curv/blob/master/src/elliptic/curves/traits.rs). 
-
 ### License
 Curv is released under the terms of the MIT license. See [LICENSE](LICENSE) for more information.
 
 
-### Development Process
-We use several methods to communicate: You can open an issue, [reach out](mailto:github@kzencorp.com) by mail or join ZenGo X [Telegram]( https://t.me/zengo_x) for discussions on code and research. Changes are to be submitted as pull requests.
+### Development Process & Contact
+This library is maintained by ZenGo-X. Contributions are highly welcomed! Besides GitHub issues and PRs, feel free to [reach out](mailto:github@kzencorp.com) by mail or join ZenGo X [Telegram]( https://t.me/zengo_x) for discussions on code and research. 
 
-### Contact
-For any questions, feel free to [email us](mailto:github@kzencorp.com).
