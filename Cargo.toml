@@ -1,7 +1,11 @@
 [package]
 name = "curv"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2018"
+authors = ["Omer Shlomovits"]
+license = "MIT"
+description = "Curv contains an extremly simple interface to onboard new elliptic curves. Use this library for general purpose elliptic curve cryptography"
+repository = "https://github.com/ZenGo-X/curv"
 
 [lib]
 crate-type = ["lib"]
