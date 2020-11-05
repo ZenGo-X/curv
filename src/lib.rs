@@ -52,11 +52,6 @@ macro_rules! test_for_all_curves {
             }
             #[test]
             $($attrs)*
-            fn [<$fn _jubjub>]() {
-                $fn::<crate::elliptic::curves::curve_jubjub::GE>()
-            }
-            #[test]
-            $($attrs)*
             fn [<$fn _bls12_381>]() {
                 $fn::<crate::elliptic::curves::bls12_381::GE>()
             }

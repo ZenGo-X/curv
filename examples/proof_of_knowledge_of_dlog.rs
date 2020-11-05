@@ -33,7 +33,6 @@ fn main() {
         Some("secp256k1") => dlog_proof::<curv::elliptic::curves::secp256_k1::GE>(),
         Some("ristretto") => dlog_proof::<curv::elliptic::curves::curve_ristretto::GE>(),
         Some("ed25519") => dlog_proof::<curv::elliptic::curves::ed25519::GE>(),
-        Some("jubjub") => dlog_proof::<curv::elliptic::curves::curve_jubjub::GE>(),
         Some("bls12_381") => dlog_proof::<curv::elliptic::curves::bls12_381::GE>(),
         Some("p256") => dlog_proof::<curv::elliptic::curves::p256::GE>(),
         Some(unknown_curve) => eprintln!("Unknown curve: {}", unknown_curve),

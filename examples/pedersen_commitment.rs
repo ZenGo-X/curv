@@ -38,7 +38,6 @@ fn main() {
         Some("secp256k1") => ped_com::<curv::elliptic::curves::secp256_k1::GE>(&_message_bn),
         Some("ristretto") => ped_com::<curv::elliptic::curves::curve_ristretto::GE>(&_message_bn),
         Some("ed25519") => ped_com::<curv::elliptic::curves::ed25519::GE>(&_message_bn),
-        Some("jubjub") => ped_com::<curv::elliptic::curves::curve_jubjub::GE>(&_message_bn),
         Some("bls12_381") => ped_com::<curv::elliptic::curves::bls12_381::GE>(&_message_bn),
         Some("p256") => ped_com::<curv::elliptic::curves::p256::GE>(&_message_bn),
         Some(unknown_curve) => eprintln!("Unknown curve: {}", unknown_curve),
