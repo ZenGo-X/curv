@@ -40,7 +40,7 @@ Use `cargo build` to build everything including curve implementations, cryptopri
 ### Examples
 The library includes some basic examples to get you going. To run them: 
 `cargo run --example EXAMPLE_NAME -- CURVE_NAME`
-for example: `cargo run --example proof_of_knowledge_of_dlog -- jubjub`
+for example: `cargo run --example proof_of_knowledge_of_dlog -- secp256k1`
 
 ### Docs 
 To build docs, use `cargo doc --no-deps`.
