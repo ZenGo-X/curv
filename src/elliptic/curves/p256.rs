@@ -56,7 +56,9 @@ impl Zeroize for Secp256r1Scalar {
     }
 }
 
-impl ECScalar<SK> for Secp256r1Scalar {
+impl ECScalar for Secp256r1Scalar {
+    type SecretKey = SK;
+
     fn new_random() -> Secp256r1Scalar {
         let mut arr = [0u8; 32];
         thread_rng().fill(&mut arr[..]);
@@ -234,7 +236,18 @@ impl Zeroize for Secp256r1Point {
     }
 }
 
-impl ECPoint<PK, SK> for Secp256r1Point {
+impl ECPoint for Secp256r1Point {
+    type SecretKey = SK;
+    type PublicKey = PK;
+    type Scalar = Secp256r1Scalar;
+
+    fn base_point2() -> Secp256r1Point {
+        let mut v = vec![4 as u8];
+        v.extend(BASE_POINT2_X.as_ref());
+        v.extend(BASE_POINT2_Y.as_ref());
+        Secp256r1Point::from_bytes(&v).unwrap()
+    }
+
     fn generator() -> Secp256r1Point {
         Secp256r1Point {
             purpose: "base_fe",
@@ -361,13 +374,6 @@ impl Secp256r1Point {
             Err(_) => return Err(()),
         };
         Ok(point)
-    }
-
-    pub fn base_point2() -> Secp256r1Point {
-        let mut v = vec![4 as u8];
-        v.extend(BASE_POINT2_X.as_ref());
-        v.extend(BASE_POINT2_Y.as_ref());
-        Secp256r1Point::from_bytes(&v).unwrap()
     }
 }
 

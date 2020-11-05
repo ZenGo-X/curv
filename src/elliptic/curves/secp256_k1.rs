@@ -18,8 +18,6 @@
 
 use super::traits::{ECPoint, ECScalar};
 use crate::arithmetic::traits::{Converter, Modulo};
-use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
-use crate::cryptographic_primitives::hashing::traits::Hash;
 use crate::BigInt;
 use crate::ErrorKey;
 
@@ -38,13 +36,6 @@ use std::ops::{Add, Mul};
 use std::ptr;
 use std::sync::{atomic, Once};
 use zeroize::Zeroize;
-
-#[cfg(feature = "merkle")]
-use crypto::digest::Digest;
-#[cfg(feature = "merkle")]
-use crypto::sha3::Sha3;
-#[cfg(feature = "merkle")]
-use merkle::Hashable;
 
 /* X coordinate of a point of unknown discrete logarithm.
 Computed using a deterministic algorithm with the generator as input.
@@ -85,16 +76,6 @@ impl Secp256k1Point {
             ge: pk.get_element(),
         }
     }
-
-    pub fn base_point2() -> Secp256k1Point {
-        let mut v = vec![4 as u8];
-        v.extend(BASE_POINT2_X.as_ref());
-        v.extend(BASE_POINT2_Y.as_ref());
-        Secp256k1Point {
-            purpose: "random",
-            ge: PK::from_slice(&v).unwrap(),
-        }
-    }
 }
 
 impl Zeroize for Secp256k1Scalar {
@@ -105,7 +86,9 @@ impl Zeroize for Secp256k1Scalar {
     }
 }
 
-impl ECScalar<SK> for Secp256k1Scalar {
+impl ECScalar for Secp256k1Scalar {
+    type SecretKey = SK;
+
     fn new_random() -> Secp256k1Scalar {
         let mut arr = [0u8; 32];
         thread_rng().fill(&mut arr[..]);
@@ -286,7 +269,21 @@ impl Zeroize for Secp256k1Point {
     }
 }
 
-impl ECPoint<PK, SK> for Secp256k1Point {
+impl ECPoint for Secp256k1Point {
+    type SecretKey = SK;
+    type PublicKey = PK;
+    type Scalar = Secp256k1Scalar;
+
+    fn base_point2() -> Secp256k1Point {
+        let mut v = vec![4 as u8];
+        v.extend(BASE_POINT2_X.as_ref());
+        v.extend(BASE_POINT2_Y.as_ref());
+        Secp256k1Point {
+            purpose: "random",
+            ge: PK::from_slice(&v).unwrap(),
+        }
+    }
+
     fn generator() -> Secp256k1Point {
         let mut v = vec![4 as u8];
         v.extend(GENERATOR_X.as_ref());

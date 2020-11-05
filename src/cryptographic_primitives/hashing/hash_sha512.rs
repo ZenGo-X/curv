@@ -13,7 +13,6 @@ use digest::Digest;
 use sha2::Sha512;
 
 use crate::BigInt;
-use crate::{FE, GE};
 
 pub struct HSha512;
 
@@ -29,7 +28,7 @@ impl Hash for HSha512 {
         BigInt::from(&result_hex[..])
     }
 
-    fn create_hash_from_ge(ge_vec: &[&GE]) -> FE {
+    fn create_hash_from_ge<P: ECPoint>(ge_vec: &[&P]) -> P::Scalar {
         let mut hasher = Sha512::new();
         for value in ge_vec {
             hasher.input(&value.pk_to_key_slice());
@@ -55,7 +54,6 @@ mod tests {
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
-    use crate::GE;
 
     #[test]
     // Test Vectors taken from:
@@ -105,14 +103,19 @@ mod tests {
         );
     }
 
-    #[test]
-    fn create_sha512_from_ge_test() {
-        let point = GE::base_point2();
-        let result1 = HSha512::create_hash_from_ge(&vec![&point, &GE::generator()]);
+    crate::test_for_all_curves!(create_sha512_from_ge_test);
+
+    fn create_sha512_from_ge_test<P>()
+    where
+        P: ECPoint,
+        P::Scalar: PartialEq + std::fmt::Debug,
+    {
+        let point = P::base_point2();
+        let result1 = HSha512::create_hash_from_ge(&vec![&point, &P::generator()]);
         assert!(result1.to_big_int().to_str_radix(2).len() > 240);
-        let result2 = HSha512::create_hash_from_ge(&vec![&GE::generator(), &point]);
+        let result2 = HSha512::create_hash_from_ge(&vec![&P::generator(), &point]);
         assert_ne!(result1, result2);
-        let result3 = HSha512::create_hash_from_ge(&vec![&GE::generator(), &point]);
+        let result3 = HSha512::create_hash_from_ge(&vec![&P::generator(), &point]);
         assert_eq!(result2, result3);
     }
 }

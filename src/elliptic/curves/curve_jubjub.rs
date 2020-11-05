@@ -68,7 +68,9 @@ impl Zeroize for JubjubScalar {
     }
 }
 
-impl ECScalar<SK> for JubjubScalar {
+impl ECScalar for JubjubScalar {
+    type SecretKey = SK;
+
     // jujub library are zero masking the first 4 bits for all random numbers (in ed25519 we do it here)
     // currently they are using rand 0.4 which is outdated therefore we do it here ourselves.
     fn new_random() -> JubjubScalar {
@@ -274,8 +276,20 @@ impl PartialEq for JubjubPoint {
     }
 }
 
-impl JubjubPoint {
-    pub fn base_point2() -> JubjubPoint {
+impl Zeroize for JubjubPoint {
+    fn zeroize(&mut self) {
+        unsafe { ptr::write_volatile(self, GE::generator()) };
+        atomic::fence(atomic::Ordering::SeqCst);
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
+    }
+}
+
+impl ECPoint for JubjubPoint {
+    type SecretKey = SK;
+    type PublicKey = PK;
+    type Scalar = JubjubScalar;
+
+    fn base_point2() -> JubjubPoint {
         let g: GE = ECPoint::generator();
         let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
         let hash = HSha256::create_hash(&[&hash]);
@@ -289,17 +303,7 @@ impl JubjubPoint {
             ge: h.get_element(),
         }
     }
-}
 
-impl Zeroize for JubjubPoint {
-    fn zeroize(&mut self) {
-        unsafe { ptr::write_volatile(self, GE::generator()) };
-        atomic::fence(atomic::Ordering::SeqCst);
-        atomic::compiler_fence(atomic::Ordering::SeqCst);
-    }
-}
-
-impl ECPoint<PK, SK> for JubjubPoint {
     fn generator() -> JubjubPoint {
         let params = JubjubBls12::new();
         let p_g = FixedGenerators::SpendingKeyGenerator;
@@ -522,14 +526,16 @@ impl<'de> Visitor<'de> for JubjubPointVisitor {
 
 #[cfg(test)]
 mod tests {
-    use super::JubjubPoint;
+    use super::{JubjubPoint, JubjubScalar};
     use crate::arithmetic::traits::Modulo;
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
-    use crate::{FE, GE};
     use bincode;
     use serde_json;
+
+    type GE = JubjubPoint;
+    type FE = JubjubScalar;
 
     #[test]
     fn test_serdes_pk() {

@@ -65,7 +65,9 @@ impl Zeroize for FieldScalar {
     }
 }
 
-impl ECScalar<SK> for FieldScalar {
+impl ECScalar for FieldScalar {
+    type SecretKey = SK;
+
     fn new_random() -> FieldScalar {
         let rnd_bn = BigInt::sample_below(&FE::q());
         ECScalar::from(&rnd_bn)
@@ -263,8 +265,20 @@ impl PartialEq for G1Point {
     }
 }
 
-impl G1Point {
-    pub fn base_point2() -> G1Point {
+impl Zeroize for G1Point {
+    fn zeroize(&mut self) {
+        unsafe { ptr::write_volatile(self, GE::generator()) };
+        atomic::fence(atomic::Ordering::SeqCst);
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
+    }
+}
+
+impl ECPoint for G1Point {
+    type SecretKey = SK;
+    type PublicKey = PK;
+    type Scalar = FieldScalar;
+
+    fn base_point2() -> G1Point {
         // 48 bytes
         let g: GE = ECPoint::generator();
         let hash = HSha512::create_hash(&[&g.bytes_compressed_to_big_int()]);
@@ -281,17 +295,7 @@ impl G1Point {
             ge: bp2_proj_in_g1.into(),
         }
     }
-}
 
-impl Zeroize for G1Point {
-    fn zeroize(&mut self) {
-        unsafe { ptr::write_volatile(self, GE::generator()) };
-        atomic::fence(atomic::Ordering::SeqCst);
-        atomic::compiler_fence(atomic::Ordering::SeqCst);
-    }
-}
-
-impl ECPoint<PK, SK> for G1Point {
     fn generator() -> G1Point {
         G1Point {
             purpose: "base_fe",
@@ -498,14 +502,16 @@ impl<'de> Visitor<'de> for JubjubPointVisitor {
 
 #[cfg(test)]
 mod tests {
-    use super::G1Point;
+    use super::{FieldScalar, G1Point};
     use crate::arithmetic::traits::Modulo;
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
-    use crate::{FE, GE};
     use bincode;
     use serde_json;
+
+    type GE = G1Point;
+    type FE = FieldScalar;
 
     #[test]
     fn test_serdes_pk() {
