@@ -11,12 +11,10 @@ use std::str;
 pub const SECRET_KEY_SIZE: usize = 32;
 use super::super::traits::ECScalar;
 use crate::arithmetic::traits::Converter;
-//use crate::cryptographic_primitives::hashing::hash_sha512::HSha512;
-//use crate::cryptographic_primitives::hashing::traits::Hash;
+
 
 use bls12_381::Gt;
 use bls12_381::Scalar;
-
 use serde::de;
 use serde::de::Visitor;
 use serde::ser::{Serialize, Serializer};
@@ -24,12 +22,10 @@ use serde::{Deserialize, Deserializer};
 use std::fmt;
 use std::ops::{Add, Mul};
 pub type SK = Scalar;
-// We use G1 only
 pub type PK = Gt;
 
 use crate::arithmetic::traits::Samplable;
 use crate::BigInt;
-//use crate::ErrorKey::{self};
 
 use std::ptr;
 use std::sync::atomic;
@@ -66,7 +62,6 @@ impl Zeroize for FieldScalar {
 
 impl ECScalar for FieldScalar {
     type SecretKey = SK;
-
     fn new_random() -> FieldScalar {
         let rnd_bn = BigInt::sample_below(&FE::q());
         ECScalar::from(&rnd_bn)

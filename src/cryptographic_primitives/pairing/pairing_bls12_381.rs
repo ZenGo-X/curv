@@ -48,6 +48,7 @@ pub mod tests {
         assert_eq!(gt_direct_power, gt_from_a_power);
     }
 
+
     #[test]
     fn powers_of_g2_and_gt_eq() {
         let a: GE1 = ECPoint::generator();

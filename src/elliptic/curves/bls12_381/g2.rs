@@ -265,7 +265,6 @@ impl PartialEq for G2Point {
         self.get_element() == other.get_element()
     }
 }
-
 impl Zeroize for G2Point {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, GE::generator()) };
@@ -280,7 +279,6 @@ impl ECPoint for G2Point {
     type Scalar = FieldScalar;
 
     fn base_point2() -> G2Point {
-        // 48 bytes
         let g: GE = ECPoint::generator();
         let mut hash = HSha512::create_hash(&[&g.bytes_compressed_to_big_int()]);
         hash = HSha512::create_hash(&[&hash]);
@@ -514,9 +512,7 @@ mod tests {
         let pk = GE::generator();
         let s = serde_json::to_string(&pk).expect("Failed in serialization");
         let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-
         assert_eq!(des_pk, pk);
-
         let pk = GE::base_point2();
         let s = serde_json::to_string(&pk).expect("Failed in serialization");
         let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");

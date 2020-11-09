@@ -239,7 +239,7 @@ impl<'de> Visitor<'de> for BLS12_381ScalarVisitor {
     type Value = FieldScalar;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("bls12_381")
+        formatter.write_str("g1")
     }
 
     fn visit_str<E: de::Error>(self, s: &str) -> Result<FieldScalar, E> {

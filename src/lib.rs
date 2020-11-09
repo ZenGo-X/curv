@@ -50,6 +50,7 @@ macro_rules! test_for_all_curves {
                 $fn::<crate::elliptic::curves::bls12_381::g1::GE>();
                 $fn::<crate::elliptic::curves::bls12_381::g2::GE>();
               }
+
             #[test]
             $(#[$attrs])*
             fn [<$fn _p256>]() {

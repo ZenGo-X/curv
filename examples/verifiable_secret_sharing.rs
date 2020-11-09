@@ -69,7 +69,9 @@ fn main() {
             secret_sharing_3_out_of_5::<curv::elliptic::curves::curve_ristretto::GE>()
         }
         Some("ed25519") => secret_sharing_3_out_of_5::<curv::elliptic::curves::ed25519::GE>(),
-        Some("bls12_381") => secret_sharing_3_out_of_5::<curv::elliptic::curves::bls12_381::GE>(),
+        Some("bls12_381") => {
+            secret_sharing_3_out_of_5::<curv::elliptic::curves::bls12_381::g1::GE>()
+        }
         Some("p256") => secret_sharing_3_out_of_5::<curv::elliptic::curves::p256::GE>(),
         Some(unknown_curve) => eprintln!("Unknown curve: {}", unknown_curve),
         None => eprintln!("Missing curve name"),
