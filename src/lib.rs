@@ -27,36 +27,31 @@ pub enum ErrorSS {
 #[cfg(test)]
 #[macro_export]
 macro_rules! test_for_all_curves {
-    (#[should_panic] $fn: ident) => {
-        crate::test_for_all_curves!([#[should_panic]] $fn);
-    };
-    ($fn: ident) => {
-        crate::test_for_all_curves!([] $fn);
-    };
-    ([$($attrs:tt)*] $fn: ident) => {
+    ($(#[$attrs:meta])* $fn: ident) => {
         paste::paste!{
             #[test]
-            $($attrs)*
+            $(#[$attrs])*
             fn [<$fn _secp256k1>]() {
                 $fn::<crate::elliptic::curves::secp256_k1::GE>()
             }
             #[test]
-            $($attrs)*
+            $(#[$attrs])*
             fn [<$fn _ristretto>]() {
                 $fn::<crate::elliptic::curves::curve_ristretto::GE>()
             }
             #[test]
-            $($attrs)*
+            $(#[$attrs])*
             fn [<$fn _ed25519>]() {
                 $fn::<crate::elliptic::curves::ed25519::GE>()
             }
             #[test]
-            $($attrs)*
+            $(#[$attrs])*
             fn [<$fn _bls12_381>]() {
-                $fn::<crate::elliptic::curves::bls12_381::GE>()
-            }
+                $fn::<crate::elliptic::curves::bls12_381::g1::GE>();
+                $fn::<crate::elliptic::curves::bls12_381::g2::GE>();
+              }
             #[test]
-            $($attrs)*
+            $(#[$attrs])*
             fn [<$fn _p256>]() {
                 $fn::<crate::elliptic::curves::p256::GE>()
             }
