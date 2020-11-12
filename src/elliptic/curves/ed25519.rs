@@ -596,7 +596,6 @@ pub fn expmod(b: &BigInt, e: &BigInt, m: &BigInt) -> BigInt {
     t
 }
 
-#[cfg(feature = "ec_ed25519")]
 #[cfg(test)]
 mod tests {
     use super::{Ed25519Point, Ed25519Scalar};
