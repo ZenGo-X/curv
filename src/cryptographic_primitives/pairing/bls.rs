@@ -32,18 +32,22 @@ pub struct KeyPair<P: ECPoint>{
 
 impl<P> KeyPair<P>
     where P: ECPoint + Clone + Debug
-    {
+{
     pub fn create_pair() -> Self
-        {
-            let sk = P::Scalar::new_random();
-            let pk: P = P::generator().scalar_mul(&sk.get_element());
-            Self{ sk, pk }
-        }
+    {
+        let sk = P::Scalar::new_random();
+        let pk: P = P::generator().scalar_mul(&sk.get_element());
+        Self { sk, pk }
+    }
+}
 
-    pub fn compute_signature(self, message: &BigInt) -> P::Scalar {
-        let sk = self.sk;
-        let signature = sk.mul(&<P::Scalar as ECScalar>::from(message).get_element());
-        signature
+pub fn compute_signature<T: ECPoint + Clone + Debug,P: ECPoint>(key_pair:&KeyPair<P>, message: &BigInt) -> T {
+        let sk_in_g1 = <T::Scalar as ECScalar>::from(&key_pair.sk.to_big_int());
+       // let signature_scalar = sk_in_g1.mul(&<T::Scalar as ECScalar>::from(message).get_element());
+       // let signature_point = T::generator().scalar_mul(&signature_scalar.get_element());
+    let hashed_message: T = hash_to_curve(&message);
+    let signature_point = hashed_message.scalar_mul(&sk_in_g1.get_element());
+    signature_point
     }
 
     /*
@@ -59,12 +63,13 @@ impl<P> KeyPair<P>
 */
 
 
-}
+
 
 pub fn verify_bls_signature(key_pair:&KeyPair<GE2>, message: &BigInt) -> bool {
     let left_side= PairingBls::compute_pairing(&hash_to_curve::<GE1>(message), &key_pair.pk );
-    let signature_point = GE1::generator().scalar_mul(&key_pair.compute_signature(message).get_element());
-    let right_side = PairingBls::compute_pairing( &signature_point,&GE2::generator());
+    //let signature_point = GE1::generator().scalar_mul(&key_pair.compute_signature(message).get_element());
+    let right_side = PairingBls::compute_pairing(
+        &compute_signature::<GE1,GE2>(key_pair ,message),&GE2::generator());
     left_side == right_side
 }
 
