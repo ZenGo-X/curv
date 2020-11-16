@@ -42,25 +42,13 @@ impl<P> KeyPair<P>
 }
 
 pub fn compute_signature<T: ECPoint + Clone + Debug,P: ECPoint>(key_pair:&KeyPair<P>, message: &BigInt) -> T {
-        let sk_in_g1 = <T::Scalar as ECScalar>::from(&key_pair.sk.to_big_int());
-       // let signature_scalar = sk_in_g1.mul(&<T::Scalar as ECScalar>::from(message).get_element());
-       // let signature_point = T::generator().scalar_mul(&signature_scalar.get_element());
+    //change sk from g2 to g1
+    let sk_in_g1 = <T::Scalar as ECScalar>::from(&key_pair.sk.to_big_int());
     let hashed_message: T = hash_to_curve(&message);
-    let signature_point = hashed_message.scalar_mul(&sk_in_g1.get_element());
-    signature_point
+    let signature = hashed_message.scalar_mul(&sk_in_g1.get_element());
+    signature
     }
 
-    /*
-    pub fn compute_public_term<P>(self, message: &BigInt) -> P
-        where P: ECPoint + Clone + Debug
-    {
-        let hashed = hash_sha256::HSha256::create_hash(&[&message, &BigInt::from(1)]);
-        let hashed_scalar = ECScalar::from(&hashed);
-
-        let pk:ECPoint = self.pk;
-         pk.scalar_mul(&hashed_scalar);
-    }
-*/
 
 
 

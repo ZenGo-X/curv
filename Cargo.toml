@@ -1,6 +1,6 @@
 [package]
 name = "curv"
-version = "0.3.2"
+version = "0.3.4"
 edition = "2018"
 authors = ["Omer Shlomovits"]
 license = "MIT"
