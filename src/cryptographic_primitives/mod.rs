@@ -7,7 +7,7 @@
 
 pub mod commitments;
 pub mod hashing;
+pub mod pairing;
 pub mod proofs;
 pub mod secret_sharing;
 pub mod twoparty;
-pub mod pairing;

@@ -15,7 +15,7 @@ type GE2 = g2::GE;
 
 pub struct PairingBls;
 
-impl<'a> PAIRING<GE1,GE2,Gt> for PairingBls {
+impl<'a> PAIRING<GE1, GE2, Gt> for PairingBls {
     fn compute_pairing(g1: &GE1, g2: &GE2) -> Gt {
         pairing(&g1.get_element(), &g2.get_element())
     }
@@ -47,7 +47,6 @@ pub mod tests {
         let gt_direct_power = PairingBls::compute_pairing(&a, &b) * scalar_factor.get_element();
         assert_eq!(gt_direct_power, gt_from_a_power);
     }
-
 
     #[test]
     fn powers_of_g2_and_gt_eq() {

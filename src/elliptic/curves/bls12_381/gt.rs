@@ -12,7 +12,6 @@ pub const SECRET_KEY_SIZE: usize = 32;
 use super::super::traits::ECScalar;
 use crate::arithmetic::traits::Converter;
 
-
 use bls12_381::Gt;
 use bls12_381::Scalar;
 use serde::de;
