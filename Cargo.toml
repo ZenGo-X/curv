@@ -10,6 +10,11 @@ repository = "https://github.com/ZenGo-X/curv"
 [lib]
 crate-type = ["lib"]
 
+[features]
+default = []
+# Exposes utils useful for testing
+testing-utils = []
+
 [dependencies]
 rand = "0.6"
 serde = "1.0"
