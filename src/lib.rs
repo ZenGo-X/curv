@@ -101,7 +101,7 @@ macro_rules! test_for_all_curves {
         $crate::test_for_all_curves!([] $fn);
     };
     ([$($attrs:tt)*] $fn: ident) => {
-        paste::paste!{
+        $crate::paste!{
             #[test]
             $($attrs)*
             fn [<$fn _secp256k1>]() {
@@ -130,3 +130,8 @@ macro_rules! test_for_all_curves {
         }
     };
 }
+
+/// Re-exporting macro to use in `test_for_all_curves!`
+#[cfg(any(test, feature = "testing-utils"))]
+#[doc(hidden)]
+pub use paste::paste;
