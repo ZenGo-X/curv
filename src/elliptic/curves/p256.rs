@@ -28,7 +28,7 @@ pub struct Secp256r1Scalar {
     fe: SK,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug)]
 pub struct Secp256r1Point {
     purpose: &'static str,
     ge: PK,
@@ -225,6 +225,12 @@ impl<'de> Visitor<'de> for Secp256r1ScalarVisitor {
 impl PartialEq for Secp256r1Scalar {
     fn eq(&self, other: &Secp256r1Scalar) -> bool {
         self.get_element().to_bytes() == other.get_element().to_bytes()
+    }
+}
+
+impl PartialEq for Secp256r1Point {
+    fn eq(&self, other: &GE) -> bool {
+        self.ge == other.ge
     }
 }
 

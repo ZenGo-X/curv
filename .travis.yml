@@ -3,10 +3,14 @@ cache: cargo
 rust:
   - stable
 
+env:
+  global:
+    - FEATURES=testing-utils
+
 before_script:
   - rustup component add rustfmt-preview
   - cargo fmt --all -- --check
 
 script:
-  - cargo build --verbose
-  - cargo test --verbose
+  - cargo build --features $FEATURES --verbose
+  - cargo test --features $FEATURES --verbose
