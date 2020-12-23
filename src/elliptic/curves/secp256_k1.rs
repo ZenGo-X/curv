@@ -21,6 +21,12 @@ use crate::arithmetic::traits::{Converter, Modulo};
 use crate::BigInt;
 use crate::ErrorKey;
 
+#[cfg(feature = "merkle")]
+use crypto::digest::Digest;
+#[cfg(feature = "merkle")]
+use crypto::sha3::Sha3;
+#[cfg(feature = "merkle")]
+use merkle::Hashable;
 use rand::{thread_rng, Rng};
 use secp256k1::constants::{
     CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
@@ -36,7 +42,6 @@ use std::ops::{Add, Mul};
 use std::ptr;
 use std::sync::{atomic, Once};
 use zeroize::Zeroize;
-
 /* X coordinate of a point of unknown discrete logarithm.
 Computed using a deterministic algorithm with the generator as input.
 See test_base_point2 */

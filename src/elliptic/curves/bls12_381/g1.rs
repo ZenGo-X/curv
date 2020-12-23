@@ -5,11 +5,9 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-// jubjub : https://z.cash/technology/jubjub/
 use std::fmt::Debug;
 use std::str;
 pub const SECRET_KEY_SIZE: usize = 32;
-use super::traits::{ECPoint, ECScalar};
 use crate::arithmetic::traits::Converter;
 use crate::cryptographic_primitives::hashing::hash_sha512::HSha512;
 use crate::cryptographic_primitives::hashing::traits::Hash;
@@ -37,6 +35,8 @@ use std::ptr;
 use std::sync::atomic;
 use zeroize::Zeroize;
 
+use crate::elliptic::curves::traits::ECPoint;
+use crate::elliptic::curves::traits::ECScalar;
 #[cfg(feature = "merkle")]
 use crypto::digest::Digest;
 #[cfg(feature = "merkle")]
@@ -444,7 +444,7 @@ impl Serialize for G1Point {
     {
         let bytes = self.pk_to_key_slice();
         let bytes_as_bn = BigInt::from(&bytes[..]);
-        let mut state = serializer.serialize_struct("JubjubCurvePoint", 1)?;
+        let mut state = serializer.serialize_struct("Bls12381G1Point", 1)?;
         state.serialize_field("bytes_str", &bytes_as_bn.to_hex())?;
         state.end()
     }
@@ -456,17 +456,17 @@ impl<'de> Deserialize<'de> for G1Point {
         D: Deserializer<'de>,
     {
         const FIELDS: &[&str] = &["bytes_str"];
-        deserializer.deserialize_struct("JujubPoint", FIELDS, JubjubPointVisitor)
+        deserializer.deserialize_struct("Bls12381G1Point", FIELDS, Bls12381G1PointVisitor)
     }
 }
 
-struct JubjubPointVisitor;
+struct Bls12381G1PointVisitor;
 
-impl<'de> Visitor<'de> for JubjubPointVisitor {
+impl<'de> Visitor<'de> for Bls12381G1PointVisitor {
     type Value = G1Point;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("JubjubCurvePoint")
+        formatter.write_str("Bls12381G1Point")
     }
 
     fn visit_seq<V>(self, mut seq: V) -> Result<G1Point, V::Error>

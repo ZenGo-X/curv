@@ -53,7 +53,7 @@ macro_rules! test_for_all_curves {
             #[test]
             $($attrs)*
             fn [<$fn _bls12_381>]() {
-                $fn::<crate::elliptic::curves::bls12_381::GE>()
+                $fn::<crate::elliptic::curves::bls12_381::g1::GE>()
             }
             #[test]
             $($attrs)*
