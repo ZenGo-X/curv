@@ -8,26 +8,30 @@
 use std::fmt::Debug;
 use std::str;
 pub const SECRET_KEY_SIZE: usize = 32;
-use crate::arithmetic::traits::Converter;
-use crate::cryptographic_primitives::hashing::hash_sha512::HSha512;
-use crate::cryptographic_primitives::hashing::traits::Hash;
-use crate::elliptic::curves::traits::{ECPoint, ECScalar};
+pub const COMPRESSED_SIZE: usize = 96;
 
-use bls12_381::G2Affine;
-use bls12_381::G2Projective;
-use bls12_381::Scalar;
+use crate::arithmetic::traits::Converter;
+
+use ff::ScalarEngine;
+use ff::{Field, PrimeField, PrimeFieldRepr};
+use pairing_plus::bls12_381::Fr;
+use pairing_plus::bls12_381::G2Compressed;
+use pairing_plus::bls12_381::G2Uncompressed;
+use pairing_plus::bls12_381::G2;
+use pairing_plus::hash_to_curve::HashToCurve;
+use pairing_plus::serdes::SerDes;
+use pairing_plus::EncodedPoint;
+use pairing_plus::{CurveAffine, CurveProjective, Engine};
 
 use serde::de;
 use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
-
 use std::fmt;
 use std::ops::{Add, Mul};
-pub type SK = Scalar;
-// We use G2 only
-pub type PK = G2Affine;
+pub type SK = <pairing_plus::bls12_381::Bls12 as ScalarEngine>::Fr;
+pub type PK = <pairing_plus::bls12_381::Bls12 as Engine>::G2Affine;
 
 use crate::arithmetic::traits::Samplable;
 use crate::BigInt;
@@ -37,12 +41,15 @@ use std::ptr;
 use std::sync::atomic;
 use zeroize::Zeroize;
 
+use crate::elliptic::curves::traits::ECPoint;
+use crate::elliptic::curves::traits::ECScalar;
 #[cfg(feature = "merkle")]
 use crypto::digest::Digest;
 #[cfg(feature = "merkle")]
 use crypto::sha3::Sha3;
 #[cfg(feature = "merkle")]
 use merkle::Hashable;
+use std::io::Cursor;
 
 #[derive(Clone, Copy)]
 pub struct FieldScalar {
@@ -76,12 +83,12 @@ impl ECScalar for FieldScalar {
     fn zero() -> FieldScalar {
         FieldScalar {
             purpose: "zero",
-            fe: SK::zero(),
+            fe: SK::default(),
         }
     }
 
     fn get_element(&self) -> SK {
-        self.fe
+        self.fe.clone()
     }
     fn set_element(&mut self, element: SK) {
         self.fe = element
@@ -100,18 +107,25 @@ impl ECScalar for FieldScalar {
         let bytes = &v[..SECRET_KEY_SIZE];
         bytes_array.copy_from_slice(&bytes);
 
-        bytes_array.reverse();
+        // bytes_array.reverse();
 
+        let mut repr = SK::default().into_repr();
+        repr.read_be(Cursor::new(&bytes_array[..])).unwrap();
         FieldScalar {
             purpose: "from_big_int",
-            fe: SK::from_bytes(&bytes_array).unwrap(),
+            fe: Fr::from_repr(repr).unwrap(),
         }
     }
 
     fn to_big_int(&self) -> BigInt {
-        let mut bytes = SK::to_bytes(&self.fe);
-        bytes.reverse();
-        BigInt::from(&bytes[..])
+        let tmp = self.fe.into_repr();
+        let scalar_u64 = tmp.as_ref().clone();
+
+        let to_bn = scalar_u64.iter().rev().fold(BigInt::zero(), |acc, x| {
+            let element_bn = BigInt::from(*x);
+            element_bn + (acc << 64)
+        });
+        to_bn
     }
 
     fn q() -> BigInt {
@@ -129,31 +143,32 @@ impl ECScalar for FieldScalar {
     }
 
     fn add(&self, other: &SK) -> FieldScalar {
-        let add_fe = FieldScalar {
+        let mut add_fe = FieldScalar {
             purpose: "other add",
-            fe: *other,
+            fe: other.clone(),
         };
-        let res = add_fe.fe.add(&self.fe);
+        add_fe.fe.add_assign(&self.fe);
         FieldScalar {
             purpose: "add",
-            fe: res,
+            fe: add_fe.fe,
         }
     }
 
     fn mul(&self, other: &SK) -> FieldScalar {
-        let mul_fe = FieldScalar {
+        let mut mul_fe = FieldScalar {
             purpose: "other mul",
-            fe: *other,
+            fe: other.clone(),
         };
-        let res = mul_fe.fe.mul(&self.fe);
+        mul_fe.fe.mul_assign(&self.fe);
         FieldScalar {
             purpose: "mul",
-            fe: res,
+            fe: mul_fe.fe,
         }
     }
 
     fn sub(&self, other: &SK) -> FieldScalar {
-        let other_neg = other.neg();
+        let mut other_neg = other.clone();
+        other_neg.negate();
         let sub_fe = FieldScalar {
             purpose: "other sub",
             fe: other_neg,
@@ -162,7 +177,8 @@ impl ECScalar for FieldScalar {
     }
 
     fn invert(&self) -> FieldScalar {
-        let inv_sc = self.fe.invert().unwrap();
+        let sc = self.fe.clone();
+        let inv_sc = sc.inverse().unwrap(); //TODO
         let inv_fe = FieldScalar {
             purpose: "inverse",
             fe: inv_sc,
@@ -239,7 +255,7 @@ impl<'de> Visitor<'de> for BLS12_381ScalarVisitor {
     type Value = FieldScalar;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("g2")
+        formatter.write_str("bls12_381")
     }
 
     fn visit_str<E: de::Error>(self, s: &str) -> Result<FieldScalar, E> {
@@ -264,6 +280,7 @@ impl PartialEq for G2Point {
         self.get_element() == other.get_element()
     }
 }
+
 impl Zeroize for G2Point {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(self, GE::generator()) };
@@ -278,29 +295,19 @@ impl ECPoint for G2Point {
     type Scalar = FieldScalar;
 
     fn base_point2() -> G2Point {
-        let g: GE = ECPoint::generator();
-        let mut hash = HSha512::create_hash(&[&g.bytes_compressed_to_big_int()]);
-        hash = HSha512::create_hash(&[&hash]);
-        hash = HSha512::create_hash(&[&hash]);
-        let mut bytes = BigInt::to_vec(&hash);
-        let end_vector_hash = HSha512::create_hash(&[&hash]);
-        let bytes_end = BigInt::to_vec(&end_vector_hash);
-        bytes[47] = 184; //Fq must be canoncial + specific flags. This byte is the same as the one from the generator.
-        bytes[0] = 184;
-        bytes.extend_from_slice(&bytes_end[0..32]);
-        let h: GE = ECPoint::from_bytes(&bytes[..]).unwrap();
-        let bp2_proj: G2Projective = h.ge.into();
-        let bp2_proj_in_g1 = bp2_proj.clear_cofactor();
+        let cs = &[1u8];
+        let msg = &[1u8];
+        let point = G2::hash_to_curve(msg, cs);
         G2Point {
-            purpose: "base point 2",
-            ge: bp2_proj_in_g1.into(),
+            purpose: "base_ge2",
+            ge: point.into_affine(),
         }
     }
 
     fn generator() -> G2Point {
         G2Point {
             purpose: "base_fe",
-            ge: G2Affine::generator(),
+            ge: PK::one(),
         }
     }
 
@@ -309,68 +316,81 @@ impl ECPoint for G2Point {
     }
 
     fn x_coor(&self) -> Option<BigInt> {
-        let bytes = G2Affine::to_uncompressed(&self.ge);
-        let x_coor = &bytes[0..96];
+        let tmp = G2Uncompressed::from_affine(self.ge.clone());
+        let bytes = tmp.as_ref();
+        let x_coor = &bytes[0..COMPRESSED_SIZE];
         let bn = BigInt::from(x_coor);
         Some(bn)
     }
 
     fn y_coor(&self) -> Option<BigInt> {
-        let bytes = G2Affine::to_uncompressed(&self.ge);
-        let y_coor = &bytes[96..192];
+        let tmp = G2Uncompressed::from_affine(self.ge.clone());
+        let bytes = tmp.as_ref();
+        let y_coor = &bytes[COMPRESSED_SIZE..2 * COMPRESSED_SIZE];
         let bn = BigInt::from(y_coor);
         Some(bn)
     }
 
     fn bytes_compressed_to_big_int(&self) -> BigInt {
-        let bytes = self.ge.to_compressed();
+        let tmp = G2Compressed::from_affine(self.ge.clone());
+        let bytes = tmp.as_ref();
         let bn = BigInt::from(&bytes[..]);
         bn
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<G2Point, ErrorKey> {
-        let mut bytes_array = [0u8; 96];
-        bytes_array[96 - bytes.len()..].copy_from_slice(bytes);
+        let mut bytes_array_comp = [0u8; COMPRESSED_SIZE];
+        match bytes.len() {
+            0..=COMPRESSED_SIZE => {
+                (&mut bytes_array_comp[COMPRESSED_SIZE - bytes.len()..]).copy_from_slice(bytes);
+            }
+            _ => {
+                bytes_array_comp.copy_from_slice(&bytes[..COMPRESSED_SIZE]);
+            }
+        }
+
+        let g2_comp = G2::deserialize(&mut bytes_array_comp[..].as_ref(), true).unwrap();
+
         let pk = G2Point {
-            purpose: "random",
-            ge: G2Affine::from_compressed_unchecked(&bytes_array).unwrap(),
+            purpose: "from_bytes",
+            ge: g2_comp.into_affine(), //TODO: handle error
         };
         return Ok(pk);
     }
 
-    // in this case the opposite of from_bytes: takes compressed pk to 96 bytes.
+    // in this case the opposite of from_bytes: takes compressed pk to COMPRESSED_SIZE bytes.
     fn pk_to_key_slice(&self) -> Vec<u8> {
-        let bytes = G2Affine::to_compressed(&self.ge);
+        let tmp = G2Compressed::from_affine(self.ge.clone());
+        let bytes = tmp.as_ref();
         let mut compressed_vec = Vec::new();
         compressed_vec.extend_from_slice(&bytes[..]);
         compressed_vec
     }
 
     fn scalar_mul(&self, fe: &SK) -> G2Point {
-        let res = &self.ge * fe;
-        let res_affine: G2Affine = res.into();
+        let mut ge_proj: G2 = self.ge.into();
+        ge_proj.mul_assign(fe.into_repr());
         G2Point {
             purpose: "scalar_point_mul",
-            ge: res_affine,
+            ge: ge_proj.into_affine(),
         }
     }
 
     fn add_point(&self, other: &PK) -> G2Point {
-        let ge_proj: G2Projective = self.ge.into();
-        let res = other + &ge_proj;
+        let mut ge_proj: G2 = self.ge.into();
+        ge_proj.add_assign_mixed(other);
         G2Point {
             purpose: "combine",
-            ge: res.into(),
+            ge: ge_proj.into_affine(),
         }
     }
 
     fn sub_point(&self, other: &PK) -> G2Point {
-        let ge_proj: G2Projective = self.ge.into();
-        let res = &ge_proj - other;
-
+        let mut ge_proj: G2 = self.ge.into();
+        ge_proj.sub_assign_mixed(other);
         G2Point {
             purpose: "sub",
-            ge: res.into(),
+            ge: ge_proj.into_affine(),
         }
     }
 
@@ -437,7 +457,7 @@ impl Serialize for G2Point {
     {
         let bytes = self.pk_to_key_slice();
         let bytes_as_bn = BigInt::from(&bytes[..]);
-        let mut state = serializer.serialize_struct("Bls12381G2PointVisitor", 1)?;
+        let mut state = serializer.serialize_struct("Bls12381G2Point", 1)?;
         state.serialize_field("bytes_str", &bytes_as_bn.to_hex())?;
         state.end()
     }
@@ -493,18 +513,28 @@ impl<'de> Visitor<'de> for Bls12381G2PointVisitor {
     }
 }
 
+impl G2Point {
+    pub fn hash_to_curve(message: &BigInt) -> Self {
+        let cs = &[1u8];
+        let msg = BigInt::to_vec(message);
+        let point = G2::hash_to_curve(msg, cs);
+        G2Point {
+            purpose: "hash_to_curve",
+            ge: point.into_affine(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{FieldScalar, G2Point};
+    use super::G2Point;
     use crate::arithmetic::traits::Modulo;
+    use crate::elliptic::curves::bls12_381::g2::{FE, GE};
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
     use bincode;
     use serde_json;
-
-    type GE = G2Point;
-    type FE = FieldScalar;
 
     #[test]
     fn test_serdes_pk() {
@@ -512,6 +542,7 @@ mod tests {
         let s = serde_json::to_string(&pk).expect("Failed in serialization");
         let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
         assert_eq!(des_pk, pk);
+
         let pk = GE::base_point2();
         let s = serde_json::to_string(&pk).expect("Failed in serialization");
         let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
@@ -598,11 +629,13 @@ mod tests {
             10, 10, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 10, 10, 10,
         ];
+
         let a_bn = BigInt::from(&a[..]);
         let a_fe: FE = ECScalar::from(&a_bn);
 
         let five = BigInt::from(5);
         let five_fe: FE = ECScalar::from(&five);
+        println!("five_fe: {:?}", five_fe.clone());
         let five_a_bn = BigInt::mod_mul(&a_bn, &five, &FE::q());
         let five_a_fe = five_fe * a_fe;
         let five_a_fe_2: FE = ECScalar::from(&five_a_bn);
@@ -644,11 +677,15 @@ mod tests {
         assert_eq!(b_tag, g);
     }
 
+    use pairing_plus::bls12_381::G2;
+    use pairing_plus::hash_to_curve::HashToCurve;
+    use pairing_plus::CurveProjective;
+    use pairing_plus::SubgroupCheck;
     #[test]
-    fn test_scalar_to_bn_and_back() {
-        let s_a: FE = ECScalar::new_random();
-        let s_bn = s_a.to_big_int();
-        let s_b: FE = ECScalar::from(&s_bn);
-        assert_eq!(s_a, s_b);
+    fn base_point2_nothing_up_my_sleeve() {
+        let cs = &[1u8];
+        let msg = &[1u8];
+        let point = G2::hash_to_curve(msg, cs);
+        assert!(point.into_affine().in_subgroup());
     }
 }
