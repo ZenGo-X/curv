@@ -514,10 +514,9 @@ impl<'de> Visitor<'de> for Bls12381G2PointVisitor {
 }
 
 impl G2Point {
-    pub fn hash_to_curve(message: &BigInt) -> Self {
+    pub fn hash_to_curve(message: &[u8]) -> Self {
         let cs = &[1u8];
-        let msg = BigInt::to_vec(message);
-        let point = G2::hash_to_curve(msg, cs);
+        let point = G2::hash_to_curve(message, cs);
         G2Point {
             purpose: "hash_to_curve",
             ge: point.into_affine(),
