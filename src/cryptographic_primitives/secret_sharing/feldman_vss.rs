@@ -207,11 +207,15 @@ where
 
     //compute \lambda_{index,S}, a lagrangian coefficient that change the (t,n) scheme to (|S|,|S|)
     // used in http://stevengoldfeder.com/papers/GG18.pdf
-    pub fn map_share_to_new_params(&self, index: usize, s: &[usize]) -> P::Scalar {
+    pub fn map_share_to_new_params(
+        params: &ShamirSecretSharing,
+        index: usize,
+        s: &[usize],
+    ) -> P::Scalar {
         let s_len = s.len();
         //     assert!(s_len > self.reconstruct_limit());
         // add one to indices to get points
-        let points: Vec<P::Scalar> = (0..self.parameters.share_count)
+        let points: Vec<P::Scalar> = (0..params.share_count)
             .map(|i| {
                 let index_bn = BigInt::from(i as u32 + 1 as u32);
                 ECScalar::from(&index_bn)
@@ -303,11 +307,11 @@ mod tests {
 
         // test map (t,n) - (t',t')
         let s = &vec![0, 1, 2, 3, 4];
-        let l0 = vss_scheme.map_share_to_new_params(0, &s);
-        let l1 = vss_scheme.map_share_to_new_params(1, &s);
-        let l2 = vss_scheme.map_share_to_new_params(2, &s);
-        let l3 = vss_scheme.map_share_to_new_params(3, &s);
-        let l4 = vss_scheme.map_share_to_new_params(4, &s);
+        let l0 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 0, &s);
+        let l1 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 1, &s);
+        let l2 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 2, &s);
+        let l3 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 3, &s);
+        let l4 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 4, &s);
         let w = l0 * secret_shares[0].clone()
             + l1 * secret_shares[1].clone()
             + l2 * secret_shares[2].clone()
@@ -345,11 +349,12 @@ mod tests {
 
         // test map (t,n) - (t',t')
         let s = &vec![0, 1, 3, 4, 6];
-        let l0 = vss_scheme.map_share_to_new_params(0, &s);
-        let l1 = vss_scheme.map_share_to_new_params(1, &s);
-        let l3 = vss_scheme.map_share_to_new_params(3, &s);
-        let l4 = vss_scheme.map_share_to_new_params(4, &s);
-        let l6 = vss_scheme.map_share_to_new_params(6, &s);
+        let l0 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 0, &s);
+        let l1 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 1, &s);
+        let l3 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 3, &s);
+        let l4 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 4, &s);
+        let l6 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 6, &s);
+
         let w = l0 * secret_shares[0].clone()
             + l1 * secret_shares[1].clone()
             + l3 * secret_shares[3].clone()
@@ -385,9 +390,8 @@ mod tests {
 
         // test map (t,n) - (t',t')
         let s = &vec![0, 1];
-        let l0 = vss_scheme.map_share_to_new_params(0, &s);
-        let l1 = vss_scheme.map_share_to_new_params(1, &s);
-
+        let l0 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 0, &s);
+        let l1 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 1, &s);
         let w = l0 * secret_shares[0].clone() + l1 * secret_shares[1].clone();
         assert_eq!(w, secret_reconstructed);
     }
@@ -432,8 +436,8 @@ mod tests {
 
         // test map (t,n) - (t',t')
         let s = &vec![0, 2];
-        let l0 = vss_scheme.map_share_to_new_params(0, &s);
-        let l2 = vss_scheme.map_share_to_new_params(2, &s);
+        let l0 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 0, &s);
+        let l2 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 2, &s);
 
         let w = l0 * secret_shares[0].clone() + l2 * secret_shares[2].clone();
         assert_eq!(w, secret_reconstructed);

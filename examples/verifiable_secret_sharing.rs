@@ -48,11 +48,11 @@ where
 
     // test map (t,n) - (t',t')
     let s = &vec![0, 1, 2, 3, 4];
-    let l0 = vss_scheme.map_share_to_new_params(0, &s);
-    let l1 = vss_scheme.map_share_to_new_params(1, &s);
-    let l2 = vss_scheme.map_share_to_new_params(2, &s);
-    let l3 = vss_scheme.map_share_to_new_params(3, &s);
-    let l4 = vss_scheme.map_share_to_new_params(4, &s);
+    let l0 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 0, &s);
+    let l1 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 1, &s);
+    let l2 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 2, &s);
+    let l3 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 3, &s);
+    let l4 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 4, &s);
     let w = l0 * secret_shares[0].clone()
         + l1 * secret_shares[1].clone()
         + l2 * secret_shares[2].clone()
