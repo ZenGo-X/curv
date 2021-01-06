@@ -357,10 +357,9 @@ impl ECPoint for G1Point {
 
     // in this case the opposite of from_bytes: takes compressed pk to COMPRESSED_SIZE bytes.
     fn pk_to_key_slice(&self) -> Vec<u8> {
-        let tmp = G1Compressed::from_affine(self.ge.clone());
-        let bytes = tmp.as_ref();
-        let mut compressed_vec = Vec::new();
-        compressed_vec.extend_from_slice(&bytes[..]);
+        let mut compressed_vec = vec![];
+        PK::serialize(&self.ge, &mut compressed_vec, true)
+            .expect("serializing into vec should always succeed");
         compressed_vec
     }
 
