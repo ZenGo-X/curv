@@ -29,7 +29,7 @@ use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
 use std::fmt;
-use std::ops::{Add, Mul};
+use std::ops::{Add, Mul, Neg};
 pub type SK = <pairing_plus::bls12_381::Bls12 as ScalarEngine>::Fr;
 pub type PK = <pairing_plus::bls12_381::Bls12 as Engine>::G2Affine;
 
@@ -439,6 +439,15 @@ impl<'o> Add<&'o G2Point> for &'o G2Point {
     type Output = G2Point;
     fn add(self, other: &'o G2Point) -> G2Point {
         self.add_point(&other.get_element())
+    }
+}
+
+impl Neg for G2Point {
+    type Output = Self;
+    fn neg(mut self) -> Self {
+        self.ge.negate();
+        self.purpose = "negated";
+        self
     }
 }
 

@@ -5,8 +5,8 @@ use crate::elliptic::curves::bls12_381::g1::GE as GE1;
 use crate::elliptic::curves::bls12_381::g2::GE as GE2;
 use crate::elliptic::curves::traits::ECPoint;
 use ff::Field;
-use pairing_plus::bls12_381::Fq12;
-use pairing_plus::CurveAffine;
+use pairing_plus::bls12_381::{Bls12, Fq12};
+use pairing_plus::{CurveAffine, Engine};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Pair {
@@ -17,6 +17,25 @@ impl Pair {
     pub fn compute_pairing(g1_ge: &GE1, g2_ge: &GE2) -> Self {
         Pair {
             e: g1_ge.get_element().pairing_with(&g2_ge.get_element()),
+        }
+    }
+
+    /// Efficiently computes product of pairings.
+    ///
+    /// Computes `e(g1,g2) * e(g3,g4)` with a single final exponentiation.
+    ///
+    /// ## Panic
+    /// Method panics if miller_loop of product is equal to zero.
+    pub fn efficient_pairing_mul(g1: &GE1, g2: &GE2, g3: &GE1, g4: &GE2) -> Self {
+        Pair {
+            e: Bls12::final_exponentiation(&Bls12::miller_loop(
+                [
+                    (&(g1.get_element().prepare()), &(g2.get_element().prepare())),
+                    (&(g3.get_element().prepare()), &(g4.get_element().prepare())),
+                ]
+                .iter(),
+            ))
+            .unwrap(),
         }
     }
 
