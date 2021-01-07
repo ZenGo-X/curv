@@ -293,12 +293,19 @@ impl ECPoint for G1Point {
     type Scalar = FieldScalar;
 
     fn base_point2() -> G1Point {
-        let cs = &[1u8];
-        let msg = &[1u8];
-        let point = <G1 as HashToCurve<ExpandMsgXmd<Sha256>>>::hash_to_curve(msg, cs);
+        const BASE_POINT2: [u8; 96] = [
+            10, 18, 122, 36, 178, 251, 236, 31, 139, 88, 242, 163, 21, 198, 168, 208, 122, 195,
+            135, 122, 7, 153, 197, 255, 160, 0, 89, 138, 39, 245, 105, 108, 99, 113, 78, 70, 130,
+            172, 183, 57, 170, 180, 39, 32, 173, 29, 238, 62, 13, 166, 109, 90, 181, 17, 76, 247,
+            26, 155, 130, 211, 18, 42, 235, 137, 225, 184, 210, 140, 54, 83, 233, 228, 226, 70,
+            194, 50, 55, 116, 229, 2, 115, 227, 223, 31, 165, 39, 191, 209, 49, 127, 106, 196, 123,
+            71, 70, 243,
+        ];
+        let mut point = G1Uncompressed::empty();
+        point.as_mut().copy_from_slice(&BASE_POINT2);
         G1Point {
             purpose: "base_ge2",
-            ge: point.into_affine(),
+            ge: point.into_affine().expect("invalid base_point"),
         }
     }
 
@@ -536,14 +543,21 @@ impl G1Point {
 
 #[cfg(test)]
 mod tests {
+    use bincode;
+    use serde_json;
+
+    use pairing_plus::bls12_381::{G1Uncompressed, G1};
+    use pairing_plus::hash_to_curve::HashToCurve;
+    use pairing_plus::hash_to_field::ExpandMsgXmd;
+    use pairing_plus::{CurveProjective, SubgroupCheck};
+    use sha2::Sha256;
+
     use super::G1Point;
     use crate::arithmetic::traits::Modulo;
     use crate::elliptic::curves::bls12_381::g1::{FE, GE};
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
-    use bincode;
-    use serde_json;
 
     #[test]
     fn test_serdes_pk() {
@@ -689,9 +703,19 @@ mod tests {
 
     #[test]
     fn base_point2_nothing_up_my_sleeve() {
-        use pairing_plus::SubgroupCheck;
+        // Generate base_point2
+        let cs = &[1u8];
+        let msg = &[1u8];
+        let point = <G1 as HashToCurve<ExpandMsgXmd<Sha256>>>::hash_to_curve(msg, cs).into_affine();
+        assert!(point.in_subgroup());
 
-        let point = GE::base_point2();
-        assert!(point.ge.in_subgroup());
+        // Print in uncompressed form
+        use pairing_plus::EncodedPoint;
+        let point_uncompressed = G1Uncompressed::from_affine(point);
+        println!("Uncompressed base_point2: {:?}", point_uncompressed);
+
+        // Check that ECPoint::base_point2() returns generated point
+        let base_point2: GE = ECPoint::base_point2();
+        assert_eq!(point, base_point2.ge);
     }
 }

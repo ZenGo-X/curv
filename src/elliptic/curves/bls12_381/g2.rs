@@ -296,12 +296,25 @@ impl ECPoint for G2Point {
     type Scalar = FieldScalar;
 
     fn base_point2() -> G2Point {
-        let cs = &[1u8];
-        let msg = &[1u8];
-        let point = <G2 as HashToCurve<ExpandMsgXmd<Sha256>>>::hash_to_curve(msg, cs);
+        const BASE_POINT2: [u8; 192] = [
+            0, 204, 165, 72, 21, 96, 36, 119, 117, 242, 58, 55, 105, 140, 136, 76, 180, 140, 92,
+            212, 55, 3, 146, 72, 120, 181, 37, 205, 165, 221, 144, 86, 57, 124, 16, 19, 160, 215,
+            21, 251, 236, 99, 91, 147, 237, 113, 223, 70, 14, 223, 81, 150, 157, 235, 107, 225,
+            151, 227, 119, 53, 195, 46, 25, 54, 57, 158, 156, 122, 75, 152, 119, 51, 137, 131, 43,
+            34, 68, 24, 24, 210, 18, 75, 36, 20, 232, 76, 38, 84, 44, 112, 213, 217, 192, 122, 177,
+            186, 5, 113, 25, 229, 205, 55, 65, 191, 147, 1, 212, 194, 151, 141, 43, 223, 68, 185,
+            183, 66, 163, 62, 96, 92, 36, 209, 216, 40, 16, 132, 231, 104, 179, 248, 189, 53, 154,
+            106, 83, 159, 5, 54, 86, 87, 45, 68, 52, 247, 3, 90, 148, 187, 234, 213, 114, 244, 52,
+            137, 201, 13, 165, 57, 217, 190, 150, 103, 223, 193, 129, 198, 47, 86, 122, 196, 22,
+            200, 123, 89, 178, 216, 11, 238, 155, 106, 172, 125, 164, 95, 2, 136, 132, 137, 27,
+            184, 237, 169,
+        ];
+
+        let mut point = G2Uncompressed::empty();
+        point.as_mut().copy_from_slice(&BASE_POINT2);
         G2Point {
             purpose: "base_ge2",
-            ge: point.into_affine(),
+            ge: point.into_affine().expect("invalid base_point"),
         }
     }
 
@@ -540,14 +553,21 @@ impl G2Point {
 
 #[cfg(test)]
 mod tests {
+    use bincode;
+    use serde_json;
+
+    use pairing_plus::bls12_381::{G2Uncompressed, G2};
+    use pairing_plus::hash_to_curve::HashToCurve;
+    use pairing_plus::hash_to_field::ExpandMsgXmd;
+    use pairing_plus::{CurveProjective, SubgroupCheck};
+    use sha2::Sha256;
+
     use super::G2Point;
     use crate::arithmetic::traits::Modulo;
     use crate::elliptic::curves::bls12_381::g2::{FE, GE};
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
-    use bincode;
-    use serde_json;
 
     #[test]
     fn test_serdes_pk() {
@@ -692,9 +712,19 @@ mod tests {
 
     #[test]
     fn base_point2_nothing_up_my_sleeve() {
-        use pairing_plus::SubgroupCheck;
+        // Generate base_point2
+        let cs = &[1u8];
+        let msg = &[1u8];
+        let point = <G2 as HashToCurve<ExpandMsgXmd<Sha256>>>::hash_to_curve(msg, cs).into_affine();
+        assert!(point.in_subgroup());
 
-        let point = GE::base_point2();
-        assert!(point.ge.in_subgroup());
+        // Print in uncompressed form
+        use pairing_plus::EncodedPoint;
+        let point_uncompressed = G2Uncompressed::from_affine(point);
+        println!("Uncompressed base_point2: {:?}", point_uncompressed);
+
+        // Check that ECPoint::base_point2() returns generated point
+        let base_point2: GE = ECPoint::base_point2();
+        assert_eq!(point, base_point2.ge);
     }
 }
