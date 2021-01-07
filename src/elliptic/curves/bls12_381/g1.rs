@@ -5,34 +5,33 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-use std::fmt::Debug;
-use std::str;
 pub const SECRET_KEY_SIZE: usize = 32;
 pub const COMPRESSED_SIZE: usize = 48;
-use crate::arithmetic::traits::Converter;
 
-use ff::ScalarEngine;
-use ff::{Field, PrimeField, PrimeFieldRepr};
-use pairing_plus::bls12_381::Fr;
-use pairing_plus::bls12_381::G1Compressed;
-use pairing_plus::bls12_381::G1Uncompressed;
-use pairing_plus::bls12_381::G1;
+use std::fmt;
+use std::fmt::Debug;
+use std::ops::{Add, Mul, Neg};
+use std::str;
+
+use ff_zeroize::{Field, PrimeField, PrimeFieldRepr, ScalarEngine};
+use pairing_plus::bls12_381::{Fr, G1Compressed, G1Uncompressed, G1};
 use pairing_plus::hash_to_curve::HashToCurve;
+use pairing_plus::hash_to_field::ExpandMsgXmd;
 use pairing_plus::serdes::SerDes;
 use pairing_plus::EncodedPoint;
 use pairing_plus::{CurveAffine, CurveProjective, Engine};
+use sha2::Sha256;
 
 use serde::de;
 use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
-use std::fmt;
-use std::ops::{Add, Mul, Neg};
+
 pub type SK = <pairing_plus::bls12_381::Bls12 as ScalarEngine>::Fr;
 pub type PK = <pairing_plus::bls12_381::Bls12 as Engine>::G1Affine;
 
-use crate::arithmetic::traits::Samplable;
+use crate::arithmetic::traits::{Converter, Samplable};
 use crate::BigInt;
 use crate::ErrorKey::{self};
 
@@ -294,12 +293,19 @@ impl ECPoint for G1Point {
     type Scalar = FieldScalar;
 
     fn base_point2() -> G1Point {
-        let cs = &[1u8];
-        let msg = &[1u8];
-        let point = G1::hash_to_curve(msg, cs);
+        const BASE_POINT2: [u8; 96] = [
+            10, 18, 122, 36, 178, 251, 236, 31, 139, 88, 242, 163, 21, 198, 168, 208, 122, 195,
+            135, 122, 7, 153, 197, 255, 160, 0, 89, 138, 39, 245, 105, 108, 99, 113, 78, 70, 130,
+            172, 183, 57, 170, 180, 39, 32, 173, 29, 238, 62, 13, 166, 109, 90, 181, 17, 76, 247,
+            26, 155, 130, 211, 18, 42, 235, 137, 225, 184, 210, 140, 54, 83, 233, 228, 226, 70,
+            194, 50, 55, 116, 229, 2, 115, 227, 223, 31, 165, 39, 191, 209, 49, 127, 106, 196, 123,
+            71, 70, 243,
+        ];
+        let mut point = G1Uncompressed::empty();
+        point.as_mut().copy_from_slice(&BASE_POINT2);
         G1Point {
             purpose: "base_ge2",
-            ge: point.into_affine(),
+            ge: point.into_affine().expect("invalid base_point"),
         }
     }
 
@@ -358,10 +364,9 @@ impl ECPoint for G1Point {
 
     // in this case the opposite of from_bytes: takes compressed pk to COMPRESSED_SIZE bytes.
     fn pk_to_key_slice(&self) -> Vec<u8> {
-        let tmp = G1Compressed::from_affine(self.ge.clone());
-        let bytes = tmp.as_ref();
-        let mut compressed_vec = Vec::new();
-        compressed_vec.extend_from_slice(&bytes[..]);
+        let mut compressed_vec = vec![];
+        PK::serialize(&self.ge, &mut compressed_vec, true)
+            .expect("serializing into vec should always succeed");
         compressed_vec
     }
 
@@ -521,9 +526,14 @@ impl<'de> Visitor<'de> for Bls12381G1PointVisitor {
 }
 
 impl G1Point {
+    /// Converts message to G1 point.
+    ///
+    /// Uses [expand_message_xmd][xmd] based on sha256.
+    ///
+    /// [xmd]: https://www.ietf.org/id/draft-irtf-cfrg-hash-to-curve-10.html#name-expand_message_xmd-2
     pub fn hash_to_curve(message: &[u8]) -> Self {
         let cs = &[1u8];
-        let point = G1::hash_to_curve(message, cs);
+        let point = <G1 as HashToCurve<ExpandMsgXmd<Sha256>>>::hash_to_curve(message, cs);
         G1Point {
             purpose: "hash_to_curve",
             ge: point.into_affine(),
@@ -533,14 +543,21 @@ impl G1Point {
 
 #[cfg(test)]
 mod tests {
+    use bincode;
+    use serde_json;
+
+    use pairing_plus::bls12_381::{G1Uncompressed, G1};
+    use pairing_plus::hash_to_curve::HashToCurve;
+    use pairing_plus::hash_to_field::ExpandMsgXmd;
+    use pairing_plus::{CurveProjective, SubgroupCheck};
+    use sha2::Sha256;
+
     use super::G1Point;
     use crate::arithmetic::traits::Modulo;
     use crate::elliptic::curves::bls12_381::g1::{FE, GE};
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
-    use bincode;
-    use serde_json;
 
     #[test]
     fn test_serdes_pk() {
@@ -684,16 +701,21 @@ mod tests {
         assert_eq!(b_tag, g);
     }
 
-    use pairing_plus::bls12_381::G1;
-    use pairing_plus::hash_to_curve::HashToCurve;
-    use pairing_plus::CurveProjective;
-    use pairing_plus::SubgroupCheck;
-
     #[test]
     fn base_point2_nothing_up_my_sleeve() {
+        // Generate base_point2
         let cs = &[1u8];
         let msg = &[1u8];
-        let point = G1::hash_to_curve(msg, cs);
-        assert!(point.into_affine().in_subgroup());
+        let point = <G1 as HashToCurve<ExpandMsgXmd<Sha256>>>::hash_to_curve(msg, cs).into_affine();
+        assert!(point.in_subgroup());
+
+        // Print in uncompressed form
+        use pairing_plus::EncodedPoint;
+        let point_uncompressed = G1Uncompressed::from_affine(point);
+        println!("Uncompressed base_point2: {:?}", point_uncompressed);
+
+        // Check that ECPoint::base_point2() returns generated point
+        let base_point2: GE = ECPoint::base_point2();
+        assert_eq!(point, base_point2.ge);
     }
 }

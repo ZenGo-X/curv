@@ -4,7 +4,8 @@ pub mod g2;
 use crate::elliptic::curves::bls12_381::g1::GE as GE1;
 use crate::elliptic::curves::bls12_381::g2::GE as GE2;
 use crate::elliptic::curves::traits::ECPoint;
-use ff::Field;
+
+use ff_zeroize::Field;
 use pairing_plus::bls12_381::{Bls12, Fq12};
 use pairing_plus::{CurveAffine, Engine};
 
