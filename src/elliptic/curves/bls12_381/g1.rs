@@ -403,6 +403,15 @@ impl ECPoint for G1Point {
     }
 }
 
+impl From<pairing_plus::bls12_381::G1Affine> for G1Point {
+    fn from(point: PK) -> Self {
+        G1Point {
+            purpose: "from_point",
+            ge: point,
+        }
+    }
+}
+
 impl Mul<FieldScalar> for G1Point {
     type Output = G1Point;
     fn mul(self, other: FieldScalar) -> G1Point {
