@@ -50,5 +50,5 @@ Curv is released under the terms of the MIT license. See [LICENSE](LICENSE) for 
 
 
 ### Development Process & Contact
-This library is maintained by ZenGo-X. Contributions are highly welcomed! Besides GitHub issues and PRs, feel free to [reach out](mailto:github@kzencorp.com) by mail or join ZenGo X [Telegram]( https://t.me/zengo_x) for discussions on code and research. 
+This library is maintained by ZenGo-X. Contributions are highly welcomed! Besides GitHub issues and PRs, feel free to [reach out](mailto:github@kzencorp.com) by mail or join ZenGo X [Telegram](https://t.me/joinchat/ET1mddGXRoyCxZ-7) for discussions on code and research. 
 
