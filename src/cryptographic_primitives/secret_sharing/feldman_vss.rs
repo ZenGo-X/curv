@@ -58,6 +58,31 @@ where
         )
     }
 
+    // takes given VSS and generates a new VSS for the same secret and a secret shares vector to match the new coomitments
+    pub fn reshare(&self) -> (VerifiableSS<P>, Vec<P::Scalar>) {
+        let one: P::Scalar = ECScalar::from(&BigInt::one());
+        let poly = VerifiableSS::<P>::sample_polynomial(self.parameters.threshold.clone(), &one);
+        let index_vec: Vec<usize> = (1..=self.parameters.share_count.clone()).collect();
+        let secret_shares_biased = VerifiableSS::<P>::evaluate_polynomial(&poly, &index_vec);
+        let secret_shares: Vec<_> = (0..secret_shares_biased.len())
+            .map(|i| secret_shares_biased[i].sub(&one.get_element()))
+            .collect();
+        let G: P = ECPoint::generator();
+        let mut new_commitments = Vec::new();
+        new_commitments.push(self.commitments[0].clone());
+        for i in 1..poly.len() {
+            new_commitments.push((G.clone() * poly[i].clone()) + self.commitments[i].clone())
+        }
+
+        (
+            VerifiableSS {
+                parameters: self.parameters.clone(),
+                commitments: new_commitments,
+            },
+            secret_shares,
+        )
+    }
+
     // generate VerifiableSS from a secret and user defined x values (in case user wants to distribute point f(1), f(4), f(6) and not f(1),f(2),f(3))
     pub fn share_at_indices(
         t: usize,
@@ -441,5 +466,39 @@ mod tests {
 
         let w = l0 * secret_shares[0].clone() + l2 * secret_shares[2].clone();
         assert_eq!(w, secret_reconstructed);
+    }
+
+    test_for_all_curves!(test_secret_resharing);
+
+    fn test_secret_resharing<P>()
+    where
+        P: ECPoint + Clone + std::fmt::Debug,
+        P::Scalar: Clone + PartialEq + std::fmt::Debug,
+    {
+        let secret: P::Scalar = ECScalar::new_random();
+
+        let (vss_scheme, secret_shares) = VerifiableSS::<P>::share(1, 3, &secret);
+        let (new_vss_scheme, zero_secret_shares) = vss_scheme.reshare();
+
+        let new_share_party_1 = secret_shares[0].clone() + zero_secret_shares[0].clone();
+        let new_share_party_2 = secret_shares[1].clone() + zero_secret_shares[1].clone();
+        let new_share_party_3 = secret_shares[2].clone() + zero_secret_shares[2].clone();
+
+        let mut shares_vec = Vec::new();
+        shares_vec.push(new_share_party_1.clone());
+        shares_vec.push(new_share_party_3.clone());
+
+        // reconstruction
+        let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 2], &shares_vec);
+        assert_eq!(secret, secret_reconstructed);
+
+        // test secret shares are verifiable
+        let valid1 = new_vss_scheme.validate_share(&new_share_party_1, 1);
+        let valid2 = new_vss_scheme.validate_share(&new_share_party_2, 2);
+        let valid3 = new_vss_scheme.validate_share(&new_share_party_3, 3);
+
+        assert!(valid1.is_ok());
+        assert!(valid2.is_ok());
+        assert!(valid3.is_ok());
     }
 }
