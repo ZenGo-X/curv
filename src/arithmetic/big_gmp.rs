@@ -22,8 +22,8 @@ use super::traits::{
 use gmp::mpz::Mpz;
 
 use std::borrow::Borrow;
-use std::ptr;
 use std::sync::atomic;
+use std::{ops, ptr};
 
 pub type BigInt = Mpz;
 
@@ -162,6 +162,92 @@ impl ConvertFrom<Mpz> for u64 {
     }
 }
 
+/// Wraps BigInt making it compatible with [ring_algorithm] crate
+#[derive(Eq, PartialEq, Clone, Debug)]
+pub struct Arithmetic<T>(T);
+
+impl Arithmetic<BigInt> {
+    pub fn wrap(n: BigInt) -> Self {
+        Self(n)
+    }
+}
+
+impl<T> Arithmetic<T> {
+    pub fn into_inner(self) -> T {
+        self.0
+    }
+}
+
+impl<T> ops::Deref for Arithmetic<T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        &self.0
+    }
+}
+
+impl<T> ops::DerefMut for Arithmetic<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        &mut self.0
+    }
+}
+
+macro_rules! impl_ops {
+    ($($op: ident $func:ident ($($t:tt)+)),+$(,)?) => {
+        $(
+        impl ops::$op for &Arithmetic<BigInt> {
+            type Output = Arithmetic<BigInt>;
+            fn $func(self, rhs: Self) -> Self::Output {
+                Arithmetic(&self.0 $($t)+ &rhs.0)
+            }
+        }
+        impl ops::$op for Arithmetic<BigInt> {
+            type Output = Self;
+            fn $func(self, rhs: Self) -> Self::Output {
+                Arithmetic(self.0 $($t)+ rhs.0)
+            }
+        }
+        )+
+    };
+}
+
+impl_ops! {
+    Add add (+),
+    Sub sub (-),
+    Mul mul (*),
+    Div div (/),
+    Rem rem (%),
+}
+
+impl num_traits::Zero for Arithmetic<BigInt> {
+    fn zero() -> Self {
+        Arithmetic(BigInt::zero())
+    }
+
+    fn is_zero(&self) -> bool {
+        self.0 == BigInt::zero()
+    }
+}
+
+impl num_traits::One for Arithmetic<BigInt> {
+    fn one() -> Self {
+        Arithmetic(BigInt::one())
+    }
+}
+
+impl ring_algorithm::RingNormalize for Arithmetic<BigInt> {
+    fn leading_unit(&self) -> Self {
+        if self.0 >= BigInt::zero() {
+            Arithmetic(BigInt::one())
+        } else {
+            Arithmetic(-BigInt::one())
+        }
+    }
+
+    fn normalize_mut(&mut self) {
+        *self = Arithmetic(self.abs())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::Converter;
@@ -277,5 +363,42 @@ mod tests {
     fn test_from_hex() {
         let a = Mpz::from(11);
         assert_eq!(Mpz::from_hex(&a.to_hex()), a);
+    }
+}
+
+/// Tests that ring_algorithm work as expected
+#[cfg(test)]
+mod ring_algorithm_test {
+    const PRIME: u32 = u32::MAX - 4;
+
+    use super::*;
+    use crate::arithmetic::traits::EGCD;
+
+    proptest::proptest! {
+        #[test]
+        fn fuzz_inverse(n in 1..PRIME) {
+            test_inverse(BigInt::from(n))
+        }
+        #[test]
+        fn fuzz_xgcd(a in 1u32.., b in 1u32..) {
+            test_xgcd(BigInt::from(a), BigInt::from(b))
+        }
+    }
+
+    fn test_inverse(n: BigInt) {
+        let prime = BigInt::from(PRIME);
+        let n_inv_expected = n.invert(&prime).unwrap();
+        let n_inv_actual =
+            ring_algorithm::modulo_inverse(Arithmetic(n), Arithmetic(prime.clone())).unwrap();
+        assert_eq!(n_inv_expected, n_inv_actual.into_inner().modulus(&prime));
+    }
+
+    fn test_xgcd(a: BigInt, b: BigInt) {
+        let (s1, p1, q1) = BigInt::egcd(&a, &b);
+        let (s2, p2, q2) =
+            ring_algorithm::normalized_extended_euclidian_algorithm(Arithmetic(a), Arithmetic(b));
+        assert_eq!(s1, s2.into_inner());
+        assert_eq!(p1, p2.into_inner());
+        assert_eq!(q1, q2.into_inner());
     }
 }

@@ -62,4 +62,5 @@ pub trait BitManipulation {
 pub trait ConvertFrom<T> {
     fn _from(_: &T) -> Self;
 }
+
 //use std::ops::{Add, Div, Mul, Neg, Rem, Shr, Sub};

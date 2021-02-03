@@ -24,6 +24,8 @@ blake2b_simd = "0.5.7"
 derivative = "2.1.1"
 pairing-plus = "0.19"
 ff-zeroize = "0.6.3"
+ring-algorithm = "0.2.3"
+num-traits = "0.2"
 
 [dependencies.rust-gmp-kzen]
 version = "0.5.0"
@@ -60,3 +62,4 @@ version = "0.14"
 bincode = "1.1"
 serde_json = "1.0"
 paste = "1.0.2"
+proptest = "0.10"
