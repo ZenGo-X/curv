@@ -550,6 +550,7 @@ impl<'de> Visitor<'de> for Ed25519PointVisitor {
     }
 }
 
+#[allow(clippy::many_single_char_names)]
 //helper function, based on https://ed25519.cr.yp.to/python/ed25519.py
 pub fn xrecover(y_coor: BigInt) -> BigInt {
     //   let d = "37095705934669439343138083508754565189542113879843219016388785533085940283555";
