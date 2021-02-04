@@ -59,10 +59,10 @@ mod tests {
             let message = BigInt::sample(SECURITY_BITS);
             let (commitment, blind_factor) = HashCommitment::create_commitment(&message);
             if commitment.to_str_radix(2).len() == hex_len {
-                ctr_commit_len = ctr_commit_len + 1;
+                ctr_commit_len += 1;
             }
             if blind_factor.to_str_radix(2).len() == hex_len {
-                ctr_blind_len = ctr_blind_len + 1;
+                ctr_blind_len += 1;
             }
         }
         //test commitment length  - works because SHA256 output length the same as sec_bits
