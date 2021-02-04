@@ -588,6 +588,7 @@ mod tests {
 
     #[test]
     #[should_panic]
+    #[allow(clippy::op_ref)] // Enables type inference.
     fn test_serdes_bad_pk() {
         let pk = GE::generator();
         let s = serde_json::to_string(&pk).expect("Failed in serialization");

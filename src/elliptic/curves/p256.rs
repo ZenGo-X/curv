@@ -750,7 +750,7 @@ mod tests {
     fn test_pk_to_key_slice() {
         for _ in 1..200 {
             let r = Secp256r1Scalar::new_random();
-            let rg = Secp256r1Point::generator() * &r;
+            let rg = Secp256r1Point::generator() * r;
             let key_slice = rg.pk_to_key_slice();
             assert!(key_slice.len() == 65);
             assert!(key_slice[0] == 4);

@@ -609,6 +609,7 @@ mod tests {
     type FE = Ed25519Scalar;
 
     #[test]
+    #[allow(clippy::op_ref)] // Enables type inference.
     fn test_serdes_pk() {
         let mut pk = GE::generator();
         let mut s = serde_json::to_string(&pk).expect("Failed in serialization");
@@ -645,6 +646,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::op_ref)] // Enables type inference.
     fn bincode_pk() {
         let pk = GE::generator();
         let encoded = bincode::serialize(&pk).unwrap();
@@ -655,6 +657,7 @@ mod tests {
 
     #[test]
     #[should_panic]
+    #[allow(clippy::op_ref)] // Enables type inference.
     fn test_serdes_bad_pk() {
         let pk = GE::generator();
         let s = serde_json::to_string(&pk).expect("Failed in serialization");
