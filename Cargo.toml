@@ -12,15 +12,20 @@ crate-type = ["lib"]
 
 [dependencies]
 blake2b_simd = "0.5.7"
+cryptoxide = "0.1.2"
+curve25519-dalek = "1.2.3"
 derivative = "2.1.1"
 digest = "0.8.1"
 ff-zeroize = "0.6.3"
+generic-array = "0.14"
 hex = "^0.3"
 hmac = "0.7.1"
+merkle-sha3 = "^0.1"
 num-traits = "0.2"
 pairing-plus = "0.19"
 rand = "0.6"
 ring-algorithm = "0.2.3"
+rust-crypto = "^0.2"
 serde = "1.0"
 serde_derive = "1.0"
 sha2 = "0.8.0"
@@ -31,28 +36,13 @@ zeroize = "0.10"
 version = "0.5.0"
 features = ["serde_support"]
 
-[dependencies.rust-crypto]
-version = "^0.2"
-
-[dependencies.merkle-sha3]
-version = "^0.1"
-
 [dependencies.secp256k1]
 version = "0.15.3"
 features = ["serde"]
 
-[dependencies.curve25519-dalek]
-version = "1.2.3"
-
-[dependencies.cryptoxide]
-version = "0.1.2"
-
 [dependencies.p256]
 version = "0.5"
 features = ["ecdsa"]
-
-[dependencies.generic-array]
-version = "0.14"
 
 [dev-dependencies]
 bincode = "1.1"
