@@ -1,6 +1,8 @@
 use curv::elliptic::curves::traits::ECPoint;
 use curv::BigInt;
 
+use std::fmt::Debug;
+
 /// Pedesen Commitment:
 /// compute c = mG + rH
 /// where m is the commited value, G is the group generator,
@@ -14,7 +16,7 @@ use curv::BigInt;
 
 pub fn ped_com<P>(message: &BigInt)
 where
-    P: ECPoint,
+    P: ECPoint + Debug,
 {
     use curv::arithmetic::traits::Samplable;
     use curv::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
@@ -22,9 +24,14 @@ where
 
     let security_bits = 256;
     let blinding_factor = BigInt::sample(security_bits);
-    let _ = PedersenCommitment::<P>::create_commitment_with_user_defined_randomness(
+    let com = PedersenCommitment::<P>::create_commitment_with_user_defined_randomness(
         message,
         &blinding_factor,
+    );
+
+    println!(
+        "\ncreated commitment with user defined randomness \n\n blinding_factor {} \n commitment: {:#?}",
+        blinding_factor, com
     );
 }
 
