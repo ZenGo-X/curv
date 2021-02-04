@@ -65,7 +65,7 @@ where
         ]);
         let z_g1 = delta.g1.clone() * self.z.clone();
         let z_g2 = delta.g2.clone() * self.z.clone();
-        let a1_plus_e_h1 = self.a1.clone() + delta.h1.clone() * e;
+        let a1_plus_e_h1 = self.a1.clone() + delta.h1.clone() * e.clone();
         let a2_plus_e_h2 = self.a2.clone() + delta.h2.clone() * e;
         if z_g1 == a1_plus_e_h1 && z_g2 == a2_plus_e_h2 {
             Ok(())

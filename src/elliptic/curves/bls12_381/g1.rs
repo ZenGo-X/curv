@@ -177,11 +177,11 @@ impl ECScalar for FieldScalar {
     fn invert(&self) -> FieldScalar {
         let sc = self.fe;
         let inv_sc = sc.inverse().unwrap(); //TODO
-        let inv_fe = FieldScalar {
+
+        FieldScalar {
             purpose: "inverse",
             fe: inv_sc,
-        };
-        inv_fe
+        }
     }
 }
 
@@ -339,8 +339,7 @@ impl ECPoint for G1Point {
     fn bytes_compressed_to_big_int(&self) -> BigInt {
         let tmp = G1Compressed::from_affine(self.ge);
         let bytes = tmp.as_ref();
-        let bn = BigInt::from(&bytes[..]);
-        bn
+        BigInt::from(&bytes[..])
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<G1Point, ErrorKey> {
@@ -359,7 +358,8 @@ impl ECPoint for G1Point {
             purpose: "from_bytes",
             ge: g1_comp.into_affine(), //TODO: handle error
         };
-        return Ok(pk);
+
+        Ok(pk)
     }
 
     // in this case the opposite of from_bytes: takes compressed pk to COMPRESSED_SIZE bytes.
