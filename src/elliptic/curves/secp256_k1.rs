@@ -280,7 +280,7 @@ impl ECPoint for Secp256k1Point {
     type Scalar = Secp256k1Scalar;
 
     fn base_point2() -> Secp256k1Point {
-        let mut v = vec![4 as u8];
+        let mut v = vec![4_u8];
         v.extend(BASE_POINT2_X.as_ref());
         v.extend(BASE_POINT2_Y.as_ref());
         Secp256k1Point {
@@ -290,7 +290,7 @@ impl ECPoint for Secp256k1Point {
     }
 
     fn generator() -> Secp256k1Point {
-        let mut v = vec![4 as u8];
+        let mut v = vec![4_u8];
         v.extend(GENERATOR_X.as_ref());
         v.extend(GENERATOR_Y.as_ref());
         Secp256k1Point {
@@ -384,7 +384,7 @@ impl ECPoint for Secp256k1Point {
         }
     }
     fn pk_to_key_slice(&self) -> Vec<u8> {
-        let mut v = vec![4 as u8];
+        let mut v = vec![4_u8];
         let x_vec = BigInt::to_vec(&self.x_coor().unwrap());
         let y_vec = BigInt::to_vec(&self.y_coor().unwrap());
 
@@ -471,7 +471,7 @@ impl ECPoint for Secp256k1Point {
         assert_eq!(x, &BigInt::from(vec_x.as_ref()));
         assert_eq!(y, &BigInt::from(vec_y.as_ref()));
 
-        let mut v = vec![4 as u8];
+        let mut v = vec![4_u8];
         v.extend(vec_x);
         v.extend(vec_y);
 

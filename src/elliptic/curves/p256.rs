@@ -242,7 +242,7 @@ impl ECPoint for Secp256r1Point {
     type Scalar = Secp256r1Scalar;
 
     fn base_point2() -> Secp256r1Point {
-        let mut v = vec![4 as u8];
+        let mut v = vec![4_u8];
         v.extend(BASE_POINT2_X.as_ref());
         v.extend(BASE_POINT2_Y.as_ref());
         Secp256r1Point::from_bytes(&v).unwrap()
