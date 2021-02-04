@@ -142,7 +142,7 @@ impl EGCD for Mpz {
 }
 
 impl BitManipulation for Mpz {
-    fn set_bit(self: &mut Self, bit: usize, bit_val: bool) {
+    fn set_bit(mut self, bit: usize, bit_val: bool) {
         if bit_val {
             self.setbit(bit);
         } else {
@@ -150,7 +150,7 @@ impl BitManipulation for Mpz {
         }
     }
 
-    fn test_bit(self: &Self, bit: usize) -> bool {
+    fn test_bit(self, bit: usize) -> bool {
         self.tstbit(bit)
     }
 }
