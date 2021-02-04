@@ -33,7 +33,7 @@ fn main() {
     let message_bytes = message.as_bytes();
     let _message_bn = BigInt::from(message_bytes);
     let curve_name = std::env::args().nth(1);
-    match curve_name.as_ref().map(|s| s.as_str()) {
+    match curve_name.as_deref() {
         Some("secp256k1") => ped_com::<curv::elliptic::curves::secp256_k1::GE>(&_message_bn),
         Some("ristretto") => ped_com::<curv::elliptic::curves::curve_ristretto::GE>(&_message_bn),
         Some("ed25519") => ped_com::<curv::elliptic::curves::ed25519::GE>(&_message_bn),

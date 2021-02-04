@@ -37,7 +37,7 @@ where
 
 fn main() {
     let curve_name = std::env::args().nth(1);
-    match curve_name.as_ref().map(|s| s.as_str()) {
+    match curve_name.as_deref() {
         Some("secp256k1") => ecdh::<curv::elliptic::curves::secp256_k1::GE>(),
         Some("ristretto") => ecdh::<curv::elliptic::curves::curve_ristretto::GE>(),
         Some("ed25519") => ecdh::<curv::elliptic::curves::ed25519::GE>(),

@@ -65,7 +65,7 @@ where
 
 fn main() {
     let curve_name = std::env::args().nth(1);
-    match curve_name.as_ref().map(|s| s.as_str()) {
+    match curve_name.as_deref() {
         Some("secp256k1") => secret_sharing_3_out_of_5::<curv::elliptic::curves::secp256_k1::GE>(),
         Some("ristretto") => {
             secret_sharing_3_out_of_5::<curv::elliptic::curves::curve_ristretto::GE>()
