@@ -69,7 +69,7 @@ where
             .collect();
         let G: P = ECPoint::generator();
         let mut new_commitments = vec![self.commitments[0].clone()];
-        for i in 1..poly.len() {
+        for (i, _) in poly.iter().enumerate().skip(1) {
             new_commitments.push((G.clone() * poly[i].clone()) + self.commitments[i].clone())
         }
 
