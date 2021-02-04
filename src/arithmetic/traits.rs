@@ -16,6 +16,9 @@
 
 use std::marker::Sized;
 
+/// Reuse common traits from [num_traits] crate
+pub use num_traits::{One, Zero};
+
 pub trait ZeroizeBN {
     fn zeroize_bn(&mut self);
 }
@@ -31,6 +34,7 @@ pub trait Modulo {
     fn mod_sub(a: &Self, b: &Self, modulus: &Self) -> Self;
     fn mod_add(a: &Self, b: &Self, modulus: &Self) -> Self;
     fn mod_inv(a: &Self, modulus: &Self) -> Self;
+    fn modulus(a: &Self, modulus: &Self) -> Self;
 }
 
 pub trait Samplable {

@@ -14,74 +14,100 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
+use std::borrow::Borrow;
+use std::convert::TryFrom;
+use std::sync::atomic;
+use std::{error, fmt, ops, ptr};
+
+use gmp::mpz::Mpz;
+use gmp::sign::Sign;
+use num_traits::{One, Zero};
+use rand::rngs::OsRng;
+use rand::RngCore;
+use zeroize::Zeroize;
+
 use super::traits::{
     BitManipulation, ConvertFrom, Converter, Modulo, NumberTests, Samplable, ZeroizeBN, EGCD,
 };
-use gmp::mpz::Mpz;
-use rand::rngs::OsRng;
-use rand::RngCore;
 
-use std::borrow::Borrow;
-use std::sync::atomic;
-use std::{ops, ptr};
+#[derive(PartialOrd, PartialEq, Ord, Eq, Clone, Debug)]
+pub struct BigInt {
+    gmp: Mpz,
+}
 
-pub type BigInt = Mpz;
-
-impl ZeroizeBN for Mpz {
+impl ZeroizeBN for BigInt {
     fn zeroize_bn(&mut self) {
-        unsafe { ptr::write_volatile(self, BigInt::zero()) };
+        unsafe { ptr::write_volatile(&mut self.gmp, Mpz::zero()) };
         atomic::fence(atomic::Ordering::SeqCst);
         atomic::compiler_fence(atomic::Ordering::SeqCst);
     }
 }
 
-impl Converter for Mpz {
-    fn to_vec(value: &Mpz) -> Vec<u8> {
-        let bytes: Vec<u8> = value.borrow().into();
+impl Zeroize for BigInt {
+    fn zeroize(&mut self) {
+        unsafe { ptr::write_volatile(&mut self.gmp, Mpz::zero()) };
+        atomic::fence(atomic::Ordering::SeqCst);
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
+    }
+}
+
+impl Converter for BigInt {
+    fn to_vec(value: &BigInt) -> Vec<u8> {
+        let bytes: Vec<u8> = value.gmp.borrow().into();
         bytes
     }
 
     fn to_hex(&self) -> String {
-        self.to_str_radix(super::HEX_RADIX)
+        self.gmp.to_str_radix(super::HEX_RADIX)
     }
 
-    fn from_hex(value: &str) -> Mpz {
-        BigInt::from_str_radix(value, super::HEX_RADIX).expect("Error in serialization")
+    fn from_hex(value: &str) -> BigInt {
+        Mpz::from_str_radix(value, super::HEX_RADIX)
+            .expect("Error in serialization")
+            .wrap()
     }
 }
 
 // TODO: write unit test
-impl Modulo for Mpz {
+impl Modulo for BigInt {
     fn mod_pow(base: &Self, exponent: &Self, modulus: &Self) -> Self {
-        base.powm(exponent, modulus)
+        base.gmp.powm(&exponent.gmp, &modulus.gmp).wrap()
     }
 
     fn mod_mul(a: &Self, b: &Self, modulus: &Self) -> Self {
-        (a.mod_floor(modulus) * b.mod_floor(modulus)).mod_floor(modulus)
+        (a.gmp.mod_floor(&modulus.gmp) * b.gmp.mod_floor(&modulus.gmp))
+            .mod_floor(&modulus.gmp)
+            .wrap()
     }
 
     fn mod_sub(a: &Self, b: &Self, modulus: &Self) -> Self {
-        let a_m = a.mod_floor(modulus);
-        let b_m = b.mod_floor(modulus);
+        let a_m = a.gmp.mod_floor(&modulus.gmp);
+        let b_m = b.gmp.mod_floor(&modulus.gmp);
 
-        let sub_op = a_m - b_m + modulus;
-        sub_op.mod_floor(modulus)
+        let sub_op = a_m - b_m + &modulus.gmp;
+        sub_op.mod_floor(&modulus.gmp).wrap()
     }
 
     fn mod_add(a: &Self, b: &Self, modulus: &Self) -> Self {
-        (a.mod_floor(modulus) + b.mod_floor(modulus)).mod_floor(modulus)
+        (a.gmp.mod_floor(&modulus.gmp) + b.gmp.mod_floor(&modulus.gmp))
+            .mod_floor(&modulus.gmp)
+            .wrap()
     }
 
     fn mod_inv(a: &Self, modulus: &Self) -> Self {
-        a.invert(modulus).unwrap()
+        a.gmp.invert(&modulus.gmp).unwrap().wrap()
+    }
+
+    fn modulus(a: &Self, modulus: &Self) -> Self {
+        a.gmp.modulus(&modulus.gmp).wrap()
     }
 }
 
-impl Samplable for Mpz {
+impl Samplable for BigInt {
     fn sample_below(upper: &Self) -> Self {
-        assert!(*upper > Mpz::zero());
+        assert!(*upper > Self::zero());
 
-        let bits = upper.bit_length();
+        let bits = upper.gmp.bit_length();
         loop {
             let n = Self::sample(bits);
             if n < *upper {
@@ -116,135 +142,205 @@ impl Samplable for Mpz {
     fn strict_sample(bit_size: usize) -> Self {
         loop {
             let n = Self::sample(bit_size);
-            if n.bit_length() == bit_size {
+            if n.gmp.bit_length() == bit_size {
                 return n;
             }
         }
     }
 }
 
-impl NumberTests for Mpz {
+impl NumberTests for BigInt {
     fn is_zero(me: &Self) -> bool {
-        me.is_zero()
+        me.gmp.is_zero()
     }
     fn is_even(me: &Self) -> bool {
-        me.is_multiple_of(&Mpz::from(2))
+        me.gmp.is_multiple_of(&Mpz::from(2))
     }
     fn is_negative(me: &Self) -> bool {
-        *me < Mpz::from(0)
+        matches!(me.gmp.sign(), Sign::Negative)
     }
 }
 
-impl EGCD for Mpz {
+impl EGCD for BigInt {
     fn egcd(a: &Self, b: &Self) -> (Self, Self, Self) {
-        a.gcdext(b)
+        let (s, p, q) = a.gmp.gcdext(&b.gmp);
+        (s.wrap(), p.wrap(), q.wrap())
     }
 }
 
-impl BitManipulation for Mpz {
-    fn set_bit(&mut self, bit: usize, bit_val: bool) {
+impl BitManipulation for BigInt {
+    fn set_bit(self: &mut Self, bit: usize, bit_val: bool) {
         if bit_val {
-            self.setbit(bit);
+            self.gmp.setbit(bit);
         } else {
-            self.clrbit(bit);
+            self.gmp.clrbit(bit);
         }
     }
 
-    fn test_bit(&self, bit: usize) -> bool {
-        self.tstbit(bit)
+    fn test_bit(self: &Self, bit: usize) -> bool {
+        self.gmp.tstbit(bit)
     }
 }
 
-impl ConvertFrom<Mpz> for u64 {
-    fn _from(x: &Mpz) -> u64 {
-        let opt_x: Option<u64> = x.into();
+macro_rules! impl_try_from {
+    ($($primitive:ty),*$(,)?) => {
+        $(
+        impl TryFrom<&BigInt> for $primitive {
+            type Error = TryFromBigIntError;
+
+            fn try_from(value: &BigInt) -> Result<Self, Self::Error> {
+                Option::<$primitive>::from(&value.gmp)
+                    .ok_or(TryFromBigIntError { type_name: stringify!($primitive) })
+            }
+        }
+        )*
+    };
+}
+
+impl_try_from! { u64, i64 }
+
+#[derive(Debug)]
+pub struct TryFromBigIntError {
+    type_name: &'static str,
+}
+
+impl fmt::Display for TryFromBigIntError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "conversion from BigInt to {} overflowed", self.type_name)
+    }
+}
+
+impl error::Error for TryFromBigIntError {}
+
+impl ConvertFrom<BigInt> for u64 {
+    fn _from(x: &BigInt) -> u64 {
+        let opt_x: Option<u64> = (&x.gmp).into();
         opt_x.unwrap()
     }
 }
 
-/// Wraps BigInt making it compatible with [ring_algorithm] crate
-#[derive(Eq, PartialEq, Clone, Debug)]
-pub struct Arithmetic<T>(T);
-
-impl Arithmetic<BigInt> {
-    pub fn wrap(n: BigInt) -> Self {
-        Self(n)
-    }
-}
-
-impl<T> Arithmetic<T> {
-    pub fn into_inner(self) -> T {
-        self.0
-    }
-}
-
-impl<T> ops::Deref for Arithmetic<T> {
-    type Target = T;
-    fn deref(&self) -> &T {
-        &self.0
-    }
-}
-
-impl<T> ops::DerefMut for Arithmetic<T> {
-    fn deref_mut(&mut self) -> &mut T {
-        &mut self.0
-    }
-}
-
 macro_rules! impl_ops {
-    ($($op: ident $func:ident ($($t:tt)+)),+$(,)?) => {
-        $(
-        impl ops::$op for &Arithmetic<BigInt> {
-            type Output = Arithmetic<BigInt>;
+    () => {};
+    ($op: ident $func:ident, $($rest:tt)*) => {
+        impl ops::$op for &BigInt {
+            type Output = BigInt;
             fn $func(self, rhs: Self) -> Self::Output {
-                Arithmetic(&self.0 $($t)+ &rhs.0)
+                (&self.gmp).$func(&rhs.gmp).wrap()
             }
         }
-        impl ops::$op for Arithmetic<BigInt> {
-            type Output = Self;
+        impl ops::$op for BigInt {
+            type Output = BigInt;
             fn $func(self, rhs: Self) -> Self::Output {
-                Arithmetic(self.0 $($t)+ rhs.0)
+                self.gmp.$func(rhs.gmp).wrap()
             }
         }
-        )+
+        impl ops::$op<BigInt> for &BigInt {
+            type Output = BigInt;
+            fn $func(self, rhs: BigInt) -> Self::Output {
+                (&self.gmp).$func(rhs.gmp).wrap()
+            }
+        }
+        impl ops::$op<&BigInt> for BigInt {
+            type Output = BigInt;
+            fn $func(self, rhs: &BigInt) -> Self::Output {
+                self.gmp.$func(&rhs.gmp).wrap()
+            }
+        }
+        impl_ops!{ $($rest)* }
+    };
+    ($op: ident $func:ident $primitive:ty, $($rest:tt)*) => {
+        impl ops::$op<$primitive> for BigInt {
+            type Output = BigInt;
+            fn $func(self, rhs: $primitive) -> Self::Output {
+                self.gmp.$func(rhs).wrap()
+            }
+        }
+        impl ops::$op<$primitive> for &BigInt {
+            type Output = BigInt;
+            fn $func(self, rhs: $primitive) -> Self::Output {
+                (&self.gmp).$func(rhs).wrap()
+            }
+        }
+        impl_ops!{ $($rest)* }
     };
 }
 
 impl_ops! {
-    Add add (+),
-    Sub sub (-),
-    Mul mul (*),
-    Div div (/),
-    Rem rem (%),
+    Add add,
+    Sub sub,
+    Mul mul,
+    Div div,
+    Rem rem,
+    Shl shl usize,
+    Shr shr usize,
 }
 
-impl num_traits::Zero for Arithmetic<BigInt> {
+impl ops::Neg for BigInt {
+    type Output = BigInt;
+    fn neg(self) -> Self::Output {
+        self.gmp.neg().wrap()
+    }
+}
+impl ops::Neg for &BigInt {
+    type Output = BigInt;
+    fn neg(self) -> Self::Output {
+        (&self.gmp).neg().wrap()
+    }
+}
+
+impl Zero for BigInt {
     fn zero() -> Self {
-        Arithmetic(BigInt::zero())
+        Mpz::zero().wrap()
     }
 
     fn is_zero(&self) -> bool {
-        self.0 == BigInt::zero()
+        self.gmp.is_zero()
     }
 }
 
-impl num_traits::One for Arithmetic<BigInt> {
+impl One for BigInt {
     fn one() -> Self {
-        Arithmetic(BigInt::one())
+        Mpz::one().wrap()
+    }
+    fn is_one(&self) -> bool {
+        self.gmp.is_one()
     }
 }
 
-impl ring_algorithm::RingNormalize for Arithmetic<BigInt> {
+impl ring_algorithm::RingNormalize for BigInt {
     fn leading_unit(&self) -> Self {
-        if self.0 >= BigInt::zero() {
-            Arithmetic(BigInt::one())
-        } else {
-            Arithmetic(-BigInt::one())
+        match self.gmp.sign() {
+            Sign::Negative => -BigInt::one(),
+            _ => BigInt::one(),
         }
     }
 
     fn normalize_mut(&mut self) {
-        *self = Arithmetic(self.abs())
+        self.gmp = self.gmp.abs();
+    }
+}
+
+macro_rules! impl_from {
+    ($($type:ty),*$(,)?) => {
+    $(
+    impl From<$type> for BigInt {
+        fn from(x: $type) -> Self {
+            Self{ gmp: Mpz::from(x) }
+        }
+    }
+    )*
+    };
+}
+
+impl_from! { &[u8], u32, u64 }
+
+/// Internal helper trait. Creates short-hand for wrapping Mpz into BigInt.
+trait Wrap {
+    fn wrap(self) -> BigInt;
+}
+impl Wrap for Mpz {
+    fn wrap(self) -> BigInt {
+        BigInt { gmp: self }
     }
 }
 
@@ -372,7 +468,7 @@ mod ring_algorithm_test {
     const PRIME: u32 = u32::MAX - 4;
 
     use super::*;
-    use crate::arithmetic::traits::EGCD;
+    use crate::arithmetic::traits::{Modulo, EGCD};
 
     proptest::proptest! {
         #[test]
@@ -387,7 +483,7 @@ mod ring_algorithm_test {
 
     fn test_inverse(n: BigInt) {
         let prime = BigInt::from(PRIME);
-        let n_inv_expected = n.invert(&prime).unwrap();
+        let n_inv_expected = n.mod_inv(&prime).unwrap();
         let n_inv_actual =
             ring_algorithm::modulo_inverse(Arithmetic(n), Arithmetic(prime.clone())).unwrap();
         assert_eq!(n_inv_expected, n_inv_actual.into_inner().modulus(&prime));
