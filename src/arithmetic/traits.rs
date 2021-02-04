@@ -16,16 +16,18 @@
 
 use std::marker::Sized;
 
+use super::errors::ParseBigIntFromHexError;
+
 /// Reuse common traits from [num_traits] crate
 pub use num_traits::{One, Zero};
 
 pub trait ZeroizeBN {
     fn zeroize_bn(&mut self);
 }
-pub trait Converter {
-    fn to_vec(n: &Self) -> Vec<u8>;
+pub trait Converter: Sized {
+    fn to_vec(&self) -> Vec<u8>;
     fn to_hex(&self) -> String;
-    fn from_hex(n: &str) -> Self;
+    fn from_hex(n: &str) -> Result<Self, ParseBigIntFromHexError>;
 }
 
 pub trait Modulo {
@@ -46,9 +48,9 @@ pub trait Samplable {
 }
 
 pub trait NumberTests {
-    fn is_zero(_: &Self) -> bool;
-    fn is_even(_: &Self) -> bool;
-    fn is_negative(me: &Self) -> bool;
+    fn is_zero(n: &Self) -> bool;
+    fn is_even(n: &Self) -> bool;
+    fn is_negative(n: &Self) -> bool;
 }
 
 pub trait EGCD

@@ -17,7 +17,7 @@
 use std::borrow::Borrow;
 use std::convert::TryFrom;
 use std::sync::atomic;
-use std::{error, fmt, ops, ptr};
+use std::{ops, ptr};
 
 use gmp::mpz::Mpz;
 use gmp::sign::Sign;
@@ -26,6 +26,7 @@ use rand::rngs::OsRng;
 use rand::RngCore;
 use zeroize::Zeroize;
 
+use super::errors::*;
 use super::traits::{
     BitManipulation, ConvertFrom, Converter, Modulo, NumberTests, Samplable, ZeroizeBN, EGCD,
 };
@@ -52,19 +53,19 @@ impl Zeroize for BigInt {
 }
 
 impl Converter for BigInt {
-    fn to_vec(value: &BigInt) -> Vec<u8> {
-        let bytes: Vec<u8> = value.gmp.borrow().into();
+    fn to_vec(&self) -> Vec<u8> {
+        let bytes: Vec<u8> = self.gmp.borrow().into();
         bytes
     }
 
     fn to_hex(&self) -> String {
-        self.gmp.to_str_radix(super::HEX_RADIX)
+        self.gmp.to_str_radix(16)
     }
 
-    fn from_hex(value: &str) -> BigInt {
-        Mpz::from_str_radix(value, super::HEX_RADIX)
-            .expect("Error in serialization")
-            .wrap()
+    fn from_hex(value: &str) -> Result<BigInt, ParseBigIntFromHexError> {
+        Ok(Mpz::from_str_radix(value, 16)
+            .map_err(ParseFromHexReason::Gmp)?
+            .wrap())
     }
 }
 
@@ -198,19 +199,6 @@ macro_rules! impl_try_from {
 }
 
 impl_try_from! { u64, i64 }
-
-#[derive(Debug)]
-pub struct TryFromBigIntError {
-    type_name: &'static str,
-}
-
-impl fmt::Display for TryFromBigIntError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "conversion from BigInt to {} overflowed", self.type_name)
-    }
-}
-
-impl error::Error for TryFromBigIntError {}
 
 impl ConvertFrom<BigInt> for u64 {
     fn _from(x: &BigInt) -> u64 {
