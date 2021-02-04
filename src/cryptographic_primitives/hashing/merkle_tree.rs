@@ -55,6 +55,7 @@ impl<P: ECPoint> MT256<P> {
         MerkleTree::root_hash(&self.tree)
     }
 
+    #[allow(clippy::result_unit_err)]
     pub fn validate_proof(proof: &Proof<[u8; 32]>, root: &[u8]) -> Result<(), ()> {
         if Proof::validate::<[u8; 32]>(proof, root) {
             Ok(())
