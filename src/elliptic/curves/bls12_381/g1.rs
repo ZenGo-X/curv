@@ -31,7 +31,7 @@ use serde::{Deserialize, Deserializer};
 pub type SK = <pairing_plus::bls12_381::Bls12 as ScalarEngine>::Fr;
 pub type PK = <pairing_plus::bls12_381::Bls12 as Engine>::G1Affine;
 
-use crate::arithmetic::traits::{Converter, Samplable};
+use crate::arithmetic::traits::{Converter, Modulo, Samplable, Zero};
 use crate::BigInt;
 use crate::ErrorKey::{self};
 
