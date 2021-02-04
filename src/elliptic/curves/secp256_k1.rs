@@ -721,7 +721,7 @@ mod tests {
     #[test]
     fn test_from_bytes() {
         let g = Secp256k1Point::generator();
-        let hash = HSha256::create_hash(&vec![&g.bytes_compressed_to_big_int()]);
+        let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
         let hash_vec = BigInt::to_vec(&hash);
         let result = Secp256k1Point::from_bytes(&hash_vec);
         assert_eq!(result.unwrap_err(), ErrorKey::InvalidPublicKey)

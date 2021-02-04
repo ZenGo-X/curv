@@ -25,14 +25,15 @@ where
 
     let (vss_scheme, secret_shares) = VerifiableSS::<P>::share(3, 5, &secret);
 
-    let mut shares_vec = Vec::new();
-    shares_vec.push(secret_shares[0].clone());
-    shares_vec.push(secret_shares[1].clone());
-    shares_vec.push(secret_shares[2].clone());
-    shares_vec.push(secret_shares[4].clone());
+    let shares_vec = vec![
+        secret_shares[0].clone(),
+        secret_shares[1].clone(),
+        secret_shares[2].clone(),
+        secret_shares[4].clone(),
+    ];
     //test reconstruction
 
-    let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 1, 2, 4], &shares_vec);
+    let secret_reconstructed = vss_scheme.reconstruct(&[0, 1, 2, 4], &shares_vec);
 
     assert_eq!(secret, secret_reconstructed);
     // test secret shares are verifiable

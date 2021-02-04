@@ -68,8 +68,7 @@ where
             .map(|i| secret_shares_biased[i].sub(&one.get_element()))
             .collect();
         let G: P = ECPoint::generator();
-        let mut new_commitments = Vec::new();
-        new_commitments.push(self.commitments[0].clone());
+        let mut new_commitments = vec![self.commitments[0].clone()];
         for i in 1..poly.len() {
             new_commitments.push((G.clone() * poly[i].clone()) + self.commitments[i].clone())
         }
@@ -286,14 +285,16 @@ mod tests {
         let (vss_scheme, secret_shares) =
             VerifiableSS::<P>::share_at_indices(3, 5, &secret, &parties);
 
-        let mut shares_vec = Vec::new();
-        shares_vec.push(secret_shares[0].clone());
-        shares_vec.push(secret_shares[1].clone());
-        shares_vec.push(secret_shares[3].clone());
-        shares_vec.push(secret_shares[4].clone());
+        let shares_vec = vec![
+            secret_shares[0].clone(),
+            secret_shares[1].clone(),
+            secret_shares[3].clone(),
+            secret_shares[4].clone(),
+        ];
+
         //test reconstruction
 
-        let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 1, 4, 5], &shares_vec);
+        let secret_reconstructed = vss_scheme.reconstruct(&[0, 1, 4, 5], &shares_vec);
         assert_eq!(secret, secret_reconstructed);
     }
 
@@ -308,14 +309,16 @@ mod tests {
 
         let (vss_scheme, secret_shares) = VerifiableSS::<P>::share(3, 5, &secret);
 
-        let mut shares_vec = Vec::new();
-        shares_vec.push(secret_shares[0].clone());
-        shares_vec.push(secret_shares[1].clone());
-        shares_vec.push(secret_shares[2].clone());
-        shares_vec.push(secret_shares[4].clone());
+        let shares_vec = vec![
+            secret_shares[0].clone(),
+            secret_shares[1].clone(),
+            secret_shares[2].clone(),
+            secret_shares[4].clone(),
+        ];
+
         //test reconstruction
 
-        let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 1, 2, 4], &shares_vec);
+        let secret_reconstructed = vss_scheme.reconstruct(&[0, 1, 2, 4], &shares_vec);
 
         assert_eq!(secret, secret_reconstructed);
         // test secret shares are verifiable
@@ -355,14 +358,15 @@ mod tests {
 
         let (vss_scheme, secret_shares) = VerifiableSS::<P>::share(3, 7, &secret);
 
-        let mut shares_vec = Vec::new();
-        shares_vec.push(secret_shares[0].clone());
-        shares_vec.push(secret_shares[6].clone());
-        shares_vec.push(secret_shares[2].clone());
-        shares_vec.push(secret_shares[4].clone());
+        let shares_vec = vec![
+            secret_shares[0].clone(),
+            secret_shares[6].clone(),
+            secret_shares[2].clone(),
+            secret_shares[4].clone(),
+        ];
 
         //test reconstruction
-        let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 6, 2, 4], &shares_vec);
+        let secret_reconstructed = vss_scheme.reconstruct(&[0, 6, 2, 4], &shares_vec);
         assert_eq!(secret, secret_reconstructed);
 
         // test secret shares are verifiable
@@ -398,12 +402,10 @@ mod tests {
 
         let (vss_scheme, secret_shares) = VerifiableSS::<P>::share(1, 2, &secret);
 
-        let mut shares_vec = Vec::new();
-        shares_vec.push(secret_shares[0].clone());
-        shares_vec.push(secret_shares[1].clone());
+        let shares_vec = vec![secret_shares[0].clone(), secret_shares[1].clone()];
 
         //test reconstruction
-        let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 1], &shares_vec);
+        let secret_reconstructed = vss_scheme.reconstruct(&[0, 1], &shares_vec);
         assert_eq!(secret, secret_reconstructed);
 
         // test secret shares are verifiable
@@ -431,9 +433,7 @@ mod tests {
 
         let (vss_scheme, secret_shares) = VerifiableSS::<P>::share(1, 3, &secret);
 
-        let mut shares_vec = Vec::new();
-        shares_vec.push(secret_shares[0].clone());
-        shares_vec.push(secret_shares[1].clone());
+        let shares_vec = vec![secret_shares[0].clone(), secret_shares[1].clone()];
 
         // test commitment to point and sum of commitments
         let (vss_scheme2, secret_shares2) = VerifiableSS::<P>::share(1, 3, &secret);
@@ -449,7 +449,7 @@ mod tests {
         assert_eq!(point1_sum_com, g_sum);
 
         //test reconstruction
-        let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 1], &shares_vec);
+        let secret_reconstructed = vss_scheme.reconstruct(&[0, 1], &shares_vec);
         assert_eq!(secret, secret_reconstructed);
 
         // test secret shares are verifiable
@@ -483,12 +483,10 @@ mod tests {
         let new_share_party_2 = secret_shares[1].clone() + zero_secret_shares[1].clone();
         let new_share_party_3 = secret_shares[2].clone() + zero_secret_shares[2].clone();
 
-        let mut shares_vec = Vec::new();
-        shares_vec.push(new_share_party_1.clone());
-        shares_vec.push(new_share_party_3.clone());
+        let shares_vec = vec![new_share_party_1.clone(), new_share_party_3.clone()];
 
         // reconstruction
-        let secret_reconstructed = vss_scheme.reconstruct(&vec![0, 2], &shares_vec);
+        let secret_reconstructed = vss_scheme.reconstruct(&[0, 2], &shares_vec);
         assert_eq!(secret, secret_reconstructed);
 
         // test secret shares are verifiable

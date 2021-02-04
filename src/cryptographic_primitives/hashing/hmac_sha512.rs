@@ -59,20 +59,20 @@ mod tests {
     #[test]
     fn create_hmac_test() {
         let key = BigInt::sample(512);
-        let result1 = HMacSha512::create_hmac(&key, &vec![&BigInt::from(10)]);
+        let result1 = HMacSha512::create_hmac(&key, &[&BigInt::from(10)]);
         let result1_bytes = &BigInt::to_vec(&result1)[..];
         let mut array_result: [u8; 64] = [0u8; 64];
         array_result.copy_from_slice(result1_bytes);
-        assert!(HMacSha512::verify(&key, &vec![&BigInt::from(10)], array_result).is_ok());
+        assert!(HMacSha512::verify(&key, &[&BigInt::from(10)], array_result).is_ok());
         let key2 = BigInt::sample(512);
         // same data , different key
-        let result2 = HMacSha512::create_hmac(&key2, &vec![&BigInt::from(10)]);
+        let result2 = HMacSha512::create_hmac(&key2, &[&BigInt::from(10)]);
         assert_ne!(result1, result2);
         // same key , different data
-        let result3 = HMacSha512::create_hmac(&key, &vec![&BigInt::from(10), &BigInt::from(11)]);
+        let result3 = HMacSha512::create_hmac(&key, &[&BigInt::from(10), &BigInt::from(11)]);
         assert_ne!(result1, result3);
         // same key, same data
-        let result4 = HMacSha512::create_hmac(&key, &vec![&BigInt::from(10)]);
+        let result4 = HMacSha512::create_hmac(&key, &[&BigInt::from(10)]);
         assert_eq!(result1, result4)
     }
 }

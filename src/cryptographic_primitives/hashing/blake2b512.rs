@@ -45,8 +45,7 @@ mod tests {
     #[test]
     // Very basic test here, TODO: suggest better testing
     fn create_hash_test() {
-        let result =
-            Blake::create_hash(&vec![&BigInt::one(), &BigInt::zero()], b"Zcash_RedJubjubH");
+        let result = Blake::create_hash(&[&BigInt::one(), &BigInt::zero()], b"Zcash_RedJubjubH");
         assert!(result > BigInt::zero());
     }
 
@@ -58,14 +57,11 @@ mod tests {
         P::Scalar: PartialEq + std::fmt::Debug,
     {
         let point = P::base_point2();
-        let result1 =
-            Blake::create_hash_from_ge(&vec![&point, &P::generator()], b"Zcash_RedJubjubH");
+        let result1 = Blake::create_hash_from_ge(&[&point, &P::generator()], b"Zcash_RedJubjubH");
         assert!(result1.to_big_int().to_str_radix(2).len() > 240);
-        let result2 =
-            Blake::create_hash_from_ge(&vec![&P::generator(), &point], b"Zcash_RedJubjubH");
+        let result2 = Blake::create_hash_from_ge(&[&P::generator(), &point], b"Zcash_RedJubjubH");
         assert_ne!(result1, result2);
-        let result3 =
-            Blake::create_hash_from_ge(&vec![&P::generator(), &point], b"Zcash_RedJubjubH");
+        let result3 = Blake::create_hash_from_ge(&[&P::generator(), &point], b"Zcash_RedJubjubH");
         assert_eq!(result2, result3);
     }
 }
