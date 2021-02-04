@@ -61,8 +61,8 @@ where
     // takes given VSS and generates a new VSS for the same secret and a secret shares vector to match the new coomitments
     pub fn reshare(&self) -> (VerifiableSS<P>, Vec<P::Scalar>) {
         let one: P::Scalar = ECScalar::from(&BigInt::one());
-        let poly = VerifiableSS::<P>::sample_polynomial(self.parameters.threshold.clone(), &one);
-        let index_vec: Vec<usize> = (1..=self.parameters.share_count.clone()).collect();
+        let poly = VerifiableSS::<P>::sample_polynomial(self.parameters.threshold, &one);
+        let index_vec: Vec<usize> = (1..=self.parameters.share_count).collect();
         let secret_shares_biased = VerifiableSS::<P>::evaluate_polynomial(&poly, &index_vec);
         let secret_shares: Vec<_> = (0..secret_shares_biased.len())
             .map(|i| secret_shares_biased[i].sub(&one.get_element()))
@@ -224,10 +224,9 @@ where
         let mut comm_iterator = self.commitments.iter().rev();
         let head = comm_iterator.next().unwrap();
         let tail = comm_iterator;
-        let comm_to_point = tail.fold(head.clone(), |acc, x: &P| {
+        tail.fold(head.clone(), |acc, x: &P| {
             x.clone() + acc * index_fe.clone()
-        });
-        comm_to_point.clone()
+        })
     }
 
     //compute \lambda_{index,S}, a lagrangian coefficient that change the (t,n) scheme to (|S|,|S|)
@@ -443,8 +442,8 @@ mod tests {
         let point_comm2 = vss_scheme.get_point_commitment(2);
         let g: P = ECPoint::generator();
         let g_sum = g.clone() * sum;
-        assert_eq!(g.clone() * secret_shares[0].clone(), point_comm1.clone());
-        assert_eq!(g.clone() * secret_shares[1].clone(), point_comm2.clone());
+        assert_eq!(g.clone() * secret_shares[0].clone(), point_comm1);
+        assert_eq!(g * secret_shares[1].clone(), point_comm2);
         let point1_sum_com =
             vss_scheme.get_point_commitment(1) + vss_scheme2.get_point_commitment(1);
         assert_eq!(point1_sum_com, g_sum);

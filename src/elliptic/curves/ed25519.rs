@@ -561,9 +561,9 @@ pub fn xrecover(y_coor: BigInt) -> BigInt {
     let d_d = expmod(&BigInt::from(121_666), &(q.clone() - BigInt::from(2)), &q);
 
     let d_bn = d_n * d_d;
-    let y_sqr = y_coor.clone() * y_coor.clone();
+    let y_sqr = y_coor.clone() * y_coor;
     let u = y_sqr.clone() - one.clone();
-    let v = y_sqr * d_bn.clone() + one.clone();
+    let v = y_sqr * d_bn + one;
     let v_inv = expmod(&v, &(q.clone() - BigInt::from(2)), &q);
 
     let x_sqr = u * v_inv;
@@ -576,7 +576,7 @@ pub fn xrecover(y_coor: BigInt) -> BigInt {
         x = BigInt::mod_mul(&x, &i, &q);
     }
     if x.modulus(&BigInt::from(2i32)) != BigInt::zero() {
-        x = q.clone() - x.clone();
+        x = q - x.clone();
     }
 
     x
@@ -586,7 +586,7 @@ pub fn xrecover(y_coor: BigInt) -> BigInt {
 pub fn expmod(b: &BigInt, e: &BigInt, m: &BigInt) -> BigInt {
     let one = BigInt::one();
     if e.clone() == BigInt::zero() {
-        return one.clone();
+        return one;
     };
     let t_temp = expmod(b, &(e.clone() / BigInt::from(2u32)), m);
     let mut t = BigInt::mod_pow(&t_temp, &BigInt::from(2u32), m);
@@ -690,7 +690,7 @@ mod tests {
     fn test_add_point() {
         let a: FE = ECScalar::new_random();
         let b: FE = ECScalar::new_random();
-        let a_plus_b_fe = a.clone() + &b;
+        let a_plus_b_fe = a + &b;
         let base: GE = ECPoint::generator();
         let point_ab1 = &base * &a_plus_b_fe;
         let point_a = &base * &a;
@@ -704,7 +704,7 @@ mod tests {
     fn test_add_scalar() {
         let a: FE = ECScalar::new_random();
         let zero: FE = FE::zero();
-        let a_plus_zero: FE = a.clone() + zero;
+        let a_plus_zero: FE = a + zero;
 
         assert_eq!(a_plus_zero, a);
     }
@@ -731,7 +731,7 @@ mod tests {
     fn test_mul_point() {
         let a: FE = ECScalar::new_random();
         let b: FE = ECScalar::new_random();
-        let a_mul_b_fe = a.clone() * &b;
+        let a_mul_b_fe = a * &b;
         let base: GE = ECPoint::generator();
         let point_ab1 = &base * &a_mul_b_fe;
         let point_a = &base * &a;

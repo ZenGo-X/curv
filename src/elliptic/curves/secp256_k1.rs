@@ -147,7 +147,7 @@ impl ECScalar for Secp256k1Scalar {
 
     fn add(&self, other: &SK) -> Secp256k1Scalar {
         let mut other_scalar: FE = ECScalar::new_random();
-        other_scalar.set_element(other.clone());
+        other_scalar.set_element(*other);
         let res: FE = ECScalar::from(&BigInt::mod_add(
             &self.to_big_int(),
             &other_scalar.to_big_int(),
@@ -161,7 +161,7 @@ impl ECScalar for Secp256k1Scalar {
 
     fn mul(&self, other: &SK) -> Secp256k1Scalar {
         let mut other_scalar: FE = ECScalar::new_random();
-        other_scalar.set_element(other.clone());
+        other_scalar.set_element(*other);
         let res: FE = ECScalar::from(&BigInt::mod_mul(
             &self.to_big_int(),
             &other_scalar.to_big_int(),
@@ -175,7 +175,7 @@ impl ECScalar for Secp256k1Scalar {
 
     fn sub(&self, other: &SK) -> Secp256k1Scalar {
         let mut other_scalar: FE = ECScalar::new_random();
-        other_scalar.set_element(other.clone());
+        other_scalar.set_element(*other);
         let res: FE = ECScalar::from(&BigInt::mod_sub(
             &self.to_big_int(),
             &other_scalar.to_big_int(),
@@ -338,7 +338,7 @@ impl ECPoint for Secp256k1Point {
                 template.extend_from_slice(&bytes);
                 let bytes_vec = template;
                 let mut template: Vec<u8> = vec![4];
-                template.append(&mut bytes_vec.clone());
+                template.append(&mut bytes_vec);
                 let bytes_slice = &template[..];
 
                 bytes_array_65.copy_from_slice(&bytes_slice[0..65]);
@@ -355,7 +355,7 @@ impl ECPoint for Secp256k1Point {
                 template.extend_from_slice(&bytes);
                 let bytes_vec = template;
                 let mut template: Vec<u8> = vec![2];
-                template.append(&mut bytes_vec.clone());
+                template.append(&mut bytes_vec);
                 let bytes_slice = &template[..];
 
                 bytes_array_33.copy_from_slice(&bytes_slice[0..33]);
@@ -370,7 +370,7 @@ impl ECPoint for Secp256k1Point {
                 let bytes_slice = &bytes_vec[0..64];
                 let bytes_vec = bytes_slice.to_vec();
                 let mut template: Vec<u8> = vec![4];
-                template.append(&mut bytes_vec.clone());
+                template.append(&mut bytes_vec);
                 let bytes_slice = &template[..];
 
                 bytes_array_65.copy_from_slice(&bytes_slice[0..65]);
@@ -768,10 +768,10 @@ mod tests {
         let a_minus_b = BigInt::mod_add(&a.to_big_int(), &minus_b, &order);
         let a_minus_b_fe: FE = ECScalar::from(&a_minus_b);
         let base: GE = ECPoint::generator();
-        let point_ab1 = base.clone() * a_minus_b_fe;
+        let point_ab1 = base * a_minus_b_fe;
 
-        let point_a = base.clone() * a;
-        let point_b = base.clone() * b;
+        let point_a = base * a;
+        let point_b = base * b;
         let point_ab2 = point_a.sub_point(&point_b.get_element());
         assert_eq!(point_ab1.get_element(), point_ab2.get_element());
     }
@@ -803,7 +803,7 @@ mod tests {
             let key_slice = rg.pk_to_key_slice();
 
             assert!(key_slice.len() == 65);
-            assert!(key_slice[0].clone() == 4);
+            assert!(key_slice[0] == 4);
 
             let rg_prime: GE = ECPoint::from_bytes(&key_slice[1..65]).unwrap();
             assert_eq!(rg_prime.get_element(), rg.get_element());

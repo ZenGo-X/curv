@@ -41,7 +41,7 @@ impl Pair {
     }
 
     pub fn add_pair(&self, other: &Pair) -> Self {
-        let mut res = self.clone();
+        let mut res = *self;
         res.e.mul_assign(&other.e);
         Pair { e: res.e }
     }

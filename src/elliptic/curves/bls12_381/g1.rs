@@ -86,7 +86,7 @@ impl ECScalar for FieldScalar {
     }
 
     fn get_element(&self) -> SK {
-        self.fe.clone()
+        self.fe
     }
     fn set_element(&mut self, element: SK) {
         self.fe = element
@@ -143,7 +143,7 @@ impl ECScalar for FieldScalar {
     fn add(&self, other: &SK) -> FieldScalar {
         let mut add_fe = FieldScalar {
             purpose: "other add",
-            fe: other.clone(),
+            fe: *other,
         };
         add_fe.fe.add_assign(&self.fe);
         FieldScalar {
@@ -155,7 +155,7 @@ impl ECScalar for FieldScalar {
     fn mul(&self, other: &SK) -> FieldScalar {
         let mut mul_fe = FieldScalar {
             purpose: "other mul",
-            fe: other.clone(),
+            fe: *other,
         };
         mul_fe.fe.mul_assign(&self.fe);
         FieldScalar {
@@ -165,7 +165,7 @@ impl ECScalar for FieldScalar {
     }
 
     fn sub(&self, other: &SK) -> FieldScalar {
-        let mut other_neg = other.clone();
+        let mut other_neg = *other;
         other_neg.negate();
         let sub_fe = FieldScalar {
             purpose: "other sub",
@@ -175,7 +175,7 @@ impl ECScalar for FieldScalar {
     }
 
     fn invert(&self) -> FieldScalar {
-        let sc = self.fe.clone();
+        let sc = self.fe;
         let inv_sc = sc.inverse().unwrap(); //TODO
         let inv_fe = FieldScalar {
             purpose: "inverse",
@@ -317,11 +317,11 @@ impl ECPoint for G1Point {
     }
 
     fn get_element(&self) -> PK {
-        self.ge.clone()
+        self.ge
     }
 
     fn x_coor(&self) -> Option<BigInt> {
-        let tmp = G1Uncompressed::from_affine(self.ge.clone());
+        let tmp = G1Uncompressed::from_affine(self.ge);
         let bytes = tmp.as_ref();
         let x_coor = &bytes[0..COMPRESSED_SIZE];
         let bn = BigInt::from(x_coor);
@@ -329,7 +329,7 @@ impl ECPoint for G1Point {
     }
 
     fn y_coor(&self) -> Option<BigInt> {
-        let tmp = G1Uncompressed::from_affine(self.ge.clone());
+        let tmp = G1Uncompressed::from_affine(self.ge);
         let bytes = tmp.as_ref();
         let y_coor = &bytes[COMPRESSED_SIZE..COMPRESSED_SIZE * 2];
         let bn = BigInt::from(y_coor);
@@ -337,7 +337,7 @@ impl ECPoint for G1Point {
     }
 
     fn bytes_compressed_to_big_int(&self) -> BigInt {
-        let tmp = G1Compressed::from_affine(self.ge.clone());
+        let tmp = G1Compressed::from_affine(self.ge);
         let bytes = tmp.as_ref();
         let bn = BigInt::from(&bytes[..]);
         bn
@@ -633,7 +633,7 @@ mod tests {
     fn test_add_point() {
         let a: FE = ECScalar::new_random();
         let b: FE = ECScalar::new_random();
-        let a_plus_b_fe = a.clone() + &b;
+        let a_plus_b_fe = a + &b;
         let base: GE = ECPoint::generator();
         let point_ab1 = &base * &a_plus_b_fe;
         let point_a = &base * &a;
@@ -647,7 +647,7 @@ mod tests {
     fn test_add_scalar() {
         let a: FE = ECScalar::new_random();
         let zero: FE = FE::zero();
-        let a_plus_zero: FE = a.clone() + zero;
+        let a_plus_zero: FE = a + zero;
 
         assert_eq!(a_plus_zero, a);
     }
@@ -676,7 +676,7 @@ mod tests {
     fn test_mul_point() {
         let a: FE = ECScalar::new_random();
         let b: FE = ECScalar::new_random();
-        let a_mul_b_fe = a.clone() * &b;
+        let a_mul_b_fe = a * &b;
         let base: GE = ECPoint::generator();
         let point_ab1 = &base * &a_mul_b_fe;
         let point_a = &base * &a;
