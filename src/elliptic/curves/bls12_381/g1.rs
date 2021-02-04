@@ -117,7 +117,7 @@ impl ECScalar for FieldScalar {
 
     fn to_big_int(&self) -> BigInt {
         let tmp = self.fe.into_repr();
-        let scalar_u64 = tmp.as_ref().clone();
+        let scalar_u64 = tmp.as_ref();
 
         let to_bn = scalar_u64.iter().rev().fold(BigInt::zero(), |acc, x| {
             let element_bn = BigInt::from(*x);
