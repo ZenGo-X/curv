@@ -58,7 +58,7 @@ where
         )
     }
 
-    // takes given VSS and generates a new VSS for the same secret and a secret shares vector to match the new coomitments
+    // takes given VSS and generates a new VSS for the same secret and a secret shares vector to match the new commitments
     pub fn reshare(&self) -> (VerifiableSS<P>, Vec<P::Scalar>) {
         let one: P::Scalar = ECScalar::from(&BigInt::one());
         let poly = VerifiableSS::<P>::sample_polynomial(self.parameters.threshold, &one);
