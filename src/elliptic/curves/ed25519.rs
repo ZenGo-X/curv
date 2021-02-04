@@ -603,7 +603,6 @@ mod tests {
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
-    use serde_json;
 
     type GE = Ed25519Point;
     type FE = Ed25519Scalar;

@@ -562,9 +562,6 @@ impl G2Point {
 
 #[cfg(test)]
 mod tests {
-    use bincode;
-    use serde_json;
-
     use pairing_plus::bls12_381::{G2Uncompressed, G2};
     use pairing_plus::hash_to_curve::HashToCurve;
     use pairing_plus::hash_to_field::ExpandMsgXmd;

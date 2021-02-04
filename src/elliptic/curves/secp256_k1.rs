@@ -622,8 +622,6 @@ mod tests {
     use crate::cryptographic_primitives::hashing::traits::Hash;
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
-    use bincode;
-    use serde_json;
 
     #[test]
     fn serialize_sk() {

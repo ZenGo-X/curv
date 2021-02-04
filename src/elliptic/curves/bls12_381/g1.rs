@@ -552,9 +552,6 @@ impl G1Point {
 
 #[cfg(test)]
 mod tests {
-    use bincode;
-    use serde_json;
-
     use pairing_plus::bls12_381::{G1Uncompressed, G1};
     use pairing_plus::hash_to_curve::HashToCurve;
     use pairing_plus::hash_to_field::ExpandMsgXmd;
