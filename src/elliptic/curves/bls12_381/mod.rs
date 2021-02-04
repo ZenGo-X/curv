@@ -74,7 +74,7 @@ mod tests {
         let p: GE1 = ECPoint::generator();
         let q: GE2 = ECPoint::generator();
         let r: GE2 = ECPoint::base_point2();
-        let q_plus_r = &q + &r;
+        let q_plus_r = q + r;
         let e_p_q = Pair::compute_pairing(&p, &q);
         let e_p_r = Pair::compute_pairing(&p, &r);
         let e_p_q_r = Pair::compute_pairing(&p, &q_plus_r);

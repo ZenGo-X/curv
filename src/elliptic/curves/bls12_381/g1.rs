@@ -613,9 +613,9 @@ mod tests {
         let a_minus_b_fe: FE = a.sub(&b.get_element());
         let base: GE = ECPoint::generator();
 
-        let point_ab1 = &base * &a_minus_b_fe;
-        let point_a = &base * &a;
-        let point_b = &base * &b;
+        let point_ab1 = base * a_minus_b_fe;
+        let point_a = base * a;
+        let point_b = base * b;
         let point_ab2 = point_a.sub_point(&point_b.get_element());
         println!(
             "point ab1: {:?}",
@@ -633,11 +633,11 @@ mod tests {
     fn test_add_point() {
         let a: FE = ECScalar::new_random();
         let b: FE = ECScalar::new_random();
-        let a_plus_b_fe = a + &b;
+        let a_plus_b_fe = a + b;
         let base: GE = ECPoint::generator();
-        let point_ab1 = &base * &a_plus_b_fe;
-        let point_a = &base * &a;
-        let point_b = &base * &b;
+        let point_ab1 = base * a_plus_b_fe;
+        let point_a = base * a;
+        let point_b = base * b;
         let point_ab2 = point_a.add_point(&point_b.get_element());
 
         assert_eq!(point_ab1, point_ab2);
@@ -676,10 +676,10 @@ mod tests {
     fn test_mul_point() {
         let a: FE = ECScalar::new_random();
         let b: FE = ECScalar::new_random();
-        let a_mul_b_fe = a * &b;
+        let a_mul_b_fe = a * b;
         let base: GE = ECPoint::generator();
-        let point_ab1 = &base * &a_mul_b_fe;
-        let point_a = &base * &a;
+        let point_ab1 = base * a_mul_b_fe;
+        let point_a = base * a;
         let point_ab2 = point_a.scalar_mul(&b.get_element());
 
         assert_eq!(point_ab1, point_ab2);
@@ -703,7 +703,7 @@ mod tests {
         let g: GE = ECPoint::generator();
 
         let fe: FE = ECScalar::from(&BigInt::from(1));
-        let b_tag = &g * &fe;
+        let b_tag = g * fe;
         assert_eq!(b_tag, g);
     }
 
