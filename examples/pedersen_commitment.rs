@@ -22,11 +22,10 @@ where
 
     let security_bits = 256;
     let blinding_factor = BigInt::sample(security_bits);
-    let com = PedersenCommitment::<P>::create_commitment_with_user_defined_randomness(
+    let _ = PedersenCommitment::<P>::create_commitment_with_user_defined_randomness(
         message,
         &blinding_factor,
     );
-    (com, blinding_factor);
 }
 
 fn main() {
