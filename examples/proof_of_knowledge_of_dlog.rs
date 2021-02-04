@@ -20,11 +20,7 @@ where
 
     let witness: P::Scalar = ECScalar::new_random();
     let dlog_proof = DLogProof::<P>::prove(&witness);
-    let verified = DLogProof::verify(&dlog_proof);
-    match verified {
-        Ok(_t) => assert!(true),
-        Err(_e) => assert!(false),
-    }
+    assert!(DLogProof::verify(&dlog_proof).is_ok());
 }
 
 fn main() {
