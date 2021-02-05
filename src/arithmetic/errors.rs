@@ -1,5 +1,6 @@
 use std::{error, fmt};
 
+/// Error type returned when conversion from hex to BigInt fails.
 #[derive(Debug)]
 pub struct ParseBigIntFromHexError {
     reason: ParseFromHexReason,
@@ -32,6 +33,7 @@ impl From<ParseFromHexReason> for ParseBigIntFromHexError {
     }
 }
 
+/// Error type returned when conversion from BigInt to primitive integer type (u64, i64, etc) fails
 #[derive(Debug)]
 pub struct TryFromBigIntError {
     pub(super) type_name: &'static str,
