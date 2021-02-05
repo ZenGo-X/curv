@@ -5,13 +5,14 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
-use super::ProofError;
-
-use crate::elliptic::curves::traits::*;
+use serde::{Deserialize, Serialize};
+use zeroize::Zeroize;
 
 use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use crate::cryptographic_primitives::hashing::traits::Hash;
-use zeroize::Zeroize;
+use crate::elliptic::curves::traits::*;
+
+use super::ProofError;
 
 /// This is implementation of Schnorr's identification protocol for elliptic curve groups or a
 /// sigma protocol for Proof of knowledge of the discrete log of an Elliptic-curve point:

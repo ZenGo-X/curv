@@ -5,13 +5,15 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
+use serde::{Deserialize, Serialize};
+use zeroize::Zeroize;
+
 use super::ProofError;
 use crate::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
 use crate::cryptographic_primitives::commitments::traits::Commitment;
 use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use crate::cryptographic_primitives::hashing::traits::Hash;
 use crate::elliptic::curves::traits::*;
-use zeroize::Zeroize;
 
 /// protocol for proving that Pedersen commitment c was constructed correctly which is the same as
 /// proof of knowledge of (m,r) such that c = mG + rH.

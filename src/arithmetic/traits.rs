@@ -21,6 +21,10 @@ use super::errors::ParseBigIntFromHexError;
 /// Reuse common traits from [num_traits] crate
 pub use num_traits::{One, Zero};
 
+#[deprecated(
+    since = "0.6.0",
+    note = "BigInt now implements zeroize::Zeroize trait, you should use it instead"
+)]
 pub trait ZeroizeBN {
     fn zeroize_bn(&mut self);
 }
@@ -30,13 +34,21 @@ pub trait Converter: Sized {
     fn from_hex(n: &str) -> Result<Self, ParseBigIntFromHexError>;
 }
 
-pub trait Modulo {
+pub trait BasicOps {
+    fn pow(&self, exponent: u32) -> Self;
+    fn mul(&self, other: &Self) -> Self;
+    fn sub(&self, other: &Self) -> Self;
+    fn add(&self, other: &Self) -> Self;
+    fn abs(&self) -> Self;
+}
+
+pub trait Modulo: Sized {
     fn mod_pow(base: &Self, exponent: &Self, modulus: &Self) -> Self;
     fn mod_mul(a: &Self, b: &Self, modulus: &Self) -> Self;
     fn mod_sub(a: &Self, b: &Self, modulus: &Self) -> Self;
     fn mod_add(a: &Self, b: &Self, modulus: &Self) -> Self;
-    fn mod_inv(a: &Self, modulus: &Self) -> Self;
-    fn modulus(a: &Self, modulus: &Self) -> Self;
+    fn mod_inv(a: &Self, modulus: &Self) -> Option<Self>;
+    fn modulus(&self, modulus: &Self) -> Self;
 }
 
 pub trait Samplable {
@@ -61,10 +73,15 @@ where
 }
 
 pub trait BitManipulation {
-    fn set_bit(self: &mut Self, bit: usize, bit_val: bool);
-    fn test_bit(self: &Self, bit: usize) -> bool;
+    fn set_bit(&mut self, bit: usize, bit_val: bool);
+    fn test_bit(&self, bit: usize) -> bool;
+    fn bit_length(&self) -> usize;
 }
 
+#[deprecated(
+    since = "0.6.0",
+    note = "Use according From<T> and TryFrom<T> traits implemented on BigInt"
+)]
 pub trait ConvertFrom<T> {
     fn _from(_: &T) -> Self;
 }

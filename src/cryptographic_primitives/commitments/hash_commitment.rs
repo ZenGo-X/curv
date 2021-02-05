@@ -14,7 +14,7 @@ use crate::BigInt;
 
 use super::traits::Commitment;
 use super::SECURITY_BITS;
-use crate::arithmetic::traits::Samplable;
+use crate::arithmetic::traits::*;
 use sha3::{Digest, Sha3_256};
 //TODO:  using the function with BigInt's as input instead of string's makes it impossible to commit to empty message or use empty randomness
 impl Commitment<BigInt> for HashCommitment {
@@ -45,7 +45,7 @@ mod tests {
     use super::Commitment;
     use super::HashCommitment;
     use super::SECURITY_BITS;
-    use crate::arithmetic::traits::Samplable;
+    use crate::arithmetic::traits::*;
     use crate::BigInt;
     use sha3::{Digest, Sha3_256};
 
@@ -58,10 +58,10 @@ mod tests {
         for _ in 1..sample_size {
             let message = BigInt::sample(SECURITY_BITS);
             let (commitment, blind_factor) = HashCommitment::create_commitment(&message);
-            if commitment.to_str_radix(2).len() == hex_len {
+            if commitment.bit_length() == hex_len {
                 ctr_commit_len = ctr_commit_len + 1;
             }
-            if blind_factor.to_str_radix(2).len() == hex_len {
+            if blind_factor.bit_length() == hex_len {
                 ctr_blind_len = ctr_blind_len + 1;
             }
         }
@@ -80,7 +80,7 @@ mod tests {
         let (_commitment, blind_factor) = HashCommitment::create_commitment(&message);
         let commitment2 =
             HashCommitment::create_commitment_with_user_defined_randomness(&message, &blind_factor);
-        assert!(commitment2.to_str_radix(16).len() / 2 <= SECURITY_BITS / 8);
+        assert!(commitment2.to_hex().len() / 2 <= SECURITY_BITS / 8);
     }
 
     #[test]

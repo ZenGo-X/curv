@@ -9,7 +9,7 @@ use std::marker::PhantomData;
 
 use super::traits::Commitment;
 use super::SECURITY_BITS;
-use crate::arithmetic::traits::Samplable;
+use crate::arithmetic::traits::*;
 
 use crate::elliptic::curves::traits::*;
 use crate::BigInt;

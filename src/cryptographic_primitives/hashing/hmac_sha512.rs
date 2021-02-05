@@ -8,7 +8,7 @@
 use crate::BigInt;
 
 use super::traits::KeyedHash;
-use crate::arithmetic::traits::Converter;
+use crate::arithmetic::traits::*;
 
 use hmac::{Hmac, Mac};
 use sha2::Sha512;
@@ -51,8 +51,7 @@ impl KeyedHash for HMacSha512 {
 mod tests {
 
     use super::HMacSha512;
-    use crate::arithmetic::traits::Converter;
-    use crate::arithmetic::traits::Samplable;
+    use crate::arithmetic::traits::*;
     use crate::cryptographic_primitives::hashing::traits::KeyedHash;
     use crate::BigInt;
 

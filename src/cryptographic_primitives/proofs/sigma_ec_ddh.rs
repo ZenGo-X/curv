@@ -5,11 +5,13 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
+use serde::{Deserialize, Serialize};
+use zeroize::Zeroize;
+
 use super::ProofError;
 use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use crate::cryptographic_primitives::hashing::traits::Hash;
 use crate::elliptic::curves::traits::*;
-use zeroize::Zeroize;
 
 /// This protocol is the elliptic curve form of the protocol from :
 ///  D. Chaum, T. P. Pedersen. Transferred cash grows in size. In Advances in Cryptology, EUROCRYPT , volume 658 of Lecture Notes in Computer Science, pages 390 - 407, 1993.

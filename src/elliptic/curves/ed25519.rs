@@ -12,11 +12,9 @@ use std::fmt::Debug;
 use std::str;
 pub const TWO_TIMES_SECRET_KEY_SIZE: usize = 64;
 use super::traits::{ECPoint, ECScalar};
-use crate::arithmetic::traits::Converter;
 use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use crate::cryptographic_primitives::hashing::traits::Hash;
-use serde::de;
-use serde::de::{MapAccess, SeqAccess, Visitor};
+use serde::de::{self, Error, MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
@@ -24,7 +22,7 @@ use std::fmt;
 use std::ops::{Add, Mul};
 pub type SK = Fe;
 pub type PK = GeP3;
-use crate::arithmetic::traits::{Modulo, Samplable};
+use crate::arithmetic::traits::*;
 use crate::BigInt;
 use crate::ErrorKey::{self, InvalidPublicKey};
 #[cfg(feature = "merkle")]
@@ -161,7 +159,7 @@ impl ECScalar for Ed25519Scalar {
 
     fn invert(&self) -> Ed25519Scalar {
         let self_bn = self.to_big_int();
-        let inv = self_bn.invert(&FE::q()).unwrap();
+        let inv = BigInt::mod_inv(&self_bn, &FE::q()).unwrap();
         let inv_fe: FE = ECScalar::from(&inv);
         inv_fe
     }
@@ -240,7 +238,7 @@ impl<'de> Visitor<'de> for Ed25519ScalarVisitor {
     }
 
     fn visit_str<E: de::Error>(self, s: &str) -> Result<Ed25519Scalar, E> {
-        let v = BigInt::from_str_radix(s, 16).expect("Failed in serde");
+        let v = BigInt::from_hex(s).map_err(E::custom)?;
         Ok(ECScalar::from(&v))
     }
 }
@@ -522,10 +520,10 @@ impl<'de> Visitor<'de> for Ed25519PointVisitor {
     where
         V: SeqAccess<'de>,
     {
-        let bytes_str = dbg!(seq
+        let bytes_str = seq
             .next_element()?
-            .ok_or_else(|| panic!("deserialization failed"))?);
-        let bytes_bn = BigInt::from_hex(bytes_str);
+            .ok_or(V::Error::invalid_length(0, &"a single element"))?;
+        let bytes_bn = BigInt::from_hex(bytes_str).map_err(V::Error::custom)?;
         let bytes = BigInt::to_vec(&bytes_bn);
         Ok(Ed25519Point::from_bytes(&bytes[..]).expect("error deserializing point"))
     }
@@ -539,14 +537,14 @@ impl<'de> Visitor<'de> for Ed25519PointVisitor {
                 "bytes_str" => {
                     bytes_str = String::from(v);
                 }
-                _ => panic!("deserialization failed!"),
+                _ => return Err(E::Error::unknown_field(key, &["bytes_str"]))?,
             }
         }
 
-        let bytes_bn = BigInt::from_hex(&bytes_str);
+        let bytes_bn = BigInt::from_hex(&bytes_str).map_err(E::Error::custom)?;
         let bytes = BigInt::to_vec(&bytes_bn);
 
-        Ok(Ed25519Point::from_bytes(&bytes[..]).expect("error deserializing point"))
+        Ed25519Point::from_bytes(&bytes[..]).map_err(|_| E::Error::custom("invalid ed25519 point"))
     }
 }
 
@@ -574,7 +572,7 @@ pub fn xrecover(y_coor: BigInt) -> BigInt {
         let i = expmod(&BigInt::from(2i32), &q_minus_1_div_4, &q);
         x = BigInt::mod_mul(&x, &i, &q);
     }
-    if x.modulus(&BigInt::from(2i32)) != BigInt::zero() {
+    if BigInt::modulus(&x, &BigInt::from(2i32)) != BigInt::zero() {
         x = q.clone() - x.clone();
     }
 
@@ -590,7 +588,7 @@ pub fn expmod(b: &BigInt, e: &BigInt, m: &BigInt) -> BigInt {
     let t_temp = expmod(b, &(e.clone() / BigInt::from(2u32)), m);
     let mut t = BigInt::mod_pow(&t_temp, &BigInt::from(2u32), m);
 
-    if e.clone().modulus(&BigInt::from(2)) != BigInt::zero() {
+    if BigInt::modulus(&e, &BigInt::from(2)) != BigInt::zero() {
         t = BigInt::mod_mul(&t, b, m);
     }
     t
@@ -599,7 +597,7 @@ pub fn expmod(b: &BigInt, e: &BigInt, m: &BigInt) -> BigInt {
 #[cfg(test)]
 mod tests {
     use super::{Ed25519Point, Ed25519Scalar};
-    use crate::arithmetic::traits::{Converter, Modulo};
+    use crate::arithmetic::traits::*;
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
@@ -747,7 +745,7 @@ mod tests {
         let a_bn = a.to_big_int();
 
         let a_inv = a.invert();
-        let a_inv_bn_1 = a_bn.invert(&FE::q()).unwrap();
+        let a_inv_bn_1 = BigInt::mod_inv(&a_bn, &FE::q()).unwrap();
         let a_inv_bn_2 = a_inv.to_big_int();
 
         assert_eq!(a_inv_bn_1, a_inv_bn_2);
@@ -809,8 +807,8 @@ mod tests {
     fn test_xy_coor() {
         let g: GE = GE::generator();
         assert_eq!(
-            g.x_coor().unwrap().to_str_radix(10),
-            "15112221349535400772501151409588531511454012693041857206046113283949847762202"
+            g.x_coor().unwrap().to_hex(),
+            "216936d3cd6e53fec0a4e231fdd6dc5c692cc7609525a7b2c9562d608f25d51a"
         );
     }
 }
