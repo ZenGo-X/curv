@@ -30,6 +30,7 @@ use zeroize::Zeroize;
 use super::errors::*;
 use super::traits::*;
 
+/// Big integer
 #[derive(PartialOrd, PartialEq, Ord, Eq, Clone, Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct BigInt {
