@@ -18,7 +18,7 @@ use std::fmt::Debug;
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 
-use crate::arithmetic::traits::Samplable;
+use crate::arithmetic::traits::*;
 use crate::cryptographic_primitives::commitments::hash_commitment::HashCommitment;
 use crate::cryptographic_primitives::commitments::traits::Commitment;
 use crate::cryptographic_primitives::proofs::sigma_dlog::*;

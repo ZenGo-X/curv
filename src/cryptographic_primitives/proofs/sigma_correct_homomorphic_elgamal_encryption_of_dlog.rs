@@ -6,11 +6,13 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
+use serde::{Deserialize, Serialize};
+use zeroize::Zeroize;
+
 use super::ProofError;
 use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use crate::cryptographic_primitives::hashing::traits::Hash;
 use crate::elliptic::curves::traits::*;
-use zeroize::Zeroize;
 
 /// This is a proof of knowledge that a pair of group elements {D, E}
 /// form a valid homomorphic ElGamal encryption (”in the exponent”) using public key Y .

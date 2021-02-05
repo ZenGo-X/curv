@@ -7,7 +7,7 @@
 */
 
 use super::traits::{ECPoint, ECScalar};
-use crate::arithmetic::traits::Converter;
+use crate::arithmetic::traits::*;
 use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use crate::cryptographic_primitives::hashing::traits::Hash;
 use crate::BigInt;
@@ -17,8 +17,7 @@ use curve25519_dalek::constants::RISTRETTO_BASEPOINT_COMPRESSED;
 use curve25519_dalek::ristretto::CompressedRistretto;
 use curve25519_dalek::scalar::Scalar;
 use rand::thread_rng;
-use serde::de;
-use serde::de::{MapAccess, SeqAccess, Visitor};
+use serde::de::{self, Error, MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
@@ -227,7 +226,7 @@ impl<'de> Visitor<'de> for Secp256k1ScalarVisitor {
     }
 
     fn visit_str<E: de::Error>(self, s: &str) -> Result<RistrettoScalar, E> {
-        let v = BigInt::from_str_radix(s, 16).expect("Failed in serde");
+        let v = BigInt::from_hex(s).map_err(E::custom)?;
         Ok(ECScalar::from(&v))
     }
 }
@@ -461,8 +460,8 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
     {
         let bytes_str = seq
             .next_element()?
-            .ok_or_else(|| panic!("deserialization failed"))?;
-        let bytes_bn = BigInt::from_hex(bytes_str);
+            .ok_or(V::Error::invalid_length(0, &"a single element"))?;
+        let bytes_bn = BigInt::from_hex(bytes_str).map_err(V::Error::custom)?;
         let bytes = BigInt::to_vec(&bytes_bn);
         Ok(RistrettoCurvPoint::from_bytes(&bytes[..]).expect("error deserializing point"))
     }
@@ -476,10 +475,10 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
                 "bytes_str" => {
                     bytes_str = String::from(v);
                 }
-                _ => panic!("deSerialization failed!"),
+                _ => return Err(E::Error::unknown_field(key, &["bytes_str"])),
             }
         }
-        let bytes_bn = BigInt::from_hex(&bytes_str);
+        let bytes_bn = BigInt::from_hex(&bytes_str).map_err(E::Error::custom)?;
         let bytes = BigInt::to_vec(&bytes_bn);
 
         Ok(RistrettoCurvPoint::from_bytes(&bytes[..]).expect("error deserializing point"))
@@ -489,8 +488,7 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
 #[cfg(test)]
 mod tests {
     use super::{RistrettoCurvPoint, RistrettoScalar};
-    use crate::arithmetic::traits::Converter;
-    use crate::arithmetic::traits::Modulo;
+    use crate::arithmetic::traits::*;
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
@@ -581,7 +579,7 @@ mod tests {
         let a: FE = ECScalar::new_random();
         let a_bn = a.to_big_int();
         let a_inv = a.invert();
-        let a_inv_bn_1 = a_bn.invert(&FE::q()).unwrap();
+        let a_inv_bn_1 = BigInt::mod_inv(&a_bn, &FE::q()).unwrap();
         let a_inv_bn_2 = a_inv.to_big_int();
         assert_eq!(a_inv_bn_1, a_inv_bn_2);
     }

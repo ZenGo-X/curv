@@ -25,8 +25,7 @@ use pairing_plus::EncodedPoint;
 use pairing_plus::{CurveAffine, CurveProjective, Engine};
 use sha2::Sha256;
 
-use serde::de;
-use serde::de::{MapAccess, SeqAccess, Visitor};
+use serde::de::{self, Error, MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
@@ -34,7 +33,7 @@ use serde::{Deserialize, Deserializer};
 pub type SK = <pairing_plus::bls12_381::Bls12 as ScalarEngine>::Fr;
 pub type PK = <pairing_plus::bls12_381::Bls12 as Engine>::G2Affine;
 
-use crate::arithmetic::traits::{Converter, Samplable};
+use crate::arithmetic::traits::*;
 use crate::BigInt;
 use crate::ErrorKey::{self};
 
@@ -259,7 +258,7 @@ impl<'de> Visitor<'de> for BLS12_381ScalarVisitor {
     }
 
     fn visit_str<E: de::Error>(self, s: &str) -> Result<FieldScalar, E> {
-        let v = BigInt::from_str_radix(s, 16).expect("Failed in serde");
+        let v = BigInt::from_hex(s).map_err(E::custom)?;
         Ok(ECScalar::from(&v))
     }
 }
@@ -270,7 +269,7 @@ impl Debug for G2Point {
             f,
             "Point {{ purpose: {:?}, bytes: {:?} }}",
             self.purpose,
-            self.bytes_compressed_to_big_int().to_str_radix(16)
+            self.bytes_compressed_to_big_int().to_hex()
         )
     }
 }
@@ -518,8 +517,8 @@ impl<'de> Visitor<'de> for Bls12381G2PointVisitor {
     {
         let bytes_str = seq
             .next_element()?
-            .ok_or_else(|| panic!("deserialization failed"))?;
-        let bytes_bn = BigInt::from_hex(bytes_str);
+            .ok_or(V::Error::invalid_length(0, &"a single element"))?;
+        let bytes_bn = BigInt::from_hex(bytes_str).map_err(V::Error::custom)?;
         let bytes = BigInt::to_vec(&bytes_bn);
         Ok(G2Point::from_bytes(&bytes[..]).expect("error deserializing point"))
     }
@@ -533,10 +532,10 @@ impl<'de> Visitor<'de> for Bls12381G2PointVisitor {
                 "bytes_str" => {
                     bytes_str = String::from(v);
                 }
-                _ => panic!("deserialization failed!"),
+                _ => return Err(E::Error::unknown_field(key, &["bytes_str"])),
             }
         }
-        let bytes_bn = BigInt::from_hex(&bytes_str);
+        let bytes_bn = BigInt::from_hex(&bytes_str).map_err(E::Error::custom)?;
         let bytes = BigInt::to_vec(&bytes_bn);
 
         Ok(G2Point::from_bytes(&bytes[..]).expect("error deserializing point"))
@@ -568,7 +567,7 @@ mod tests {
     use sha2::Sha256;
 
     use super::G2Point;
-    use crate::arithmetic::traits::Modulo;
+    use crate::arithmetic::traits::*;
     use crate::elliptic::curves::bls12_381::g2::{FE, GE};
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
@@ -629,11 +628,11 @@ mod tests {
         let point_ab2 = point_a.sub_point(&point_b.get_element());
         println!(
             "point ab1: {:?}",
-            point_ab1.bytes_compressed_to_big_int().to_str_radix(16)
+            point_ab1.bytes_compressed_to_big_int().to_hex()
         );
         println!(
             "point ab2: {:?}",
-            point_ab2.bytes_compressed_to_big_int().to_str_radix(16)
+            point_ab2.bytes_compressed_to_big_int().to_hex()
         );
 
         assert_eq!(point_ab1, point_ab2);
@@ -702,7 +701,7 @@ mod tests {
         let a_bn = a.to_big_int();
 
         let a_inv = a.invert();
-        let a_inv_bn_1 = a_bn.invert(&FE::q()).unwrap();
+        let a_inv_bn_1 = BigInt::mod_inv(&a_bn, &FE::q()).unwrap();
         let a_inv_bn_2 = a_inv.to_big_int();
 
         assert_eq!(a_inv_bn_1, a_inv_bn_2);
