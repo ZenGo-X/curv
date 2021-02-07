@@ -107,7 +107,7 @@ mod tests {
         let h: P::Scalar = ECScalar::new_random();
         let H = G.clone() * h;
         let y: P::Scalar = ECScalar::new_random();
-        let Y = G.clone() * y.clone();
+        let Y = G.clone() * y;
         let D = H.clone() * witness.x.clone() + Y.clone() * witness.r.clone();
         let E = G.clone() * witness.r.clone();
         let delta = HomoElGamalStatement { G, H, Y, D, E };

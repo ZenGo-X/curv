@@ -14,12 +14,12 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-use super::rand::rngs::OsRng;
-use super::rand::RngCore;
 use super::traits::{
     BitManipulation, ConvertFrom, Converter, Modulo, NumberTests, Samplable, ZeroizeBN, EGCD,
 };
 use gmp::mpz::Mpz;
+use rand::rngs::OsRng;
+use rand::RngCore;
 
 use std::borrow::Borrow;
 use std::sync::atomic;
@@ -142,7 +142,7 @@ impl EGCD for Mpz {
 }
 
 impl BitManipulation for Mpz {
-    fn set_bit(self: &mut Self, bit: usize, bit_val: bool) {
+    fn set_bit(&mut self, bit: usize, bit_val: bool) {
         if bit_val {
             self.setbit(bit);
         } else {
@@ -150,7 +150,7 @@ impl BitManipulation for Mpz {
         }
     }
 
-    fn test_bit(self: &Self, bit: usize) -> bool {
+    fn test_bit(&self, bit: usize) -> bool {
         self.tstbit(bit)
     }
 }

@@ -550,6 +550,7 @@ impl<'de> Visitor<'de> for Ed25519PointVisitor {
     }
 }
 
+#[allow(clippy::many_single_char_names)]
 //helper function, based on https://ed25519.cr.yp.to/python/ed25519.py
 pub fn xrecover(y_coor: BigInt) -> BigInt {
     //   let d = "37095705934669439343138083508754565189542113879843219016388785533085940283555";
@@ -560,9 +561,9 @@ pub fn xrecover(y_coor: BigInt) -> BigInt {
     let d_d = expmod(&BigInt::from(121_666), &(q.clone() - BigInt::from(2)), &q);
 
     let d_bn = d_n * d_d;
-    let y_sqr = y_coor.clone() * y_coor.clone();
+    let y_sqr = y_coor.clone() * y_coor;
     let u = y_sqr.clone() - one.clone();
-    let v = y_sqr * d_bn.clone() + one.clone();
+    let v = y_sqr * d_bn + one;
     let v_inv = expmod(&v, &(q.clone() - BigInt::from(2)), &q);
 
     let x_sqr = u * v_inv;
@@ -575,7 +576,7 @@ pub fn xrecover(y_coor: BigInt) -> BigInt {
         x = BigInt::mod_mul(&x, &i, &q);
     }
     if x.modulus(&BigInt::from(2i32)) != BigInt::zero() {
-        x = q.clone() - x.clone();
+        x = q - x.clone();
     }
 
     x
@@ -585,7 +586,7 @@ pub fn xrecover(y_coor: BigInt) -> BigInt {
 pub fn expmod(b: &BigInt, e: &BigInt, m: &BigInt) -> BigInt {
     let one = BigInt::one();
     if e.clone() == BigInt::zero() {
-        return one.clone();
+        return one;
     };
     let t_temp = expmod(b, &(e.clone() / BigInt::from(2u32)), m);
     let mut t = BigInt::mod_pow(&t_temp, &BigInt::from(2u32), m);
@@ -603,12 +604,12 @@ mod tests {
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
-    use serde_json;
 
     type GE = Ed25519Point;
     type FE = Ed25519Scalar;
 
     #[test]
+    #[allow(clippy::op_ref)] // Enables type inference.
     fn test_serdes_pk() {
         let mut pk = GE::generator();
         let mut s = serde_json::to_string(&pk).expect("Failed in serialization");
@@ -645,6 +646,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::op_ref)] // Enables type inference.
     fn bincode_pk() {
         let pk = GE::generator();
         let encoded = bincode::serialize(&pk).unwrap();
@@ -655,6 +657,7 @@ mod tests {
 
     #[test]
     #[should_panic]
+    #[allow(clippy::op_ref)] // Enables type inference.
     fn test_serdes_bad_pk() {
         let pk = GE::generator();
         let s = serde_json::to_string(&pk).expect("Failed in serialization");
@@ -679,9 +682,9 @@ mod tests {
         let b: FE = ECScalar::new_random();
         let a_minus_b_fe: FE = a.sub(&b.get_element());
         let base: GE = ECPoint::generator();
-        let point_ab1 = &base * &a_minus_b_fe;
-        let point_a = &base * &a;
-        let point_b = &base * &b;
+        let point_ab1 = base * a_minus_b_fe;
+        let point_a = base * a;
+        let point_b = base * b;
         let point_ab2 = point_a.sub_point(&point_b.get_element());
         assert_eq!(point_ab1, point_ab2);
     }
@@ -690,11 +693,11 @@ mod tests {
     fn test_add_point() {
         let a: FE = ECScalar::new_random();
         let b: FE = ECScalar::new_random();
-        let a_plus_b_fe = a.clone() + &b;
+        let a_plus_b_fe = a + b;
         let base: GE = ECPoint::generator();
-        let point_ab1 = &base * &a_plus_b_fe;
-        let point_a = &base * &a;
-        let point_b = &base * &b;
+        let point_ab1 = base * a_plus_b_fe;
+        let point_a = base * a;
+        let point_b = base * b;
         let point_ab2 = point_a.add_point(&point_b.get_element());
 
         assert_eq!(point_ab1, point_ab2);
@@ -704,7 +707,7 @@ mod tests {
     fn test_add_scalar() {
         let a: FE = ECScalar::new_random();
         let zero: FE = FE::zero();
-        let a_plus_zero: FE = a.clone() + zero;
+        let a_plus_zero: FE = a + zero;
 
         assert_eq!(a_plus_zero, a);
     }
@@ -731,10 +734,10 @@ mod tests {
     fn test_mul_point() {
         let a: FE = ECScalar::new_random();
         let b: FE = ECScalar::new_random();
-        let a_mul_b_fe = a.clone() * &b;
+        let a_mul_b_fe = a * b;
         let base: GE = ECPoint::generator();
-        let point_ab1 = &base * &a_mul_b_fe;
-        let point_a = &base * &a;
+        let point_ab1 = base * a_mul_b_fe;
+        let point_a = base * a;
         let point_ab2 = point_a.scalar_mul(&b.get_element());
 
         assert_eq!(point_ab1, point_ab2);
@@ -776,7 +779,7 @@ mod tests {
         let g: GE = ECPoint::generator();
 
         let fe: FE = ECScalar::from(&BigInt::from(1));
-        let b_tag = &g * &fe;
+        let b_tag = g * fe;
         assert_eq!(b_tag, g);
     }
 
@@ -790,7 +793,7 @@ mod tests {
         ];
         let tv_bn = BigInt::from(&test_vec[..]);
         let test_fe: FE = ECScalar::from(&tv_bn);
-        let test_ge = g * &test_fe;
+        let test_ge = g * test_fe;
         let test_ge_bytes = test_ge.get_element().to_bytes();
         let test_ge2: GE = ECPoint::from_bytes(&test_ge_bytes[..]).unwrap();
         let eight: FE = ECScalar::from(&BigInt::from(8));

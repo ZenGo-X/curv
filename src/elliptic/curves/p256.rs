@@ -79,7 +79,7 @@ impl ECScalar for Secp256r1Scalar {
     }
 
     fn get_element(&self) -> SK {
-        self.fe.clone()
+        self.fe
     }
 
     fn set_element(&mut self, element: SK) {
@@ -242,7 +242,7 @@ impl ECPoint for Secp256r1Point {
     type Scalar = Secp256r1Scalar;
 
     fn base_point2() -> Secp256r1Point {
-        let mut v = vec![4 as u8];
+        let mut v = vec![4_u8];
         v.extend(BASE_POINT2_X.as_ref());
         v.extend(BASE_POINT2_Y.as_ref());
         Secp256r1Point::from_bytes(&v).unwrap()
@@ -257,7 +257,7 @@ impl ECPoint for Secp256r1Point {
     }
 
     fn get_element(&self) -> PK {
-        self.ge.clone()
+        self.ge
     }
 
     fn bytes_compressed_to_big_int(&self) -> BigInt {
@@ -652,9 +652,9 @@ mod tests {
         let a_minus_b = BigInt::mod_add(&a.to_big_int(), &minus_b, &q);
         let a_minus_b_fe: Secp256r1Scalar = ECScalar::from(&a_minus_b);
         let base: Secp256r1Point = ECPoint::generator();
-        let point_ab1 = base.clone() * a_minus_b_fe;
-        let point_a = base.clone() * a;
-        let point_b = base.clone() * b;
+        let point_ab1 = base * a_minus_b_fe;
+        let point_a = base * a;
+        let point_b = base * b;
         let point_ab2 = point_a.sub_point(&point_b.get_element());
         assert_eq!(point_ab1.get_element(), point_ab2.get_element());
     }
@@ -750,10 +750,10 @@ mod tests {
     fn test_pk_to_key_slice() {
         for _ in 1..200 {
             let r = Secp256r1Scalar::new_random();
-            let rg = Secp256r1Point::generator() * &r;
+            let rg = Secp256r1Point::generator() * r;
             let key_slice = rg.pk_to_key_slice();
             assert!(key_slice.len() == 65);
-            assert!(key_slice[0].clone() == 4);
+            assert!(key_slice[0] == 4);
             let rg_prime: Secp256r1Point = ECPoint::from_bytes(&key_slice).unwrap();
             assert_eq!(rg_prime.get_element(), rg.get_element());
         }
@@ -842,50 +842,32 @@ mod tests {
     fn add_sub_point() {
         let g = Secp256r1Point::generator();
         let i: Secp256r1Scalar = ECScalar::from(&BigInt::from(3));
-        assert_eq!(
-            (g.clone() + g.clone() + g.clone()).get_element(),
-            (g.clone() * i).get_element()
-        );
-        assert_eq!(
-            (g.clone() + g.clone()).get_element(),
-            (g.clone() + g.clone() - g.clone() + g.clone()).get_element()
-        );
+        assert_eq!((g + g + g).get_element(), (g * i).get_element());
+        assert_eq!((g + g).get_element(), (g + g - g + g).get_element());
     }
 
     #[test]
     fn add_scalar() {
         let i: Secp256r1Scalar = ECScalar::from(&BigInt::from(1));
         let j: Secp256r1Scalar = ECScalar::from(&BigInt::from(2));
-        assert_eq!((i.clone() + i.clone()).to_big_int(), j.to_big_int());
-        assert_eq!(
-            (i.clone() + i.clone() + i.clone() + i.clone()).to_big_int(),
-            (j.clone() + j.clone()).to_big_int()
-        );
+        assert_eq!((i + i).to_big_int(), j.to_big_int());
+        assert_eq!((i + i + i + i).to_big_int(), (j + j).to_big_int());
     }
 
     #[test]
     fn sub_scalar() {
         let i: Secp256r1Scalar = ECScalar::from(&BigInt::from(1));
-        assert_eq!(
-            (i.clone() + i.clone() - i.clone()).to_big_int(),
-            i.to_big_int()
-        );
+        assert_eq!((i + i - i).to_big_int(), i.to_big_int());
         let j: Secp256r1Scalar = ECScalar::from(&BigInt::from(2));
-        assert_eq!(
-            (j.clone() + j.clone() - j.clone()).to_big_int(),
-            j.to_big_int()
-        );
+        assert_eq!((j + j - j).to_big_int(), j.to_big_int());
         let k = Secp256r1Scalar::new_random();
-        assert_eq!(
-            (k.clone() + k.clone() - k.clone()).to_big_int(),
-            k.to_big_int()
-        );
+        assert_eq!((k + k - k).to_big_int(), k.to_big_int());
     }
 
     #[test]
     fn mul_scalar() {
         let i: Secp256r1Scalar = ECScalar::from(&BigInt::from(1));
         let j: Secp256r1Scalar = ECScalar::from(&BigInt::from(2));
-        assert_eq!((j.clone() * i.clone()).to_big_int(), j.to_big_int());
+        assert_eq!((j * i).to_big_int(), j.to_big_int());
     }
 }

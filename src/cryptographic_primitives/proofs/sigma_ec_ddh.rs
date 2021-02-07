@@ -66,7 +66,7 @@ where
         let z_g1 = delta.g1.clone() * self.z.clone();
         let z_g2 = delta.g2.clone() * self.z.clone();
         let a1_plus_e_h1 = self.a1.clone() + delta.h1.clone() * e.clone();
-        let a2_plus_e_h2 = self.a2.clone() + delta.h2.clone() * e.clone();
+        let a2_plus_e_h2 = self.a2.clone() + delta.h2.clone() * e;
         if z_g1 == a1_plus_e_h1 && z_g2 == a2_plus_e_h2 {
             Ok(())
         } else {
@@ -112,7 +112,7 @@ mod tests {
         let g2: P = ECPoint::base_point2();
         let x2: P::Scalar = ECScalar::new_random();
         let h1 = g1.clone() * x.clone();
-        let h2 = g2.clone() * x2.clone();
+        let h2 = g2.clone() * x2;
         let delta = ECDDHStatement { g1, g2, h1, h2 };
         let w = ECDDHWitness { x };
         let proof = ECDDHProof::prove(&w, &delta);

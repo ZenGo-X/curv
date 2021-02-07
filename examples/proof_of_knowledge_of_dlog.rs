@@ -20,16 +20,12 @@ where
 
     let witness: P::Scalar = ECScalar::new_random();
     let dlog_proof = DLogProof::<P>::prove(&witness);
-    let verified = DLogProof::verify(&dlog_proof);
-    match verified {
-        Ok(_t) => assert!(true),
-        Err(_e) => assert!(false),
-    }
+    assert!(DLogProof::verify(&dlog_proof).is_ok());
 }
 
 fn main() {
     let curve_name = std::env::args().nth(1);
-    match curve_name.as_ref().map(|s| s.as_str()) {
+    match curve_name.as_deref() {
         Some("secp256k1") => dlog_proof::<curv::elliptic::curves::secp256_k1::GE>(),
         Some("ristretto") => dlog_proof::<curv::elliptic::curves::curve_ristretto::GE>(),
         Some("ed25519") => dlog_proof::<curv::elliptic::curves::ed25519::GE>(),

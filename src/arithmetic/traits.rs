@@ -55,8 +55,8 @@ where
 }
 
 pub trait BitManipulation {
-    fn set_bit(self: &mut Self, bit: usize, bit_val: bool);
-    fn test_bit(self: &Self, bit: usize) -> bool;
+    fn set_bit(&mut self, bit: usize, bit_val: bool);
+    fn test_bit(&self, bit: usize) -> bool;
 }
 
 pub trait ConvertFrom<T> {

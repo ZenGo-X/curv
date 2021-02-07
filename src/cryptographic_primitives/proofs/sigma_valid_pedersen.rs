@@ -37,6 +37,7 @@ where
     P: ECPoint + Clone,
     P::Scalar: Zeroize,
 {
+    #[allow(clippy::many_single_char_names)]
     pub fn prove(m: &P::Scalar, r: &P::Scalar) -> PedersenProof<P> {
         let g: P = ECPoint::generator();
         let h: P = ECPoint::base_point2();

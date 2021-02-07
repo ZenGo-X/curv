@@ -4,8 +4,9 @@ rust:
   - stable
 
 before_script:
-  - rustup component add rustfmt-preview
+  - rustup component add rustfmt-preview clippy
   - cargo fmt --all -- --check
+  - cargo clippy -- -D clippy::all
 
 script:
   - cargo build --verbose

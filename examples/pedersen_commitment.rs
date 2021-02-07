@@ -1,6 +1,8 @@
 use curv::elliptic::curves::traits::ECPoint;
 use curv::BigInt;
 
+use std::fmt::Debug;
+
 /// Pedesen Commitment:
 /// compute c = mG + rH
 /// where m is the commited value, G is the group generator,
@@ -14,7 +16,7 @@ use curv::BigInt;
 
 pub fn ped_com<P>(message: &BigInt)
 where
-    P: ECPoint,
+    P: ECPoint + Debug,
 {
     use curv::arithmetic::traits::Samplable;
     use curv::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
@@ -26,7 +28,11 @@ where
         message,
         &blinding_factor,
     );
-    (com, blinding_factor);
+
+    println!(
+        "\ncreated commitment with user defined randomness \n\n blinding_factor {} \n commitment: {:#?}",
+        blinding_factor, com
+    );
 }
 
 fn main() {
@@ -34,7 +40,7 @@ fn main() {
     let message_bytes = message.as_bytes();
     let _message_bn = BigInt::from(message_bytes);
     let curve_name = std::env::args().nth(1);
-    match curve_name.as_ref().map(|s| s.as_str()) {
+    match curve_name.as_deref() {
         Some("secp256k1") => ped_com::<curv::elliptic::curves::secp256_k1::GE>(&_message_bn),
         Some("ristretto") => ped_com::<curv::elliptic::curves::curve_ristretto::GE>(&_message_bn),
         Some("ed25519") => ped_com::<curv::elliptic::curves::ed25519::GE>(&_message_bn),

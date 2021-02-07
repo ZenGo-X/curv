@@ -36,6 +36,7 @@ where
     P: ECPoint + Clone,
     P::Scalar: Zeroize + Clone,
 {
+    #[allow(clippy::many_single_char_names)]
     //TODO: add self verification to prover proof
     pub fn prove(m: &P::Scalar, r: &P::Scalar) -> PedersenBlindingProof<P> {
         let h: P = ECPoint::base_point2();

@@ -494,7 +494,6 @@ mod tests {
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
-    use serde_json;
 
     type GE = RistrettoCurvPoint;
     type FE = RistrettoScalar;
