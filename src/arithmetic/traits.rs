@@ -26,9 +26,48 @@ pub use num_traits::{One, Zero};
 pub trait ZeroizeBN {
     fn zeroize_bn(&mut self);
 }
+
+/// Converts BigInt to/from various forms of representation.
 pub trait Converter: Sized {
+    /// Converts BigInt to bytes discarding sign of the number, i.e. it converts
+    /// absolute value of the number. If this is the case, you need to handle
+    /// serializing sign on your own.
+    ///
+    /// ## Examples
+    /// ```
+    /// # use curv::arithmetic::{BigInt, Converter};
+    /// assert_eq!(BigInt::from(31).to_vec(), &[31]);
+    /// assert_eq!(BigInt::from(-31).to_vec(), &[31]);
+    /// assert_eq!(BigInt::from(1_000_000).to_vec(), &[15, 66, 64]);
+    /// assert_eq!(BigInt::from(-1_000_000).to_vec(), &[15, 66, 64]);
+    /// ```
     fn to_vec(&self) -> Vec<u8>;
+    /// Converts BigInt to hex representation.
+    ///
+    /// If the number is negative, it will be serialized by absolute value, and minus character
+    /// will be prepended to resulting string.
+    ///
+    /// ## Examples
+    /// ```
+    /// # use curv::arithmetic::{BigInt, Converter};
+    /// assert_eq!(BigInt::from(31).to_hex(), "1f");
+    /// assert_eq!(BigInt::from(-31).to_hex(), "-1f");
+    /// assert_eq!(BigInt::from(1_000_000).to_hex(), "f4240");
+    /// assert_eq!(BigInt::from(-1_000_000).to_hex(), "-f4240");
+    /// ```
     fn to_hex(&self) -> String;
+    /// Parses given hex string.
+    ///
+    /// Follows the same format as was described in [to_vec](Self::to_vec).
+    ///
+    /// ## Examples
+    /// ```
+    /// # use curv::arithmetic::{BigInt, Converter};
+    /// assert_eq!(BigInt::from_hex("1f").unwrap(), BigInt::from(31));
+    /// assert_eq!(BigInt::from_hex("-1f").unwrap(), BigInt::from(-31));
+    /// assert_eq!(BigInt::from_hex("f4240").unwrap(), BigInt::from(1_000_000));
+    /// assert_eq!(BigInt::from_hex("-f4240").unwrap(), BigInt::from(-1_000_000));
+    /// ```
     fn from_hex(n: &str) -> Result<Self, ParseBigIntFromHexError>;
 }
 

@@ -8,13 +8,19 @@ pub struct ParseBigIntFromHexError {
 
 #[derive(Debug)]
 pub enum ParseFromHexReason {
+    #[cfg(feature = "rust-gmp-kzen")]
     Gmp(gmp::mpz::ParseMpzError),
+    #[cfg(feature = "num-bigint")]
+    Native,
 }
 
 impl fmt::Display for ParseBigIntFromHexError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.reason {
+            #[cfg(feature = "rust-gmp-kzen")]
             ParseFromHexReason::Gmp(reason) => write!(f, "{}", reason),
+            #[cfg(feature = "num-bigint")]
+            ParseFromHexReason::Native => write!(f, "invalid hex"),
         }
     }
 }
@@ -22,7 +28,10 @@ impl fmt::Display for ParseBigIntFromHexError {
 impl error::Error for ParseBigIntFromHexError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match &self.reason {
+            #[cfg(feature = "rust-gmp-kzen")]
             ParseFromHexReason::Gmp(reason) => Some(reason),
+            #[cfg(feature = "num-bigint")]
+            ParseFromHexReason::Native => None,
         }
     }
 }
