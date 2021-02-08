@@ -23,6 +23,7 @@ hex = "^0.3"
 hmac = "0.7.1"
 merkle-sha3 = "^0.1"
 num-traits = "0.2"
+num-integer = "0.1"
 pairing-plus = "0.19"
 rand = "0.6"
 ring-algorithm = "0.2.3"
@@ -36,6 +37,12 @@ zeroize = "0.10"
 [dependencies.rust-gmp-kzen]
 version = "0.5.0"
 features = ["serde_support"]
+optional = true
+
+[dependencies.num-bigint]
+version = "0.3"
+features = ["serde"]
+optional = true
 
 [dependencies.secp256k1]
 version = "0.15.3"
@@ -50,3 +57,7 @@ bincode = "1.1"
 serde_json = "1.0"
 paste = "1.0.2"
 proptest = "0.10"
+proptest-derive = "0.2"
+
+[features]
+default = ["rust-gmp-kzen"]
