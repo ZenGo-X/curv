@@ -84,6 +84,7 @@ pub trait BasicOps {
     fn sign(&self) -> Sign;
 }
 
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Sign {
     Negative,
     Zero,
@@ -96,7 +97,7 @@ pub trait Modulo: Sized {
     fn mod_mul(a: &Self, b: &Self, modulus: &Self) -> Self;
     fn mod_sub(a: &Self, b: &Self, modulus: &Self) -> Self;
     fn mod_add(a: &Self, b: &Self, modulus: &Self) -> Self;
-    /// Returns b = a^-1 (mod m). Returns None if `a` and `modulus` are not coprimes.
+    /// Returns b = a^-1 (mod m). Returns None if `a` and `m` are not coprimes.
     fn mod_inv(a: &Self, m: &Self) -> Option<Self>;
     fn modulus(&self, modulus: &Self) -> Self;
 }
@@ -126,8 +127,15 @@ pub trait Samplable {
 
 /// Set of predicates allowing to examine BigInt
 pub trait NumberTests {
+    /// Returns `true` if `n` is zero
+    ///
+    /// Alternatively, [BasicOps::sign] method can be used to check sign of the number.  
     fn is_zero(n: &Self) -> bool;
+    /// Returns `true` if `n` is even
     fn is_even(n: &Self) -> bool;
+    /// Returns `true` if `n` is negative
+    ///
+    /// Alternatively, [BasicOps::sign] method can be used to check sign of the number.
     fn is_negative(n: &Self) -> bool;
 }
 
@@ -136,13 +144,52 @@ pub trait EGCD
 where
     Self: Sized,
 {
+    /// For given a, b calculates gcd(a,b), p, q such as `gcd(a,b) = a*p + b*q`
+    ///
+    /// ## Example
+    /// ```
+    /// # use curv::arithmetic::*;
+    /// let (a, b) = (BigInt::from(10), BigInt::from(15));
+    /// let (s, p, q) = BigInt::egcd(&a, &b);
+    /// assert_eq!(&s, &BigInt::from(5));
+    /// assert_eq!(s, a*p + b*q);
+    /// ```
     fn egcd(a: &Self, b: &Self) -> (Self, Self, Self);
 }
 
 /// Bits manipulation in BigInt
 pub trait BitManipulation {
+    /// Sets/unsets bit in the number
+    ///
+    /// ## Example
+    /// ```
+    /// # use curv::arithmetic::*;
+    /// let mut n = BigInt::from(0b100);
+    /// n.set_bit(3, true);
+    /// assert_eq!(n, BigInt::from(0b1100));
+    /// n.set_bit(0, true);
+    /// assert_eq!(n, BigInt::from(0b1101));
+    /// n.set_bit(2, false);
+    /// assert_eq!(n, BigInt::from(0b1001));
+    /// ```
     fn set_bit(&mut self, bit: usize, bit_val: bool);
+    /// Tests if bit is set
+    ///
+    /// ```
+    /// # use curv::arithmetic::*;
+    /// let n = BigInt::from(0b101);
+    /// assert_eq!(n.test_bit(3), false);
+    /// assert_eq!(n.test_bit(2), true);
+    /// assert_eq!(n.test_bit(1), false);
+    /// assert_eq!(n.test_bit(0), true);
+    /// ```
     fn test_bit(&self, bit: usize) -> bool;
+    /// Length of the number in bits
+    ///
+    /// ```
+    /// # use curv::arithmetic::*;
+    /// assert_eq!(BigInt::from(0b1011).bit_length(), 4);
+    /// ```
     fn bit_length(&self) -> usize;
 }
 
