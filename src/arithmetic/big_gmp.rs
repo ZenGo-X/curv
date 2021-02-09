@@ -21,19 +21,31 @@ use std::{ops, ptr};
 use gmp::mpz::Mpz;
 use gmp::sign::Sign;
 use num_traits::{One, Zero};
-use rand::rngs::OsRng;
-use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use zeroize::Zeroize;
 
 use super::errors::*;
-use super::traits::*;
+use super::traits::{Sign as S, *};
+
+type BN = Mpz;
 
 /// Big integer
 #[derive(PartialOrd, PartialEq, Ord, Eq, Clone, Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct BigInt {
     gmp: Mpz,
+}
+
+impl BigInt {
+    fn inner_ref(&self) -> &Mpz {
+        &self.gmp
+    }
+    fn inner_mut(&mut self) -> &mut Mpz {
+        &mut self.gmp
+    }
+    fn into_inner(self) -> Mpz {
+        self.gmp
+    }
 }
 
 #[allow(deprecated)]
@@ -88,6 +100,14 @@ impl BasicOps for BigInt {
 
     fn abs(&self) -> Self {
         self.gmp.abs().wrap()
+    }
+
+    fn sign(&self) -> S {
+        match self.gmp.sign() {
+            Sign::Negative => S::Negative,
+            Sign::Zero => S::Zero,
+            Sign::Positive => S::Positive,
+        }
     }
 }
 
@@ -188,53 +208,7 @@ impl ConvertFrom<BigInt> for u64 {
     }
 }
 
-macro_rules! impl_ops {
-    () => {};
-    ($op: ident $func:ident, $($rest:tt)*) => {
-        impl ops::$op for &BigInt {
-            type Output = BigInt;
-            fn $func(self, rhs: Self) -> Self::Output {
-                (&self.gmp).$func(&rhs.gmp).wrap()
-            }
-        }
-        impl ops::$op for BigInt {
-            type Output = BigInt;
-            fn $func(self, rhs: Self) -> Self::Output {
-                self.gmp.$func(rhs.gmp).wrap()
-            }
-        }
-        impl ops::$op<BigInt> for &BigInt {
-            type Output = BigInt;
-            fn $func(self, rhs: BigInt) -> Self::Output {
-                (&self.gmp).$func(rhs.gmp).wrap()
-            }
-        }
-        impl ops::$op<&BigInt> for BigInt {
-            type Output = BigInt;
-            fn $func(self, rhs: &BigInt) -> Self::Output {
-                self.gmp.$func(&rhs.gmp).wrap()
-            }
-        }
-        impl_ops!{ $($rest)* }
-    };
-    ($op: ident $func:ident $primitive:ty, $($rest:tt)*) => {
-        impl ops::$op<$primitive> for BigInt {
-            type Output = BigInt;
-            fn $func(self, rhs: $primitive) -> Self::Output {
-                self.gmp.$func(rhs).wrap()
-            }
-        }
-        impl ops::$op<$primitive> for &BigInt {
-            type Output = BigInt;
-            fn $func(self, rhs: $primitive) -> Self::Output {
-                (&self.gmp).$func(rhs).wrap()
-            }
-        }
-        impl_ops!{ $($rest)* }
-    };
-}
-
-impl_ops! {
+crate::__bigint_impl_ops! {
     Add add,
     Sub sub,
     Mul mul,
@@ -243,6 +217,19 @@ impl_ops! {
     BitXor bitxor,
     Shl shl usize,
     Shr shr usize,
+}
+
+crate::__bigint_impl_assigns! {
+    AddAssign add_assign,
+    BitAndAssign bitand_assign,
+    BitOrAssign bitor_assign,
+    BitXorAssign bitxor_assign,
+    DivAssign div_assign,
+    MulAssign mul_assign,
+    RemAssign rem_assign,
+    ShlAssign shl_assign usize,
+    ShrAssign shr_assign usize,
+    SubAssign sub_assign,
 }
 
 impl ops::Neg for BigInt {
@@ -290,19 +277,7 @@ impl ring_algorithm::RingNormalize for BigInt {
     }
 }
 
-macro_rules! impl_from {
-    ($($type:ty),*$(,)?) => {
-        $(
-        impl From<$type> for BigInt {
-            fn from(x: $type) -> Self {
-                Self{ gmp: Mpz::from(x) }
-            }
-        }
-        )*
-    };
-}
-
-impl_from! { &[u8], u32, i32, u64 }
+crate::__bigint_impl_from! { &[u8], u32, i32, u64 }
 
 impl From<&BigInt> for Vec<u8> {
     fn from(bn: &BigInt) -> Vec<u8> {

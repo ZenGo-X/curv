@@ -15,6 +15,7 @@
 */
 
 mod errors;
+mod macros;
 mod samplable;
 pub mod traits;
 
@@ -92,12 +93,6 @@ mod test {
             BigInt::from(-1_000_000_i32).to_vec(),
             BigInt::from(1_000_000_i32).to_vec()
         );
-    }
-
-    /// This test will fail to compile if BigInt doesn't implement certain traits.
-    #[test]
-    fn big_int_implements_all_required_trait() {
-        assert_big_int_implements_all_required_traits::<BigInt>();
     }
 
     #[test]
@@ -246,16 +241,9 @@ mod test {
 
     proptest::proptest! {
         #[test]
-        fn fuzz_mod_ops_big(ops: Vec<(ModOp, u32)>) {
+        fn fuzz_mod_ops(ops: Vec<(ModOp, u32)>) {
             test_mod_ops(ops)
         }
-    }
-
-    #[test]
-    fn test_mod_ops_corner_cases() {
-        let actual = BigInt::mod_sub(&BigInt::zero(), &BigInt::one(), &BigInt::from(4));
-        let expected = BigInt::from(3);
-        assert_eq!(actual, expected);
     }
 
     fn test_mod_ops(ops: Vec<(ModOp, u32)>) {
@@ -283,6 +271,12 @@ mod test {
         }
     }
 
+    /// This test will fail to compile if BigInt doesn't implement certain traits.
+    #[test]
+    fn big_int_implements_all_required_trait() {
+        assert_big_int_implements_all_required_traits::<BigInt>();
+    }
+
     /// A no-op function that takes BigInt implementation as a generic param. It's only purpose
     /// is to abort compilation if BigInt doesn't implement certain traits.
     #[allow(deprecated)]
@@ -297,9 +291,9 @@ mod test {
         T: zeroize::Zeroize + ring_algorithm::RingNormalize + num_traits::One + num_traits::Zero,
         for<'a> &'a T: ring_algorithm::EuclideanRingOperation<T>,
         // Conversion traits
-        // for<'a> u64: std::convert::TryFrom<&'a BigInt>,
-        // for<'a> i64: std::convert::TryFrom<&'a BigInt>,
-        // for<'a> BigInt: From<&'a [u8]> + From<u32> + From<i32> + From<u64>,
+        for<'a> u64: std::convert::TryFrom<&'a BigInt>,
+        for<'a> i64: std::convert::TryFrom<&'a BigInt>,
+        for<'a> BigInt: From<&'a [u8]> + From<u32> + From<i32> + From<u64>,
         // STD Operators
         BigInt: Add<Output = BigInt>
             + Sub<Output = BigInt>
