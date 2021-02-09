@@ -63,7 +63,7 @@ pub trait Converter: Sized {
     fn to_hex(&self) -> String;
     /// Parses given hex string.
     ///
-    /// Follows the same format as was described in [to_vec](Self::to_vec).
+    /// Follows the same format as was described in [to_hex](Self::to_hex).
     ///
     /// ## Examples
     /// ```

@@ -37,6 +37,19 @@ attacks as possible (see audit report).
 ### Build
 Use `cargo build` to build everything including curve implementations, cryptoprimitives, BigInt, etc.
 
+### Big integer implementation
+The library supports a couple of bigint implementations and can easily switch between them.
+You can choose any one which you prefer by specifying a feature:
+* **rust-gmp-kzen**, uses GMP bindings, requires GMP to be installed on a machine. Used by default.
+* **num-bigint**, Rust's pure implementation of big integer. In order to use it, put in Cargo.toml:
+  ```toml
+  [dependencies.curv]
+  git = "https://github.com/ZenGo-X/curv"
+  tag = "v0.6.0"
+  default-features = false
+  features = ["num-bigint"]
+  ```
+
 ### Examples
 The library includes some basic examples to get you going. To run them: 
 `cargo run --example EXAMPLE_NAME -- CURVE_NAME`

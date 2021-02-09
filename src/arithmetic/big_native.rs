@@ -11,6 +11,12 @@ use super::traits::{Sign as S, *};
 use num_bigint::BigInt as BN;
 use num_bigint::Sign;
 
+/// Big integer
+///
+/// Wraps underlying BigInt implementation (either GMP bindings or num-bigint), exposes only
+/// very limited API that allows easily switching between implementations.
+///
+/// Set of traits implemented on BigInt remains the same regardless of underlying implementation.
 #[derive(PartialOrd, PartialEq, Ord, Eq, Clone, Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct BigInt {
