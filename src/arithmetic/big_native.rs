@@ -46,9 +46,18 @@ impl zeroize::Zeroize for BigInt {
 }
 
 impl Converter for BigInt {
-    fn to_vec(&self) -> Vec<u8> {
+    fn to_bytes(&self) -> (S, Vec<u8>) {
         let (_sign, bytes) = self.num.to_bytes_be();
-        bytes
+        (self.sign(), bytes)
+    }
+
+    fn from_bytes(sign: S, bytes: &[u8]) -> Self {
+        let sign = match sign {
+            S::Negative => Sign::Minus,
+            S::Zero => Sign::NoSign,
+            S::Positive => Sign::Plus,
+        };
+        BN::from_bytes_be(sign, bytes).wrap()
     }
 
     fn to_hex(&self) -> String {
@@ -59,12 +68,6 @@ impl Converter for BigInt {
         BN::parse_bytes(n.as_bytes(), 16)
             .map(Wrap::wrap)
             .ok_or(ParseFromHexReason::Native.into())
-    }
-}
-
-impl From<&[u8]> for BigInt {
-    fn from(bytes: &[u8]) -> Self {
-        BN::from_bytes_be(Sign::Plus, bytes).wrap()
     }
 }
 
@@ -126,11 +129,16 @@ impl Modulo for BigInt {
     }
 
     fn mod_inv(a: &Self, modulus: &Self) -> Option<Self> {
-        ring_algorithm::modulo_inverse(a.clone(), modulus.clone())
+        ring_algorithm::modulo_inverse(a.clone(), modulus.clone()).map(|inv| inv.modulus(modulus))
     }
 
     fn modulus(&self, modulus: &Self) -> Self {
-        (&self.num % &modulus.num).wrap()
+        let n = self % modulus;
+        if n.sign() == S::Negative {
+            modulus + n
+        } else {
+            n
+        }
     }
 }
 

@@ -89,7 +89,7 @@ impl ECScalar for RistrettoScalar {
     }
 
     fn from(n: &BigInt) -> RistrettoScalar {
-        let mut v = BigInt::to_vec(n);
+        let (_sign, mut v) = BigInt::to_bytes(n);
         //TODO: add consistency check for sizes max 32/ max 64
         let mut bytes_array_32: [u8; 32];
         let mut bytes_array_64: [u8; 64];
@@ -128,7 +128,7 @@ impl ECScalar for RistrettoScalar {
         let t1 = &self.fe.to_bytes()[0..self.fe.to_bytes().len()];
         let mut t2 = t1.to_vec();
         t2.reverse();
-        BigInt::from(&t2[0..self.fe.to_bytes().len()])
+        BigInt::from_bytes(Sign::Positive, &t2[0..self.fe.to_bytes().len()])
     }
 
     fn q() -> BigInt {
@@ -259,7 +259,7 @@ impl ECPoint for RistrettoCurvPoint {
     fn base_point2() -> RistrettoCurvPoint {
         let g: GE = ECPoint::generator();
         let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
-        let bytes = BigInt::to_vec(&hash);
+        let (_sign, bytes) = BigInt::to_bytes(&hash);
         let h: GE = ECPoint::from_bytes(&bytes[..]).unwrap();
         RistrettoCurvPoint {
             purpose: "random",
@@ -292,7 +292,10 @@ impl ECPoint for RistrettoCurvPoint {
     }
 
     fn bytes_compressed_to_big_int(&self) -> BigInt {
-        BigInt::from(self.ge.to_bytes()[0..self.ge.to_bytes().len()].as_ref())
+        BigInt::from_bytes(
+            Sign::Positive,
+            self.ge.to_bytes()[0..self.ge.to_bytes().len()].as_ref(),
+        )
     }
     fn from_bytes(bytes: &[u8]) -> Result<RistrettoCurvPoint, ErrorKey> {
         let bytes_vec = bytes.to_vec();
@@ -428,7 +431,7 @@ impl Serialize for RistrettoCurvPoint {
         S: Serializer,
     {
         let bytes = self.pk_to_key_slice();
-        let bytes_as_bn = BigInt::from(&bytes[..]);
+        let bytes_as_bn = BigInt::from_bytes(Sign::Positive, &bytes[..]);
         let mut state = serializer.serialize_struct("RistrettoCurvPoint", 1)?;
         state.serialize_field("bytes_str", &bytes_as_bn.to_hex())?;
         state.end()
@@ -462,8 +465,9 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
             .next_element()?
             .ok_or(V::Error::invalid_length(0, &"a single element"))?;
         let bytes_bn = BigInt::from_hex(bytes_str).map_err(V::Error::custom)?;
-        let bytes = BigInt::to_vec(&bytes_bn);
-        Ok(RistrettoCurvPoint::from_bytes(&bytes[..]).expect("error deserializing point"))
+        let (_sign, bytes) = BigInt::to_bytes(&bytes_bn);
+        RistrettoCurvPoint::from_bytes(&bytes[..])
+            .map_err(|_| V::Error::custom("failed to parse ristretto point"))
     }
 
     fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<RistrettoCurvPoint, E::Error> {
@@ -479,9 +483,10 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
             }
         }
         let bytes_bn = BigInt::from_hex(&bytes_str).map_err(E::Error::custom)?;
-        let bytes = BigInt::to_vec(&bytes_bn);
+        let (_sign, bytes) = BigInt::to_bytes(&bytes_bn);
 
-        Ok(RistrettoCurvPoint::from_bytes(&bytes[..]).expect("error deserializing point"))
+        RistrettoCurvPoint::from_bytes(&bytes[..])
+            .map_err(|_| E::Error::custom("failed to parse ristretto point"))
     }
 }
 
@@ -540,7 +545,7 @@ mod tests {
     fn test_from_slice() {
         let point: GE = GE::base_point2();
         let point_bn = point.bytes_compressed_to_big_int();
-        let point_bytes = BigInt::to_vec(&point_bn);
+        let (_sign, point_bytes) = BigInt::to_bytes(&point_bn);
         let point_reconstruct = GE::from_bytes(&point_bytes[..]).expect("bad encoding of point");
         assert_eq!(point_reconstruct, point);
     }

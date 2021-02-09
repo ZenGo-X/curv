@@ -89,7 +89,7 @@ impl ECScalar for Secp256r1Scalar {
     fn from(n: &BigInt) -> Secp256r1Scalar {
         let curve_order = Secp256r1Scalar::q();
         let n_reduced = BigInt::mod_add(n, &BigInt::from(0), &curve_order);
-        let mut v = BigInt::to_vec(&n_reduced);
+        let (_sign, mut v) = BigInt::to_bytes(&n_reduced);
         const SECRET_KEY_SIZE: usize = 32;
 
         if v.len() < SECRET_KEY_SIZE {
@@ -106,7 +106,7 @@ impl ECScalar for Secp256r1Scalar {
     }
 
     fn to_big_int(&self) -> BigInt {
-        BigInt::from(self.fe.to_bytes().as_slice())
+        BigInt::from_bytes(Sign::Positive, self.fe.to_bytes().as_slice())
     }
 
     fn q() -> BigInt {
@@ -115,7 +115,7 @@ impl ECScalar for Secp256r1Scalar {
             0xff, 0xff, 0xbc, 0xe6, 0xfa, 0xad, 0xa7, 0x17, 0x9e, 0x84, 0xf3, 0xb9, 0xca, 0xc2,
             0xfc, 0x63, 0x25, 0x51,
         ];
-        BigInt::from(CURVE_ORDER.as_ref())
+        BigInt::from_bytes(Sign::Positive, CURVE_ORDER.as_ref())
     }
 
     fn add(&self, other: &SK) -> Secp256r1Scalar {
@@ -261,17 +261,24 @@ impl ECPoint for Secp256r1Point {
     }
 
     fn bytes_compressed_to_big_int(&self) -> BigInt {
-        BigInt::from(self.get_element().to_encoded_point(true).as_bytes())
+        BigInt::from_bytes(
+            Sign::Positive,
+            self.get_element().to_encoded_point(true).as_bytes(),
+        )
     }
 
     fn x_coor(&self) -> Option<BigInt> {
-        Some(BigInt::from(EncodedPoint::from(&self.ge).x().as_slice()))
+        Some(BigInt::from_bytes(
+            Sign::Positive,
+            EncodedPoint::from(&self.ge).x().as_slice(),
+        ))
     }
 
     fn y_coor(&self) -> Option<BigInt> {
         // need this back and forth conversion to get an uncompressed point
         let tmp = AffinePoint::from_encoded_point(&EncodedPoint::from(&self.ge)).unwrap();
-        Some(BigInt::from(
+        Some(BigInt::from_bytes(
+            Sign::Positive,
             tmp.to_encoded_point(false).y().unwrap().as_slice(),
         ))
     }
@@ -335,8 +342,8 @@ impl ECPoint for Secp256r1Point {
     }
 
     fn from_coor(x: &BigInt, y: &BigInt) -> Secp256r1Point {
-        let mut vec_x = BigInt::to_vec(x);
-        let mut vec_y = BigInt::to_vec(y);
+        let (_sign, mut vec_x) = BigInt::to_bytes(x);
+        let (_sign, mut vec_y) = BigInt::to_bytes(y);
         const COORDINATE_SIZE: usize = 32;
         assert!(vec_x.len() <= COORDINATE_SIZE, "x coordinate is too big.");
         assert!(vec_x.len() <= COORDINATE_SIZE, "y coordinate is too big.");
@@ -368,7 +375,7 @@ impl ECPoint for Secp256r1Point {
 impl Secp256r1Point {
     // derive point from BigInt
     fn from_bigint(i: &BigInt) -> Result<Secp256r1Point, ()> {
-        let vec = BigInt::to_vec(i);
+        let (_sign, vec) = BigInt::to_bytes(i);
         let point = match Secp256r1Point::from_bytes(&vec) {
             Ok(v) => v,
             Err(_) => return Err(()),
@@ -601,7 +608,7 @@ mod tests {
 
     #[test]
     fn test_from_bytes() {
-        let vec = BigInt::to_vec(&BigInt::from(1337));
+        let (_sign, vec) = BigInt::to_bytes(&BigInt::from(1337));
         let result = Secp256r1Point::from_bytes(&vec);
         assert_eq!(result.unwrap_err(), ErrorKey::InvalidPublicKey)
     }

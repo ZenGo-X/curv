@@ -19,26 +19,26 @@ pub struct HMacSha512;
 
 impl KeyedHash for HMacSha512 {
     fn create_hmac(key: &BigInt, data: &[&BigInt]) -> BigInt {
-        let mut key_bytes: Vec<u8> = key.into();
+        let (_sign, mut key_bytes) = key.to_bytes();
 
         let mut hmac = HmacSha256type::new_varkey(&key_bytes).expect("");
 
         for value in data {
-            hmac.input(&BigInt::to_vec(value));
+            hmac.input(&BigInt::to_bytes(value).1);
         }
         key_bytes.zeroize();
         let result = hmac.result();
         let code = result.code();
 
-        BigInt::from(code.as_slice())
+        BigInt::from_bytes(Sign::Positive, code.as_slice())
     }
     fn verify(key: &BigInt, data: &[&BigInt], code_bytes: [u8; 64]) -> Result<(), ()> {
-        let key_bytes: Vec<u8> = key.into();
+        let (_sign, key_bytes) = key.to_bytes();
 
         let mut hmac = HmacSha256type::new_varkey(&key_bytes).expect("");
 
         for value in data {
-            hmac.input(&BigInt::to_vec(value));
+            hmac.input(&BigInt::to_bytes(value).1);
         }
         match hmac.verify(&code_bytes) {
             Ok(_) => Ok(()),
@@ -59,7 +59,7 @@ mod tests {
     fn create_hmac_test() {
         let key = BigInt::sample(512);
         let result1 = HMacSha512::create_hmac(&key, &[&BigInt::from(10)]);
-        let result1_bytes = &BigInt::to_vec(&result1)[..];
+        let result1_bytes = &BigInt::to_bytes(&result1).1[..];
         let mut array_result: [u8; 64] = [0u8; 64];
         array_result.copy_from_slice(result1_bytes);
         assert!(HMacSha512::verify(&key, &[&BigInt::from(10)], array_result).is_ok());
