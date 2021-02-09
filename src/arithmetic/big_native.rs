@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::ops;
 
 use num_integer::Integer;
@@ -5,7 +6,7 @@ use num_traits::Signed;
 use serde::{Deserialize, Serialize};
 
 use super::errors::*;
-use super::traits::*;
+use super::traits::{Sign as S, *};
 
 use num_bigint::BigInt as BN;
 use num_bigint::Sign;
@@ -14,6 +15,18 @@ use num_bigint::Sign;
 #[serde(transparent)]
 pub struct BigInt {
     num: BN,
+}
+
+impl BigInt {
+    fn inner_ref(&self) -> &BN {
+        &self.num
+    }
+    fn inner_mut(&mut self) -> &mut BN {
+        &mut self.num
+    }
+    fn into_inner(self) -> BN {
+        self.num
+    }
 }
 
 #[allow(deprecated)]
@@ -55,19 +68,7 @@ impl From<&[u8]> for BigInt {
     }
 }
 
-macro_rules! impl_from {
-    ($($type:ty),*$(,)?) => {
-        $(
-        impl From<$type> for BigInt {
-            fn from(x: $type) -> Self {
-                Self{ num: BN::from(x) }
-            }
-        }
-        )*
-    };
-}
-
-impl_from! { u32, i32, u64 }
+crate::__bigint_impl_from! { u32, i32, u64 }
 
 impl BasicOps for BigInt {
     fn pow(&self, exponent: u32) -> Self {
@@ -88,6 +89,14 @@ impl BasicOps for BigInt {
 
     fn abs(&self) -> Self {
         self.num.abs().wrap()
+    }
+
+    fn sign(&self) -> S {
+        match self.gmp.sign() {
+            Sign::Minus => S::Negative,
+            Sign::NoSign => S::Zero,
+            Sign::Plus => S::Positive,
+        }
     }
 }
 
@@ -145,53 +154,7 @@ impl BitManipulation for BigInt {
     }
 }
 
-macro_rules! impl_ops {
-    () => {};
-    ($op: ident $func:ident, $($rest:tt)*) => {
-        impl ops::$op for &BigInt {
-            type Output = BigInt;
-            fn $func(self, rhs: Self) -> Self::Output {
-                (&self.num).$func(&rhs.num).wrap()
-            }
-        }
-        impl ops::$op for BigInt {
-            type Output = BigInt;
-            fn $func(self, rhs: Self) -> Self::Output {
-                self.num.$func(rhs.num).wrap()
-            }
-        }
-        impl ops::$op<BigInt> for &BigInt {
-            type Output = BigInt;
-            fn $func(self, rhs: BigInt) -> Self::Output {
-                (&self.num).$func(rhs.num).wrap()
-            }
-        }
-        impl ops::$op<&BigInt> for BigInt {
-            type Output = BigInt;
-            fn $func(self, rhs: &BigInt) -> Self::Output {
-                self.num.$func(&rhs.num).wrap()
-            }
-        }
-        impl_ops!{ $($rest)* }
-    };
-    ($op: ident $func:ident $primitive:ty, $($rest:tt)*) => {
-        impl ops::$op<$primitive> for BigInt {
-            type Output = BigInt;
-            fn $func(self, rhs: $primitive) -> Self::Output {
-                self.num.$func(rhs).wrap()
-            }
-        }
-        impl ops::$op<$primitive> for &BigInt {
-            type Output = BigInt;
-            fn $func(self, rhs: $primitive) -> Self::Output {
-                (&self.num).$func(rhs).wrap()
-            }
-        }
-        impl_ops!{ $($rest)* }
-    };
-}
-
-impl_ops! {
+crate::__bigint_impl_ops! {
     Add add,
     Sub sub,
     Mul mul,
@@ -203,32 +166,7 @@ impl_ops! {
     Shr shr usize,
 }
 
-macro_rules! impl_assigns {
-    () => {};
-    ($trait:ident $fn:ident, $($rest:tt)*) => {
-        impl ops::$trait for BigInt {
-            fn $fn(&mut self, rhs: BigInt) {
-                self.num.$fn(rhs.num)
-            }
-        }
-        impl ops::$trait<&BigInt> for BigInt {
-            fn $fn(&mut self, rhs: &BigInt) {
-                self.num.$fn(&rhs.num)
-            }
-        }
-        impl_assigns!{ $($rest)* }
-    };
-    ($trait:ident $fn:ident $primitive:ident, $($rest:tt)*) => {
-        impl ops::$trait<$primitive> for BigInt {
-            fn $fn(&mut self, rhs: $primitive) {
-                self.num.$fn(rhs)
-            }
-        }
-        impl_assigns!{ $($rest)* }
-    };
-}
-
-impl_assigns! {
+crate::__bigint_impl_assigns! {
     AddAssign add_assign,
     BitAndAssign bitand_assign,
     BitOrAssign bitor_assign,
@@ -281,6 +219,23 @@ impl ring_algorithm::RingNormalize for BigInt {
         self.num = self.num.abs();
     }
 }
+
+macro_rules! impl_try_from {
+    ($($primitive:ty),*$(,)?) => {
+        $(
+        impl TryFrom<&BigInt> for $primitive {
+            type Error = TryFromBigIntError;
+
+            fn try_from(value: &BigInt) -> Result<Self, Self::Error> {
+                TryFrom::<&BN>::try_from(&value.num)
+                    .map_err(|_| TryFromBigIntError { type_name: stringify!($primitive) })
+            }
+        }
+        )*
+    };
+}
+
+impl_try_from! { u64, i64 }
 
 /// Internal helper trait. Creates short-hand for wrapping Mpz into BigInt.
 trait Wrap {
