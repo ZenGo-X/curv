@@ -30,6 +30,11 @@ use super::traits::{Sign as S, *};
 type BN = Mpz;
 
 /// Big integer
+///
+/// Wraps underlying BigInt implementation (either GMP bindings or num-bigint), exposes only
+/// very limited API that allows easily switching between implementations.
+///
+/// Set of traits implemented on BigInt remains the same regardless of underlying implementation.
 #[derive(PartialOrd, PartialEq, Ord, Eq, Clone, Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct BigInt {
@@ -222,6 +227,7 @@ crate::__bigint_impl_ops! {
     Mul mul,
     Div div,
     Rem rem,
+    BitAnd bitand,
     BitXor bitxor,
     Shl shl usize,
     Shr shr usize,
@@ -286,12 +292,6 @@ impl ring_algorithm::RingNormalize for BigInt {
 }
 
 crate::__bigint_impl_from! { u32, i32, u64 }
-
-impl From<&BigInt> for Vec<u8> {
-    fn from(bn: &BigInt) -> Vec<u8> {
-        (&bn.gmp).into()
-    }
-}
 
 /// Internal helper trait. Creates short-hand for wrapping Mpz into BigInt.
 trait Wrap {

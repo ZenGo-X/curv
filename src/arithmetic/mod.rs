@@ -323,24 +323,28 @@ mod test {
             + Mul<Output = BigInt>
             + Div<Output = BigInt>
             + Rem<Output = BigInt>
+            + BitAnd<Output = BigInt>
             + BitXor<Output = BigInt>,
         for<'a> BigInt: Add<&'a BigInt, Output = BigInt>
             + Sub<&'a BigInt, Output = BigInt>
             + Mul<&'a BigInt, Output = BigInt>
             + Div<&'a BigInt, Output = BigInt>
             + Rem<&'a BigInt, Output = BigInt>
+            + BitAnd<&'a BigInt, Output = BigInt>
             + BitXor<&'a BigInt, Output = BigInt>,
         for<'a> &'a BigInt: Add<Output = BigInt>
             + Sub<Output = BigInt>
             + Mul<Output = BigInt>
             + Div<Output = BigInt>
             + Rem<Output = BigInt>
+            + BitAnd<Output = BigInt>
             + BitXor<Output = BigInt>,
         for<'a> &'a BigInt: Add<&'a BigInt, Output = BigInt>
             + Sub<&'a BigInt, Output = BigInt>
             + Mul<&'a BigInt, Output = BigInt>
             + Div<&'a BigInt, Output = BigInt>
             + Rem<&'a BigInt, Output = BigInt>
+            + BitAnd<&'a BigInt, Output = BigInt>
             + BitXor<&'a BigInt, Output = BigInt>,
         BigInt: Shl<usize, Output = BigInt> + Shr<usize, Output = BigInt>,
         for<'a> &'a BigInt: Shl<usize, Output = BigInt> + Shr<usize, Output = BigInt>,
