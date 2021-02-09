@@ -283,10 +283,10 @@ mod test {
     fn assert_big_int_implements_all_required_traits<T>()
     where
         // Basic traits from self::traits module
-        T: Converter + BasicOps + Modulo + Samplable + BitManipulation, // + NumberTests + EGCD + BitManipulation,
+        T: Converter + BasicOps + Modulo + Samplable + NumberTests + EGCD + BitManipulation,
         // Deprecated but not deleted yet traits from self::traits module
         T: ZeroizeBN,
-        // u64: ConvertFrom<BigInt>,
+        u64: ConvertFrom<BigInt>,
         // Foreign traits implementations
         T: zeroize::Zeroize + ring_algorithm::RingNormalize + num_traits::One + num_traits::Zero,
         for<'a> &'a T: ring_algorithm::EuclideanRingOperation<T>,
