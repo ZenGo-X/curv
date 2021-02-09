@@ -1,4 +1,4 @@
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::ops;
 
 use num_integer::Integer;
@@ -92,7 +92,7 @@ impl BasicOps for BigInt {
     }
 
     fn sign(&self) -> S {
-        match self.gmp.sign() {
+        match self.num.sign() {
             Sign::Minus => S::Negative,
             Sign::NoSign => S::Zero,
             Sign::Plus => S::Positive,
@@ -151,6 +151,26 @@ impl BitManipulation for BigInt {
 
     fn bit_length(&self) -> usize {
         self.num.bits() as usize
+    }
+}
+
+impl NumberTests for BigInt {
+    fn is_zero(n: &Self) -> bool {
+        matches!(n.sign(), S::Zero)
+    }
+
+    fn is_even(n: &Self) -> bool {
+        n.num.is_even()
+    }
+
+    fn is_negative(n: &Self) -> bool {
+        matches!(n.sign(), S::Negative)
+    }
+}
+
+impl EGCD for BigInt {
+    fn egcd(a: &Self, b: &Self) -> (Self, Self, Self) {
+        ring_algorithm::normalized_extended_euclidian_algorithm(a.clone(), b.clone())
     }
 }
 
@@ -236,6 +256,14 @@ macro_rules! impl_try_from {
 }
 
 impl_try_from! { u64, i64 }
+
+#[allow(deprecated)]
+impl ConvertFrom<BigInt> for u64 {
+    fn _from(x: &BigInt) -> u64 {
+        let opt_x: u64 = (&x.num).try_into().unwrap();
+        opt_x
+    }
+}
 
 /// Internal helper trait. Creates short-hand for wrapping Mpz into BigInt.
 trait Wrap {
