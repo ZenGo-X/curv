@@ -76,23 +76,31 @@ mod test {
     #[test]
     fn serializing_to_vec() {
         let n = BigInt::from(1_000_000_u32);
-        let v = n.to_vec();
+        let (s, v) = n.to_bytes();
+        assert_eq!(s, Sign::Positive);
         assert_eq!(v, b"\x0f\x42\x40");
     }
 
     #[test]
     fn deserializing_from_bytes() {
         let v: &[u8] = b"\x0f\x42\x40";
-        let n = BigInt::from(v);
+        let n = BigInt::from_bytes(Sign::Positive, v);
         assert_eq!(n, BigInt::from(1_000_000_u32))
     }
 
     #[test]
-    fn serializing_negative_to_vec_discards_sign() {
-        assert_eq!(
-            BigInt::from(-1_000_000_i32).to_vec(),
-            BigInt::from(1_000_000_i32).to_vec()
-        );
+    fn serializing_negative_to_vec() {
+        let n = BigInt::from(-1_000_000);
+        let (s, v) = n.to_bytes();
+        assert_eq!(s, Sign::Negative);
+        assert_eq!(v, b"\x0f\x42\x40");
+    }
+
+    #[test]
+    fn deserializing_negative_from_bytes() {
+        let v: &[u8] = b"\x0f\x42\x40";
+        let n = BigInt::from_bytes(Sign::Negative, v);
+        assert_eq!(n, BigInt::from(-1_000_000))
     }
 
     #[test]
@@ -271,6 +279,21 @@ mod test {
         }
     }
 
+    proptest::proptest! {
+        #[test]
+        fn fuzz_modulo_invert(a in 0..(u32::MAX - 4)) {
+            modulo_invert(a, u32::MAX - 4)
+        }
+    }
+
+    fn modulo_invert(a: u32, m: u32) {
+        let (a, m) = (BigInt::from(a), BigInt::from(m));
+        let inv = BigInt::mod_inv(&a, &m).unwrap();
+        assert!(BigInt::zero() <= inv && inv < m);
+        let one = BigInt::mod_mul(&a, &inv, &m);
+        assert_eq!(one, BigInt::one());
+    }
+
     /// This test will fail to compile if BigInt doesn't implement certain traits.
     #[test]
     fn big_int_implements_all_required_trait() {
@@ -293,7 +316,7 @@ mod test {
         // Conversion traits
         for<'a> u64: std::convert::TryFrom<&'a BigInt>,
         for<'a> i64: std::convert::TryFrom<&'a BigInt>,
-        for<'a> BigInt: From<&'a [u8]> + From<u32> + From<i32> + From<u64>,
+        BigInt: From<u32> + From<i32> + From<u64>,
         // STD Operators
         BigInt: Add<Output = BigInt>
             + Sub<Output = BigInt>

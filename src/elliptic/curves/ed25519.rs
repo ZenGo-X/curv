@@ -83,7 +83,7 @@ impl ECScalar for Ed25519Scalar {
     }
 
     fn from(n: &BigInt) -> Ed25519Scalar {
-        let mut v = BigInt::to_vec(&n);
+        let (_sign, mut v) = BigInt::to_bytes(&n);
         if v.len() > TWO_TIMES_SECRET_KEY_SIZE {
             v = v[0..TWO_TIMES_SECRET_KEY_SIZE].to_vec();
         }
@@ -103,7 +103,7 @@ impl ECScalar for Ed25519Scalar {
         let t1 = &self.fe.to_bytes()[0..self.fe.to_bytes().len()];
         let mut t2 = t1.to_vec();
         t2.reverse();
-        BigInt::from(&t2[0..self.fe.to_bytes().len()])
+        BigInt::from_bytes(Sign::Positive, &t2[0..self.fe.to_bytes().len()])
     }
 
     fn q() -> BigInt {
@@ -277,7 +277,7 @@ impl ECPoint for Ed25519Point {
         let g: GE = ECPoint::generator();
         let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
         let hash = HSha256::create_hash(&[&hash]);
-        let bytes = BigInt::to_vec(&hash);
+        let (_sign, bytes) = BigInt::to_bytes(&hash);
         let h: GE = ECPoint::from_bytes(&bytes[..]).unwrap();
         Ed25519Point {
             purpose: "random",
@@ -316,7 +316,10 @@ impl ECPoint for Ed25519Point {
     }
 
     fn bytes_compressed_to_big_int(&self) -> BigInt {
-        BigInt::from(self.ge.to_bytes()[0..self.ge.to_bytes().len()].as_ref())
+        BigInt::from_bytes(
+            Sign::Positive,
+            self.ge.to_bytes()[0..self.ge.to_bytes().len()].as_ref(),
+        )
     }
 
     // from_bytes will return Ok only if the bytes encode a valid point.
@@ -489,7 +492,7 @@ impl Serialize for Ed25519Point {
         S: Serializer,
     {
         let bytes = self.pk_to_key_slice();
-        let bytes_as_bn = BigInt::from(&bytes[..]);
+        let bytes_as_bn = BigInt::from_bytes(Sign::Positive, &bytes[..]);
         let padded_bytes_hex = format!("{:0>64}", bytes_as_bn.to_hex());
         let mut state = serializer.serialize_struct("ed25519CurvePoint", 1)?;
         state.serialize_field("bytes_str", &padded_bytes_hex)?;
@@ -524,8 +527,9 @@ impl<'de> Visitor<'de> for Ed25519PointVisitor {
             .next_element()?
             .ok_or(V::Error::invalid_length(0, &"a single element"))?;
         let bytes_bn = BigInt::from_hex(bytes_str).map_err(V::Error::custom)?;
-        let bytes = BigInt::to_vec(&bytes_bn);
-        Ok(Ed25519Point::from_bytes(&bytes[..]).expect("error deserializing point"))
+        let (_sign, bytes) = BigInt::to_bytes(&bytes_bn);
+        Ed25519Point::from_bytes(&bytes[..])
+            .map_err(|_| V::Error::custom("failed to parse ed25519 point"))
     }
 
     fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<Ed25519Point, E::Error> {
@@ -542,7 +546,7 @@ impl<'de> Visitor<'de> for Ed25519PointVisitor {
         }
 
         let bytes_bn = BigInt::from_hex(&bytes_str).map_err(E::Error::custom)?;
-        let bytes = BigInt::to_vec(&bytes_bn);
+        let (_sign, bytes) = BigInt::to_bytes(&bytes_bn);
 
         Ed25519Point::from_bytes(&bytes[..]).map_err(|_| E::Error::custom("invalid ed25519 point"))
     }
@@ -713,7 +717,7 @@ mod tests {
             10, 10, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 10, 10, 10,
         ];
-        let a_bn = BigInt::from(&a[..]);
+        let a_bn = BigInt::from_bytes(Sign::Positive, &a[..]);
         let a_fe: FE = ECScalar::from(&a_bn);
 
         let five = BigInt::from(5);
@@ -786,7 +790,7 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 1,
         ];
-        let tv_bn = BigInt::from(&test_vec[..]);
+        let tv_bn = BigInt::from_bytes(Sign::Positive, &test_vec[..]);
         let test_fe: FE = ECScalar::from(&tv_bn);
         let test_ge = g * &test_fe;
         let test_ge_bytes = test_ge.get_element().to_bytes();

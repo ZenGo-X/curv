@@ -29,19 +29,24 @@ pub trait ZeroizeBN {
 
 /// Converts BigInt to/from various forms of representation.
 pub trait Converter: Sized {
-    /// Converts BigInt to bytes discarding sign of the number, i.e. it converts
-    /// absolute value of the number. If this is the case, you need to handle
-    /// serializing sign on your own.
+    /// Returns the sign and bytes representation of the number.
     ///
     /// ## Examples
     /// ```
-    /// # use curv::arithmetic::{BigInt, Converter};
-    /// assert_eq!(BigInt::from(31).to_vec(), &[31]);
-    /// assert_eq!(BigInt::from(-31).to_vec(), &[31]);
-    /// assert_eq!(BigInt::from(1_000_000).to_vec(), &[15, 66, 64]);
-    /// assert_eq!(BigInt::from(-1_000_000).to_vec(), &[15, 66, 64]);
+    /// # use curv::arithmetic::{BigInt, Converter, Sign};
+    /// assert_eq!(BigInt::from(31).to_bytes(), (Sign::Positive, vec![31]));
+    /// assert_eq!(BigInt::from(-31).to_bytes(), (Sign::Negative, vec![31]));
+    /// assert_eq!(BigInt::from(1_000_000).to_bytes(), (Sign::Positive, vec![15, 66, 64]));
+    /// assert_eq!(BigInt::from(-1_000_000).to_bytes(), (Sign::Negative, vec![15, 66, 64]));
     /// ```
-    fn to_vec(&self) -> Vec<u8>;
+    fn to_bytes(&self) -> (Sign, Vec<u8>);
+    /// Constructs BigInt from its sign and byte representation
+    ///
+    /// ```
+    /// # use curv::arithmetic::{BigInt, Converter, Sign};
+    /// assert_eq!(BigInt::from_bytes(Sign::Negative, &[15, 66, 64]), BigInt::from(-1_000_000))
+    /// ```
+    fn from_bytes(sign: Sign, bytes: &[u8]) -> Self;
     /// Converts BigInt to hex representation.
     ///
     /// If the number is negative, it will be serialized by absolute value, and minus character

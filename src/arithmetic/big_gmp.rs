@@ -66,8 +66,16 @@ impl Zeroize for BigInt {
 }
 
 impl Converter for BigInt {
-    fn to_vec(&self) -> Vec<u8> {
-        (&self.gmp).into()
+    fn to_bytes(&self) -> (S, Vec<u8>) {
+        (self.sign(), (&self.gmp).into())
+    }
+
+    fn from_bytes(sign: S, bytes: &[u8]) -> Self {
+        let mut n = Mpz::from(bytes).wrap();
+        if sign == S::Negative {
+            n *= BigInt::from(-1);
+        }
+        n
     }
 
     fn to_hex(&self) -> String {
@@ -277,7 +285,7 @@ impl ring_algorithm::RingNormalize for BigInt {
     }
 }
 
-crate::__bigint_impl_from! { &[u8], u32, i32, u64 }
+crate::__bigint_impl_from! { u32, i32, u64 }
 
 impl From<&BigInt> for Vec<u8> {
     fn from(bn: &BigInt) -> Vec<u8> {

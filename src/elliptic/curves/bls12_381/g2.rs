@@ -96,7 +96,7 @@ impl ECScalar for FieldScalar {
 
     fn from(n: &BigInt) -> FieldScalar {
         let n_mod = BigInt::modulus(n, &FE::q());
-        let mut v = BigInt::to_vec(&n_mod);
+        let (_sign, mut v) = BigInt::to_bytes(&n_mod);
         let mut bytes_array: [u8; SECRET_KEY_SIZE];
         if v.len() < SECRET_KEY_SIZE {
             let mut template = vec![0; SECRET_KEY_SIZE - v.len()];
@@ -332,7 +332,7 @@ impl ECPoint for G2Point {
         let tmp = G2Uncompressed::from_affine(self.ge.clone());
         let bytes = tmp.as_ref();
         let x_coor = &bytes[0..COMPRESSED_SIZE];
-        let bn = BigInt::from(x_coor);
+        let bn = BigInt::from_bytes(Sign::Positive, x_coor);
         Some(bn)
     }
 
@@ -340,14 +340,14 @@ impl ECPoint for G2Point {
         let tmp = G2Uncompressed::from_affine(self.ge.clone());
         let bytes = tmp.as_ref();
         let y_coor = &bytes[COMPRESSED_SIZE..2 * COMPRESSED_SIZE];
-        let bn = BigInt::from(y_coor);
+        let bn = BigInt::from_bytes(Sign::Positive, y_coor);
         Some(bn)
     }
 
     fn bytes_compressed_to_big_int(&self) -> BigInt {
         let tmp = G2Compressed::from_affine(self.ge.clone());
         let bytes = tmp.as_ref();
-        let bn = BigInt::from(&bytes[..]);
+        let bn = BigInt::from_bytes(Sign::Positive, &bytes[..]);
         bn
     }
 
@@ -486,7 +486,7 @@ impl Serialize for G2Point {
         S: Serializer,
     {
         let bytes = self.pk_to_key_slice();
-        let bytes_as_bn = BigInt::from(&bytes[..]);
+        let bytes_as_bn = BigInt::from_bytes(Sign::Positive, &bytes[..]);
         let mut state = serializer.serialize_struct("Bls12381G2Point", 1)?;
         state.serialize_field("bytes_str", &bytes_as_bn.to_hex())?;
         state.end()
@@ -520,8 +520,9 @@ impl<'de> Visitor<'de> for Bls12381G2PointVisitor {
             .next_element()?
             .ok_or(V::Error::invalid_length(0, &"a single element"))?;
         let bytes_bn = BigInt::from_hex(bytes_str).map_err(V::Error::custom)?;
-        let bytes = BigInt::to_vec(&bytes_bn);
-        Ok(G2Point::from_bytes(&bytes[..]).expect("error deserializing point"))
+        let (_sign, bytes) = BigInt::to_bytes(&bytes_bn);
+        Ok(G2Point::from_bytes(&bytes[..])
+            .map_err(|_| V::Error::custom("failed to parse g2 point"))?)
     }
 
     fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<G2Point, E::Error> {
@@ -537,9 +538,10 @@ impl<'de> Visitor<'de> for Bls12381G2PointVisitor {
             }
         }
         let bytes_bn = BigInt::from_hex(&bytes_str).map_err(E::Error::custom)?;
-        let bytes = BigInt::to_vec(&bytes_bn);
+        let (_sign, bytes) = BigInt::to_bytes(&bytes_bn);
 
-        Ok(G2Point::from_bytes(&bytes[..]).expect("error deserializing point"))
+        Ok(G2Point::from_bytes(&bytes[..])
+            .map_err(|_| E::Error::custom("failed to parse g2 point"))?)
     }
 }
 
@@ -671,7 +673,7 @@ mod tests {
             0, 10, 10, 10,
         ];
 
-        let a_bn = BigInt::from(&a[..]);
+        let a_bn = BigInt::from_bytes(Sign::Positive, &a[..]);
         let a_fe: FE = ECScalar::from(&a_bn);
 
         let five = BigInt::from(5);

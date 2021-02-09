@@ -1,5 +1,5 @@
+use curv::arithmetic::{traits::*, BigInt};
 use curv::elliptic::curves::traits::ECPoint;
-use curv::BigInt;
 
 /// Pedesen Commitment:
 /// compute c = mG + rH
@@ -32,7 +32,7 @@ where
 fn main() {
     let message = "commit me!";
     let message_bytes = message.as_bytes();
-    let _message_bn = BigInt::from(message_bytes);
+    let _message_bn = BigInt::from_bytes(Sign::Positive, message_bytes);
     let curve_name = std::env::args().nth(1);
     match curve_name.as_ref().map(|s| s.as_str()) {
         Some("secp256k1") => ped_com::<curv::elliptic::curves::secp256_k1::GE>(&_message_bn),
