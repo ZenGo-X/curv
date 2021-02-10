@@ -11,6 +11,8 @@ use super::traits::{Sign as S, *};
 use num_bigint::BigInt as BN;
 use num_bigint::Sign;
 
+mod primes;
+
 /// Big integer
 ///
 /// Wraps underlying BigInt implementation (either GMP bindings or num-bigint), exposes only
@@ -70,10 +72,26 @@ impl Converter for BigInt {
         self.num.to_str_radix(16)
     }
 
-    fn from_hex(n: &str) -> Result<Self, ParseBigIntFromHexError> {
+    fn from_hex(n: &str) -> Result<Self, ParseBigIntError> {
         BN::parse_bytes(n.as_bytes(), 16)
             .map(Wrap::wrap)
-            .ok_or(ParseFromHexReason::Native.into())
+            .ok_or(ParseBigIntError {
+                reason: ParseErrorReason::NumBigint,
+                radix: 16,
+            })
+    }
+}
+
+impl Num for BigInt {
+    type FromStrRadixErr = ParseBigIntError;
+
+    fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
+        BN::parse_bytes(str.as_bytes(), radix)
+            .map(Wrap::wrap)
+            .ok_or(ParseBigIntError {
+                reason: ParseErrorReason::NumBigint,
+                radix,
+            })
     }
 }
 
@@ -105,6 +123,24 @@ impl BasicOps for BigInt {
             Sign::Minus => S::Negative,
             Sign::NoSign => S::Zero,
             Sign::Plus => S::Positive,
+        }
+    }
+}
+
+impl Primes for BigInt {
+    fn next_prime(&self) -> BigInt {
+        if self.sign() != S::Positive {
+            return BigInt::from(2);
+        }
+        let uint = primes::next_prime(self.num.magnitude());
+        BN::from_biguint(Sign::Plus, uint).wrap()
+    }
+
+    fn is_probable_prime(&self, n: u32) -> bool {
+        if self.sign() != S::Positive {
+            false
+        } else {
+            primes::probably_prime(self.num.magnitude(), n as usize)
         }
     }
 }

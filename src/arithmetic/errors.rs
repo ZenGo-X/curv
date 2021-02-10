@@ -2,43 +2,40 @@ use std::{error, fmt};
 
 /// Error type returned when conversion from hex to BigInt fails.
 #[derive(Debug)]
-pub struct ParseBigIntFromHexError {
-    reason: ParseFromHexReason,
+pub struct ParseBigIntError {
+    pub(super) reason: ParseErrorReason,
+    pub(super) radix: u32,
 }
 
 #[derive(Debug)]
-pub enum ParseFromHexReason {
+pub enum ParseErrorReason {
     #[cfg(feature = "rust-gmp-kzen")]
     Gmp(gmp::mpz::ParseMpzError),
     #[cfg(feature = "num-bigint")]
-    Native,
+    NumBigint,
 }
 
-impl fmt::Display for ParseBigIntFromHexError {
+impl fmt::Display for ParseBigIntError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.reason {
             #[cfg(feature = "rust-gmp-kzen")]
-            ParseFromHexReason::Gmp(reason) => write!(f, "{}", reason),
+            ParseErrorReason::Gmp(reason) => write!(f, "{}", reason),
             #[cfg(feature = "num-bigint")]
-            ParseFromHexReason::Native => write!(f, "invalid hex"),
+            ParseErrorReason::NumBigint => {
+                write!(f, "invalid {}-based number representation", self.radix)
+            }
         }
     }
 }
 
-impl error::Error for ParseBigIntFromHexError {
+impl error::Error for ParseBigIntError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match &self.reason {
             #[cfg(feature = "rust-gmp-kzen")]
-            ParseFromHexReason::Gmp(reason) => Some(reason),
+            ParseErrorReason::Gmp(reason) => Some(reason),
             #[cfg(feature = "num-bigint")]
-            ParseFromHexReason::Native => None,
+            ParseErrorReason::NumBigint => None,
         }
-    }
-}
-
-impl From<ParseFromHexReason> for ParseBigIntFromHexError {
-    fn from(reason: ParseFromHexReason) -> ParseBigIntFromHexError {
-        ParseBigIntFromHexError { reason }
     }
 }
 
