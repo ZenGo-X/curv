@@ -87,10 +87,26 @@ impl Converter for BigInt {
         self.gmp.to_str_radix(16)
     }
 
-    fn from_hex(value: &str) -> Result<BigInt, ParseBigIntFromHexError> {
-        Ok(Mpz::from_str_radix(value, 16)
-            .map_err(ParseFromHexReason::Gmp)?
-            .wrap())
+    fn from_hex(value: &str) -> Result<BigInt, ParseBigIntError> {
+        Mpz::from_str_radix(value, 16)
+            .map(Wrap::wrap)
+            .map_err(|e| ParseBigIntError {
+                reason: ParseErrorReason::Gmp(e),
+                radix: 16,
+            })
+    }
+}
+
+impl Num for BigInt {
+    type FromStrRadixErr = ParseBigIntError;
+
+    fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
+        Mpz::from_str_radix(str, radix as u8)
+            .map(Wrap::wrap)
+            .map_err(|e| ParseBigIntError {
+                reason: ParseErrorReason::Gmp(e),
+                radix,
+            })
     }
 }
 
@@ -124,7 +140,20 @@ impl BasicOps for BigInt {
     }
 }
 
-// TODO: write unit test
+impl Primes for BigInt {
+    fn next_prime(&self) -> Self {
+        self.gmp.nextprime().wrap()
+    }
+
+    fn is_probable_prime(&self, n: u32) -> bool {
+        use gmp::mpz::ProbabPrimeResult::*;
+        match self.gmp.probab_prime(n as i32) {
+            Prime | ProbablyPrime => true,
+            NotPrime => false,
+        }
+    }
+}
+
 impl Modulo for BigInt {
     fn mod_pow(base: &Self, exponent: &Self, modulus: &Self) -> Self {
         base.gmp.powm(&exponent.gmp, &modulus.gmp).wrap()

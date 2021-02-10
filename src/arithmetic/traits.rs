@@ -14,10 +14,10 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-use super::errors::ParseBigIntFromHexError;
+use super::errors::ParseBigIntError;
 
 /// Reuse common traits from [num_traits] crate
-pub use num_traits::{One, Zero};
+pub use num_traits::{Num, One, Zero};
 
 #[deprecated(
     since = "0.6.0",
@@ -73,7 +73,7 @@ pub trait Converter: Sized {
     /// assert_eq!(BigInt::from_hex("f4240").unwrap(), BigInt::from(1_000_000));
     /// assert_eq!(BigInt::from_hex("-f4240").unwrap(), BigInt::from(-1_000_000));
     /// ```
-    fn from_hex(n: &str) -> Result<Self, ParseBigIntFromHexError>;
+    fn from_hex(n: &str) -> Result<Self, ParseBigIntError>;
 }
 
 /// Provides basic arithmetic operators for BigInt
@@ -204,4 +204,16 @@ pub trait BitManipulation {
 )]
 pub trait ConvertFrom<T> {
     fn _from(_: &T) -> Self;
+}
+
+/// Utilities for searching / testing prime numbers
+pub trait Primes {
+    /// Finds next prime number using probabilistic algorithms
+    fn next_prime(&self) -> Self;
+    /// Probabilistically determine whether number is prime
+    ///
+    /// If number is prime, `is_probable_prime` always returns true. If number is composite,
+    /// `is_probable_prime` probably return false. The probability of returning true for a randomly
+    /// chosen non-prime is at most 4^(-reps).
+    fn is_probable_prime(&self, n: u32) -> bool;
 }

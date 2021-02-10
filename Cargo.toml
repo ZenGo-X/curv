@@ -26,6 +26,7 @@ ff-zeroize = "0.6.3"
 ring-algorithm = "0.2.3"
 num-traits = "0.2"
 num-integer = "0.1"
+lazy_static = "1.4.0"
 
 [dependencies.rust-gmp-kzen]
 version = "0.5.0"

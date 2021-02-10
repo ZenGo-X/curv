@@ -16,7 +16,6 @@ pub fn ped_com<P>(message: &BigInt)
 where
     P: ECPoint,
 {
-    use curv::arithmetic::traits::Samplable;
     use curv::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
     use curv::cryptographic_primitives::commitments::traits::Commitment;
 
