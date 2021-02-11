@@ -39,14 +39,14 @@ pub trait Converter: Sized {
     /// assert_eq!(BigInt::from(1_000_000).to_bytes(), (Sign::Positive, vec![15, 66, 64]));
     /// assert_eq!(BigInt::from(-1_000_000).to_bytes(), (Sign::Negative, vec![15, 66, 64]));
     /// ```
-    fn to_bytes(&self) -> (Sign, Vec<u8>);
+    fn to_bytes(&self) -> Vec<u8>; // TODO update docs
     /// Constructs BigInt from its sign and byte representation
     ///
     /// ```
     /// # use curv::arithmetic::{BigInt, Converter, Sign};
     /// assert_eq!(BigInt::from_bytes(Sign::Negative, &[15, 66, 64]), BigInt::from(-1_000_000))
     /// ```
-    fn from_bytes(sign: Sign, bytes: &[u8]) -> Self;
+    fn from_bytes(bytes: &[u8]) -> Self; // TODO update docs
     /// Converts BigInt to hex representation.
     ///
     /// If the number is negative, it will be serialized by absolute value, and minus character
