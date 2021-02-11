@@ -312,7 +312,7 @@ impl ConvertFrom<BigInt> for u64 {
 }
 
 /// Internal helper trait. Creates short-hand for wrapping Mpz into BigInt.
-trait Wrap {
+pub(super) trait Wrap {
     fn wrap(self) -> BigInt;
 }
 impl Wrap for BN {

@@ -14,9 +14,9 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/cryptography-utils/blob/master/LICENSE>
 */
 
-pub mod arithmetic_dsl;
 mod errors;
 mod macros;
+pub mod modular_dsl;
 // mod samplable;
 pub mod traits;
 
@@ -34,6 +34,8 @@ compile_error!("You need to choose which bigint implementation to use. See crate
 mod big_native;
 #[cfg(feature = "num-bigint")]
 pub use big_native::BigInt;
+#[cfg(feature = "num-bigint")]
+use big_native::Wrap;
 
 pub use errors::{ParseBigIntError, TryFromBigIntError};
 pub use traits::*;
