@@ -383,7 +383,7 @@ impl ECPoint for Secp256k1Point {
         }
     }
     fn pk_to_key_slice(&self) -> Vec<u8> {
-        let mut v = vec![4 as u8];
+        let mut v = vec![4_u8];
         let x_vec = BigInt::to_bytes(&self.x_coor().unwrap());
         let y_vec = BigInt::to_bytes(&self.y_coor().unwrap());
 
@@ -577,10 +577,10 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
     {
         let x = seq
             .next_element()?
-            .ok_or(V::Error::invalid_length(0, &"a single element"))?;
+            .ok_or_else(|| V::Error::invalid_length(0, &"a single element"))?;
         let y = seq
             .next_element()?
-            .ok_or(V::Error::invalid_length(0, &"a single element"))?;
+            .ok_or_else(|| V::Error::invalid_length(0, &"a single element"))?;
 
         let bx = BigInt::from_hex(x).map_err(V::Error::custom)?;
         let by = BigInt::from_hex(y).map_err(V::Error::custom)?;

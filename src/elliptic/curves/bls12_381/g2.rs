@@ -346,8 +346,7 @@ impl ECPoint for G2Point {
     fn bytes_compressed_to_big_int(&self) -> BigInt {
         let tmp = G2Compressed::from_affine(self.ge);
         let bytes = tmp.as_ref();
-        let bn = BigInt::from_bytes(&bytes[..]);
-        bn
+        BigInt::from_bytes(&bytes[..])
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<G2Point, ErrorKey> {
@@ -518,7 +517,7 @@ impl<'de> Visitor<'de> for Bls12381G2PointVisitor {
     {
         let bytes_str = seq
             .next_element()?
-            .ok_or(V::Error::invalid_length(0, &"a single element"))?;
+            .ok_or_else(|| V::Error::invalid_length(0, &"a single element"))?;
         let bytes_bn = BigInt::from_hex(bytes_str).map_err(V::Error::custom)?;
         let bytes = BigInt::to_bytes(&bytes_bn);
         Ok(G2Point::from_bytes(&bytes[..])

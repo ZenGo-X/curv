@@ -522,7 +522,7 @@ impl<'de> Visitor<'de> for Ed25519PointVisitor {
     {
         let bytes_str = seq
             .next_element()?
-            .ok_or(V::Error::invalid_length(0, &"a single element"))?;
+            .ok_or_else(|| V::Error::invalid_length(0, &"a single element"))?;
         let bytes_bn = BigInt::from_hex(bytes_str).map_err(V::Error::custom)?;
         let bytes = BigInt::to_bytes(&bytes_bn);
         Ed25519Point::from_bytes(&bytes[..])
@@ -538,7 +538,7 @@ impl<'de> Visitor<'de> for Ed25519PointVisitor {
                 "bytes_str" => {
                     bytes_str = String::from(v);
                 }
-                _ => return Err(E::Error::unknown_field(key, &["bytes_str"]))?,
+                _ => return Err(E::Error::unknown_field(key, &["bytes_str"])),
             }
         }
 

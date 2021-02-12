@@ -194,6 +194,7 @@ impl NumberTests for BigInt {
 }
 
 impl EGCD for BigInt {
+    #[allow(clippy::many_single_char_names)]
     fn egcd(a: &Self, b: &Self) -> (Self, Self, Self) {
         let (s, p, q) = a.gmp.gcdext(&b.gmp);
         (s.wrap(), p.wrap(), q.wrap())

@@ -460,7 +460,7 @@ impl<'de> Visitor<'de> for RistrettoCurvPointVisitor {
     {
         let bytes_str = seq
             .next_element()?
-            .ok_or(V::Error::invalid_length(0, &"a single element"))?;
+            .ok_or_else(|| V::Error::invalid_length(0, &"a single element"))?;
         let bytes_bn = BigInt::from_hex(bytes_str).map_err(V::Error::custom)?;
         let bytes = BigInt::to_bytes(&bytes_bn);
         RistrettoCurvPoint::from_bytes(&bytes[..])

@@ -338,8 +338,7 @@ impl ECPoint for G1Point {
     fn bytes_compressed_to_big_int(&self) -> BigInt {
         let tmp = G1Compressed::from_affine(self.ge);
         let bytes = tmp.as_ref();
-        let bn = BigInt::from_bytes(&bytes[..]);
-        bn
+        BigInt::from_bytes(&bytes[..])
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<G1Point, ErrorKey> {
@@ -509,7 +508,7 @@ impl<'de> Visitor<'de> for Bls12381G1PointVisitor {
     {
         let bytes_str = seq
             .next_element()?
-            .ok_or(V::Error::invalid_length(0, &"a single element"))?;
+            .ok_or_else(|| V::Error::invalid_length(0, &"a single element"))?;
         let bytes_bn = BigInt::from_hex(bytes_str).map_err(V::Error::custom)?;
         let bytes = BigInt::to_bytes(&bytes_bn);
         G1Point::from_bytes(&bytes[..]).map_err(|_| V::Error::custom("failed to parse g1 point"))

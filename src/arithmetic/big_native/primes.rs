@@ -3,6 +3,8 @@
 //!
 //! [num-bigint-dig]: https://docs.rs/num-bigint-dig/0.6.1/src/num_bigint_dig/prime.rs.html#113-179
 
+#![allow(clippy::many_single_char_names)]
+
 use std::hash::Hash;
 
 use rand::{rngs::StdRng, Rng, SeedableRng};
@@ -494,7 +496,7 @@ pub fn jacobi(x: &BigInt, y: &BigInt) -> isize {
 }
 
 fn is_bit_set(x: &BigUint, i: usize) -> bool {
-    &((x >> i) & &*BIG_1) == &*BIG_1
+    ((x >> i) & &*BIG_1) == *BIG_1
 }
 
 /// Generates biguint within `[0;upper)` range
