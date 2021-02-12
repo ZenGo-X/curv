@@ -1,5 +1,5 @@
 use std::convert::{TryFrom, TryInto};
-use std::ops;
+use std::{fmt, ops};
 
 use num_traits::Signed;
 use serde::{Deserialize, Serialize};
@@ -18,7 +18,7 @@ mod primes;
 /// very limited API that allows easily switching between implementations.
 ///
 /// Set of traits implemented on BigInt remains the same regardless of underlying implementation.
-#[derive(PartialOrd, PartialEq, Ord, Eq, Clone, Debug, Serialize, Deserialize)]
+#[derive(PartialOrd, PartialEq, Ord, Eq, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct BigInt {
     num: BN,
@@ -292,6 +292,18 @@ impl Roots for BigInt {
 
     fn cbrt(&self) -> Self {
         self.num.cbrt().wrap()
+    }
+}
+
+impl fmt::Display for BigInt {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.num.fmt(f)
+    }
+}
+
+impl fmt::Debug for BigInt {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.num.fmt(f)
     }
 }
 

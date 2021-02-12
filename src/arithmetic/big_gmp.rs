@@ -16,7 +16,7 @@
 
 use std::convert::TryFrom;
 use std::sync::atomic;
-use std::{ops, ptr};
+use std::{fmt, ops, ptr};
 
 use gmp::mpz::Mpz;
 use gmp::sign::Sign;
@@ -35,7 +35,7 @@ type BN = Mpz;
 /// very limited API that allows easily switching between implementations.
 ///
 /// Set of traits implemented on BigInt remains the same regardless of underlying implementation.
-#[derive(PartialOrd, PartialEq, Ord, Eq, Clone, Debug, Serialize, Deserialize)]
+#[derive(PartialOrd, PartialEq, Ord, Eq, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct BigInt {
     gmp: Mpz,
@@ -265,6 +265,18 @@ impl Roots for BigInt {
 
     fn sqrt(&self) -> Self {
         self.gmp.sqrt().wrap()
+    }
+}
+
+impl fmt::Display for BigInt {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.gmp.fmt(f)
+    }
+}
+
+impl fmt::Debug for BigInt {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.gmp.fmt(f)
     }
 }
 

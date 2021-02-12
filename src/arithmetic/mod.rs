@@ -39,7 +39,7 @@ pub use traits::*;
 
 #[cfg(test)]
 mod test {
-    use std::ops::*;
+    use std::{fmt, ops::*};
 
     use proptest_derive::Arbitrary;
 
@@ -334,6 +334,12 @@ mod test {
         }
     }
 
+    #[test]
+    fn display_bigint_returns_decimal_representation() {
+        let s = BigInt::from(12345).to_string();
+        assert_eq!(s, "12345")
+    }
+
     proptest::proptest! {
         #[test]
         fn fuzz_searching_next_prime(n in 1u64..) {
@@ -359,6 +365,7 @@ mod test {
     #[allow(deprecated)]
     fn assert_big_int_implements_all_required_traits<T>()
     where
+        T: fmt::Display + fmt::Debug,
         // Basic traits from self::traits module
         T: Converter + BasicOps + Modulo + Samplable + NumberTests + EGCD + BitManipulation,
         T: Primes,
