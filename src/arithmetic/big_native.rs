@@ -203,10 +203,6 @@ impl NumberTests for BigInt {
         matches!(n.sign(), S::Zero)
     }
 
-    fn is_even(n: &Self) -> bool {
-        n.num.is_even()
-    }
-
     fn is_negative(n: &Self) -> bool {
         matches!(n.sign(), S::Negative)
     }

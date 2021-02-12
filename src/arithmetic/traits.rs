@@ -134,8 +134,6 @@ pub trait NumberTests {
     ///
     /// Alternatively, [BasicOps::sign] method can be used to check sign of the number.  
     fn is_zero(n: &Self) -> bool;
-    /// Returns `true` if `n` is even
-    fn is_even(n: &Self) -> bool;
     /// Returns `true` if `n` is negative
     ///
     /// Alternatively, [BasicOps::sign] method can be used to check sign of the number.

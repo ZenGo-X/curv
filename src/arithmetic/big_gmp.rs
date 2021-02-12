@@ -188,9 +188,6 @@ impl NumberTests for BigInt {
     fn is_zero(me: &Self) -> bool {
         me.gmp.is_zero()
     }
-    fn is_even(me: &Self) -> bool {
-        me.gmp.is_multiple_of(&Mpz::from(2))
-    }
     fn is_negative(me: &Self) -> bool {
         matches!(me.gmp.sign(), Sign::Negative)
     }
