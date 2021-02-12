@@ -367,7 +367,7 @@ mod test {
         u64: ConvertFrom<BigInt>,
         // Foreign traits implementations
         T: zeroize::Zeroize + ring_algorithm::RingNormalize + num_traits::One + num_traits::Zero,
-        T: num_traits::Num,
+        T: num_traits::Num + num_integer::Integer + num_integer::Roots,
         for<'a> &'a T: ring_algorithm::EuclideanRingOperation<T>,
         // Conversion traits
         for<'a> u64: std::convert::TryFrom<&'a BigInt>,

@@ -35,15 +35,8 @@ sha2 = "0.8.0"
 sha3 = "0.8.2"
 zeroize = "0.10"
 
-[dependencies.rust-gmp-kzen]
-version = "0.5.0"
-features = ["serde_support"]
-optional = true
-
-[dependencies.num-bigint]
-version = "0.3"
-features = ["serde"]
-optional = true
+rust-gmp-kzen = { version = "0.5", features = ["serde_support"], optional = true }
+num-bigint = { version = "0.3", features = ["serde"], optional = true }
 
 [dependencies.secp256k1]
 version = "0.15.3"

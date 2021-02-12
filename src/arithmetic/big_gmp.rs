@@ -221,6 +221,56 @@ impl BitManipulation for BigInt {
     }
 }
 
+impl Integer for BigInt {
+    fn div_floor(&self, other: &Self) -> Self {
+        self.gmp.div_floor(&other.gmp).wrap()
+    }
+
+    fn mod_floor(&self, other: &Self) -> Self {
+        self.gmp.mod_floor(&other.gmp).wrap()
+    }
+
+    fn gcd(&self, other: &Self) -> Self {
+        self.gmp.gcd(&other.gmp).wrap()
+    }
+
+    fn lcm(&self, other: &Self) -> Self {
+        self.gmp.lcm(&other.gmp).wrap()
+    }
+
+    fn divides(&self, other: &Self) -> bool {
+        self.gmp.divides(&other.gmp)
+    }
+
+    fn is_multiple_of(&self, other: &Self) -> bool {
+        self.gmp.is_multiple_of(&other.gmp)
+    }
+
+    fn is_even(&self) -> bool {
+        self.gmp.is_multiple_of(&Mpz::from(2))
+    }
+
+    fn is_odd(&self) -> bool {
+        !self.gmp.is_multiple_of(&Mpz::from(2))
+    }
+
+    fn div_rem(&self, other: &Self) -> (Self, Self) {
+        let n = self / other;
+        let m = self % other;
+        (n, m)
+    }
+}
+
+impl Roots for BigInt {
+    fn nth_root(&self, n: u32) -> Self {
+        self.gmp.root(n).wrap()
+    }
+
+    fn sqrt(&self) -> Self {
+        self.gmp.sqrt().wrap()
+    }
+}
+
 macro_rules! impl_try_from {
     ($($primitive:ty),*$(,)?) => {
         $(

@@ -1,7 +1,6 @@
 use std::convert::{TryFrom, TryInto};
 use std::ops;
 
-use num_integer::Integer;
 use num_traits::Signed;
 use serde::{Deserialize, Serialize};
 
@@ -216,6 +215,87 @@ impl NumberTests for BigInt {
 impl EGCD for BigInt {
     fn egcd(a: &Self, b: &Self) -> (Self, Self, Self) {
         ring_algorithm::normalized_extended_euclidian_algorithm(a.clone(), b.clone())
+    }
+}
+
+impl Integer for BigInt {
+    fn div_floor(&self, other: &Self) -> Self {
+        self.num.div_floor(&other.num).wrap()
+    }
+
+    fn mod_floor(&self, other: &Self) -> Self {
+        self.num.mod_floor(&other.num).wrap()
+    }
+
+    fn div_ceil(&self, other: &Self) -> Self {
+        self.num.div_ceil(&other.num).wrap()
+    }
+
+    fn gcd(&self, other: &Self) -> Self {
+        self.num.gcd(&other.num).wrap()
+    }
+
+    fn lcm(&self, other: &Self) -> Self {
+        self.num.lcm(&other.num).wrap()
+    }
+
+    fn gcd_lcm(&self, other: &Self) -> (Self, Self) {
+        let (n, m) = self.num.gcd_lcm(&other.num);
+        (n.wrap(), m.wrap())
+    }
+
+    fn divides(&self, other: &Self) -> bool {
+        self.num.divides(&other.num)
+    }
+
+    fn is_multiple_of(&self, other: &Self) -> bool {
+        self.num.is_multiple_of(&other.num)
+    }
+
+    fn is_even(&self) -> bool {
+        self.num.is_even()
+    }
+
+    fn is_odd(&self) -> bool {
+        self.num.is_odd()
+    }
+
+    fn div_rem(&self, other: &Self) -> (Self, Self) {
+        let (n, m) = self.num.div_rem(&other.num);
+        (n.wrap(), m.wrap())
+    }
+
+    fn div_mod_floor(&self, other: &Self) -> (Self, Self) {
+        let (n, m) = self.num.div_mod_floor(&other.num);
+        (n.wrap(), m.wrap())
+    }
+
+    fn next_multiple_of(&self, other: &Self) -> Self
+    where
+        Self: Clone,
+    {
+        self.num.next_multiple_of(&other.num).wrap()
+    }
+
+    fn prev_multiple_of(&self, other: &Self) -> Self
+    where
+        Self: Clone,
+    {
+        self.num.prev_multiple_of(&other.num).wrap()
+    }
+}
+
+impl Roots for BigInt {
+    fn nth_root(&self, n: u32) -> Self {
+        self.num.nth_root(n).wrap()
+    }
+
+    fn sqrt(&self) -> Self {
+        self.num.sqrt().wrap()
+    }
+
+    fn cbrt(&self) -> Self {
+        self.num.cbrt().wrap()
     }
 }
 
