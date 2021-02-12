@@ -23,11 +23,11 @@ impl Commitment<BigInt> for HashCommitment {
         blinding_factor: &BigInt,
     ) -> BigInt {
         let mut digest = Sha3_256::new();
-        let (_sign, bytes_message) = message.to_bytes();
+        let bytes_message = message.to_bytes();
         digest.input(&bytes_message);
-        let (_sign, bytes_blinding_factor) = blinding_factor.to_bytes();
+        let bytes_blinding_factor = blinding_factor.to_bytes();
         digest.input(&bytes_blinding_factor);
-        BigInt::from_bytes(Sign::Positive, digest.result().as_ref())
+        BigInt::from_bytes(digest.result().as_ref())
     }
 
     fn create_commitment(message: &BigInt) -> (BigInt, BigInt) {
@@ -100,11 +100,11 @@ mod tests {
             &message,
             &BigInt::zero(),
         );
-        let (_sign, message2) = message.to_bytes();
+        let message2 = message.to_bytes();
         digest.input(&message2);
-        let (_sign, bytes_blinding_factor) = &BigInt::zero().to_bytes();
+        let bytes_blinding_factor = &BigInt::zero().to_bytes();
         digest.input(&bytes_blinding_factor);
-        let hash_result = BigInt::from_bytes(Sign::Positive, digest.result().as_ref());
+        let hash_result = BigInt::from_bytes(digest.result().as_ref());
         assert_eq!(&commitment, &hash_result);
     }
 }

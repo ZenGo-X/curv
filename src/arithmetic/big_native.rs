@@ -54,18 +54,13 @@ impl zeroize::Zeroize for BigInt {
 }
 
 impl Converter for BigInt {
-    fn to_bytes(&self) -> (S, Vec<u8>) {
+    fn to_bytes(&self) -> Vec<u8> {
         let (_sign, bytes) = self.num.to_bytes_be();
-        (self.sign(), bytes)
+        bytes
     }
 
-    fn from_bytes(sign: S, bytes: &[u8]) -> Self {
-        let sign = match sign {
-            S::Negative => Sign::Minus,
-            S::Zero => Sign::NoSign,
-            S::Positive => Sign::Plus,
-        };
-        BN::from_bytes_be(sign, bytes).wrap()
+    fn from_bytes(bytes: &[u8]) -> Self {
+        BN::from_bytes_be(Sign::Plus, bytes).wrap()
     }
 
     fn to_hex(&self) -> String {

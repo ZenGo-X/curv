@@ -122,7 +122,7 @@ impl ECScalar for Secp256k1Scalar {
     fn from(n: &BigInt) -> Secp256k1Scalar {
         let curve_order = FE::q();
         let n_reduced = BigInt::mod_add(n, &BigInt::from(0), &curve_order);
-        let (_sign, mut v) = BigInt::to_bytes(&n_reduced);
+        let mut v = BigInt::to_bytes(&n_reduced);
 
         if v.len() < SECRET_KEY_SIZE {
             let mut template = vec![0; SECRET_KEY_SIZE - v.len()];
@@ -137,11 +137,11 @@ impl ECScalar for Secp256k1Scalar {
     }
 
     fn to_big_int(&self) -> BigInt {
-        BigInt::from_bytes(Sign::Positive, &(self.fe[0..self.fe.len()]))
+        BigInt::from_bytes(&(self.fe[0..self.fe.len()]))
     }
 
     fn q() -> BigInt {
-        BigInt::from_bytes(Sign::Positive, CURVE_ORDER.as_ref())
+        BigInt::from_bytes(CURVE_ORDER.as_ref())
     }
 
     fn add(&self, other: &SK) -> Secp256k1Scalar {
@@ -308,21 +308,21 @@ impl ECPoint for Secp256k1Point {
     /// 3) call from_bytes
     fn bytes_compressed_to_big_int(&self) -> BigInt {
         let serial = self.ge.serialize();
-        BigInt::from_bytes(Sign::Positive, &serial[0..33])
+        BigInt::from_bytes(&serial[0..33])
     }
 
     fn x_coor(&self) -> Option<BigInt> {
         let serialized_pk = PK::serialize_uncompressed(&self.ge);
         let x = &serialized_pk[1..serialized_pk.len() / 2 + 1];
         let x_vec = x.to_vec();
-        Some(BigInt::from_bytes(Sign::Positive, &x_vec[..]))
+        Some(BigInt::from_bytes(&x_vec[..]))
     }
 
     fn y_coor(&self) -> Option<BigInt> {
         let serialized_pk = PK::serialize_uncompressed(&self.ge);
         let y = &serialized_pk[(serialized_pk.len() - 1) / 2 + 1..serialized_pk.len()];
         let y_vec = y.to_vec();
-        Some(BigInt::from_bytes(Sign::Positive, &y_vec[..]))
+        Some(BigInt::from_bytes(&y_vec[..]))
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Secp256k1Point, ErrorKey> {
@@ -384,8 +384,8 @@ impl ECPoint for Secp256k1Point {
     }
     fn pk_to_key_slice(&self) -> Vec<u8> {
         let mut v = vec![4 as u8];
-        let (_sign, x_vec) = BigInt::to_bytes(&self.x_coor().unwrap());
-        let (_sign, y_vec) = BigInt::to_bytes(&self.y_coor().unwrap());
+        let x_vec = BigInt::to_bytes(&self.x_coor().unwrap());
+        let y_vec = BigInt::to_bytes(&self.y_coor().unwrap());
 
         let mut raw_x: Vec<u8> = Vec::new();
         let mut raw_y: Vec<u8> = Vec::new();
@@ -425,13 +425,13 @@ impl ECPoint for Secp256k1Point {
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 255, 255, 252, 47,
         ];
-        let order = BigInt::from_bytes(Sign::Positive, &p[..]);
+        let order = BigInt::from_bytes(&p[..]);
         let x = point.x_coor().unwrap();
         let y = point.y_coor().unwrap();
         let minus_y = BigInt::mod_sub(&order, &y, &order);
 
-        let (_sign, x_vec) = BigInt::to_bytes(&x);
-        let (_sign, y_vec) = BigInt::to_bytes(&minus_y);
+        let x_vec = BigInt::to_bytes(&x);
+        let y_vec = BigInt::to_bytes(&minus_y);
 
         let mut template_x = vec![0; 32 - x_vec.len()];
         template_x.extend_from_slice(&x_vec);
@@ -449,8 +449,8 @@ impl ECPoint for Secp256k1Point {
     }
 
     fn from_coor(x: &BigInt, y: &BigInt) -> Secp256k1Point {
-        let (_sign, mut vec_x) = BigInt::to_bytes(x);
-        let (_sign, mut vec_y) = BigInt::to_bytes(y);
+        let mut vec_x = BigInt::to_bytes(x);
+        let mut vec_y = BigInt::to_bytes(y);
         let coor_size = (UNCOMPRESSED_PUBLIC_KEY_SIZE - 1) / 2;
 
         if vec_x.len() < coor_size {
@@ -467,8 +467,8 @@ impl ECPoint for Secp256k1Point {
             vec_y = y_buffer
         }
 
-        assert_eq!(x, &BigInt::from_bytes(Sign::Positive, vec_x.as_ref()));
-        assert_eq!(y, &BigInt::from_bytes(Sign::Positive, vec_y.as_ref()));
+        assert_eq!(x, &BigInt::from_bytes(vec_x.as_ref()));
+        assert_eq!(y, &BigInt::from_bytes(vec_y.as_ref()));
 
         let mut v = vec![4_u8];
         v.extend(vec_x);
@@ -724,7 +724,7 @@ mod tests {
     fn test_from_bytes() {
         let g = Secp256k1Point::generator();
         let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
-        let (_sign, hash_vec) = BigInt::to_bytes(&hash);
+        let hash_vec = BigInt::to_bytes(&hash);
         let result = Secp256k1Point::from_bytes(&hash_vec);
         assert_eq!(result.unwrap_err(), ErrorKey::InvalidPublicKey)
     }

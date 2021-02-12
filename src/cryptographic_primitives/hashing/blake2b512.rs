@@ -16,10 +16,10 @@ impl Blake {
         let mut digest = Params::new().hash_length(64).personal(persona).to_state();
         // let mut digest = Blake2b::with_params(64, &[], &[], persona);
         for value in big_ints {
-            digest.update(&BigInt::to_bytes(value).1);
+            digest.update(&BigInt::to_bytes(value));
         }
 
-        BigInt::from_bytes(Sign::Positive, digest.finalize().as_ref())
+        BigInt::from_bytes(digest.finalize().as_ref())
     }
 
     pub fn create_hash_from_ge<P: ECPoint>(ge_vec: &[&P], persona: &[u8]) -> P::Scalar {
@@ -30,7 +30,7 @@ impl Blake {
             digest.update(&value.pk_to_key_slice());
         }
 
-        let result = BigInt::from_bytes(Sign::Positive, digest.finalize().as_ref());
+        let result = BigInt::from_bytes(digest.finalize().as_ref());
         ECScalar::from(&result)
     }
 }

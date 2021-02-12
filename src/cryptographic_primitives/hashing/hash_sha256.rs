@@ -20,11 +20,11 @@ impl Hash for HSha256 {
         let mut hasher = Sha256::new();
 
         for value in big_ints {
-            hasher.input(&BigInt::to_bytes(value).1);
+            hasher.input(&BigInt::to_bytes(value));
         }
 
         let result_hex = hasher.result();
-        BigInt::from_bytes(Sign::Positive, &result_hex[..])
+        BigInt::from_bytes(&result_hex[..])
     }
 
     fn create_hash_from_ge<P: ECPoint>(ge_vec: &[&P]) -> P::Scalar {
@@ -34,7 +34,7 @@ impl Hash for HSha256 {
         }
 
         let result_hex = hasher.result();
-        let result = BigInt::from_bytes(Sign::Positive, &result_hex[..]);
+        let result = BigInt::from_bytes(&result_hex[..]);
         ECScalar::from(&result)
     }
 
@@ -42,7 +42,7 @@ impl Hash for HSha256 {
         let mut hasher = Sha256::new();
         hasher.input(byte_slice);
         let result_hex = hasher.result();
-        BigInt::from_bytes(Sign::Positive, &result_hex[..])
+        BigInt::from_bytes(&result_hex[..])
     }
 }
 

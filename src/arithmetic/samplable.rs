@@ -1,7 +1,7 @@
 use num_integer::Integer;
 use rand::{rngs::OsRng, RngCore};
 
-use super::traits::{BitManipulation, Converter, One, Samplable, Sign, Zero};
+use super::traits::{BitManipulation, Converter, One, Samplable, Zero};
 use super::BigInt;
 
 impl Samplable for BigInt {
@@ -40,7 +40,7 @@ impl Samplable for BigInt {
         let bytes = bit_size.div_ceil(&8);
         let mut buf: Vec<u8> = vec![0; bytes];
         rng.fill_bytes(&mut buf);
-        BigInt::from_bytes(Sign::Positive, &*buf) >> (bytes * 8 - bit_size)
+        BigInt::from_bytes(&*buf) >> (bytes * 8 - bit_size)
     }
 
     fn strict_sample(bit_size: usize) -> Self {

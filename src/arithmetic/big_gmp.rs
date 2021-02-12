@@ -71,16 +71,12 @@ impl Zeroize for BigInt {
 }
 
 impl Converter for BigInt {
-    fn to_bytes(&self) -> (S, Vec<u8>) {
-        (self.sign(), (&self.gmp).into())
+    fn to_bytes(&self) -> Vec<u8> {
+        (&self.gmp).into()
     }
 
-    fn from_bytes(sign: S, bytes: &[u8]) -> Self {
-        let mut n = Mpz::from(bytes).wrap();
-        if sign == S::Negative {
-            n *= BigInt::from(-1);
-        }
-        n
+    fn from_bytes(bytes: &[u8]) -> Self {
+        Mpz::from(bytes).wrap()
     }
 
     fn to_hex(&self) -> String {

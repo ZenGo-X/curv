@@ -59,49 +59,48 @@ mod test {
         assert_eq!(n, BigInt::from(1_000_000_u32));
     }
 
-    #[test]
-    fn serializing_negative_to_hex() {
-        let n = BigInt::from(-1_000_000_i32);
-        let h = n.to_hex();
-        assert_eq!(h, "-f4240")
-    }
+    // #[test]
+    // fn serializing_negative_to_hex() {
+    //     let n = BigInt::from(-1_000_000_i32);
+    //     let h = n.to_hex();
+    //     assert_eq!(h, "-f4240")
+    // }
 
-    #[test]
-    fn deserializing_negative_from_hex() {
-        let h = "-f4240";
-        let n = BigInt::from_hex(h).unwrap();
-        assert_eq!(n, BigInt::from(-1_000_000_i32));
-    }
+    // #[test]
+    // fn deserializing_negative_from_hex() {
+    //     let h = "-f4240";
+    //     let n = BigInt::from_hex(h).unwrap();
+    //     assert_eq!(n, BigInt::from(-1_000_000_i32));
+    // }
 
     #[test]
     fn serializing_to_vec() {
         let n = BigInt::from(1_000_000_u32);
-        let (s, v) = n.to_bytes();
-        assert_eq!(s, Sign::Positive);
+        let v = n.to_bytes();
         assert_eq!(v, b"\x0f\x42\x40");
     }
 
     #[test]
     fn deserializing_from_bytes() {
         let v: &[u8] = b"\x0f\x42\x40";
-        let n = BigInt::from_bytes(Sign::Positive, v);
+        let n = BigInt::from_bytes(v);
         assert_eq!(n, BigInt::from(1_000_000_u32))
     }
 
-    #[test]
-    fn serializing_negative_to_vec() {
-        let n = BigInt::from(-1_000_000);
-        let (s, v) = n.to_bytes();
-        assert_eq!(s, Sign::Negative);
-        assert_eq!(v, b"\x0f\x42\x40");
-    }
+    // #[test]
+    // fn serializing_negative_to_vec() {
+    //     let n = BigInt::from(-1_000_000);
+    //     let (s, v) = n.to_bytes();
+    //     assert_eq!(s, Sign::Negative);
+    //     assert_eq!(v, b"\x0f\x42\x40");
+    // }
 
-    #[test]
-    fn deserializing_negative_from_bytes() {
-        let v: &[u8] = b"\x0f\x42\x40";
-        let n = BigInt::from_bytes(Sign::Negative, v);
-        assert_eq!(n, BigInt::from(-1_000_000))
-    }
+    // #[test]
+    // fn deserializing_negative_from_bytes() {
+    //     let v: &[u8] = b"\x0f\x42\x40";
+    //     let n = BigInt::from_bytes(Sign::Negative, v);
+    //     assert_eq!(n, BigInt::from(-1_000_000))
+    // }
 
     #[test]
     fn count_bits() {
