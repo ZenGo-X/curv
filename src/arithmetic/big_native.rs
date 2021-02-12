@@ -305,6 +305,12 @@ crate::__bigint_impl_ops! {
     BitXor bitxor,
     Shl shl usize,
     Shr shr usize,
+
+    Add add u64,
+    Sub sub u64,
+    Mul mul u64,
+    Div div u64,
+    Rem rem u64,
 }
 
 crate::__bigint_impl_assigns! {

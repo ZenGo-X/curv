@@ -404,6 +404,14 @@ mod test {
             + BitXor<&'a BigInt, Output = BigInt>,
         BigInt: Shl<usize, Output = BigInt> + Shr<usize, Output = BigInt>,
         for<'a> &'a BigInt: Shl<usize, Output = BigInt> + Shr<usize, Output = BigInt>,
+        BigInt: Add<u64, Output = BigInt>
+            + Sub<u64, Output = BigInt>
+            + Mul<u64, Output = BigInt>
+            + Div<u64, Output = BigInt>,
+        for<'a> &'a BigInt: Add<u64, Output = BigInt>
+            + Sub<u64, Output = BigInt>
+            + Mul<u64, Output = BigInt>
+            + Div<u64, Output = BigInt>,
         // Assigns traits
         for<'a> BigInt: AddAssign
             + AddAssign<&'a BigInt>
