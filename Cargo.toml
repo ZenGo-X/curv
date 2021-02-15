@@ -1,6 +1,6 @@
 [package]
 name = "curv"
-version = "0.5.7"
+version = "0.5.8"
 edition = "2018"
 authors = ["Omer Shlomovits"]
 license = "MIT"
@@ -17,6 +17,7 @@ curve25519-dalek = "1.2.3"
 derivative = "2.1.1"
 digest = "0.8.1"
 ff-zeroize = "0.6.3"
+funty = "=1.1.0"
 generic-array = "0.14"
 hex = "^0.3"
 hmac = "0.7.1"
