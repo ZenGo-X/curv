@@ -25,7 +25,7 @@ use serde::{Deserialize, Serialize};
 use zeroize::Zeroize;
 
 use super::errors::*;
-use super::traits::{Sign as S, *};
+use super::traits::*;
 
 type BN = Mpz;
 
@@ -125,14 +125,6 @@ impl BasicOps for BigInt {
 
     fn abs(&self) -> Self {
         self.gmp.abs().wrap()
-    }
-
-    fn sign(&self) -> S {
-        match self.gmp.sign() {
-            Sign::Negative => S::Negative,
-            Sign::Zero => S::Zero,
-            Sign::Positive => S::Positive,
-        }
     }
 }
 

@@ -5,7 +5,7 @@ use num_traits::Signed;
 use serde::{Deserialize, Serialize};
 
 use super::errors::*;
-use super::traits::{Sign as S, *};
+use super::traits::*;
 
 use num_bigint::BigInt as BN;
 use num_bigint::Sign;
@@ -111,19 +111,11 @@ impl BasicOps for BigInt {
     fn abs(&self) -> Self {
         self.num.abs().wrap()
     }
-
-    fn sign(&self) -> S {
-        match self.num.sign() {
-            Sign::Minus => S::Negative,
-            Sign::NoSign => S::Zero,
-            Sign::Plus => S::Positive,
-        }
-    }
 }
 
 impl Primes for BigInt {
     fn next_prime(&self) -> BigInt {
-        if self.sign() != S::Positive {
+        if self.num.sign() != Sign::Plus {
             return BigInt::from(2);
         }
         let uint = primes::next_prime(self.num.magnitude());
@@ -131,7 +123,7 @@ impl Primes for BigInt {
     }
 
     fn is_probable_prime(&self, n: u32) -> bool {
-        if self.sign() != S::Positive {
+        if self.num.sign() != Sign::Plus {
             false
         } else {
             primes::probably_prime(self.num.magnitude(), n as usize)
@@ -170,7 +162,7 @@ impl Modulo for BigInt {
 
     fn modulus(&self, modulus: &Self) -> Self {
         let n = self % modulus;
-        if n.sign() == S::Negative {
+        if n.num.sign() == Sign::Minus {
             modulus + n
         } else {
             n
@@ -200,11 +192,11 @@ impl BitManipulation for BigInt {
 
 impl NumberTests for BigInt {
     fn is_zero(n: &Self) -> bool {
-        matches!(n.sign(), S::Zero)
+        matches!(n.num.sign(), Sign::NoSign)
     }
 
     fn is_negative(n: &Self) -> bool {
-        matches!(n.sign(), S::Negative)
+        matches!(n.num.sign(), Sign::Minus)
     }
 }
 

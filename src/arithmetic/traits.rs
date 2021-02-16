@@ -84,14 +84,6 @@ pub trait BasicOps {
     fn sub(&self, other: &Self) -> Self;
     fn add(&self, other: &Self) -> Self;
     fn abs(&self) -> Self;
-    fn sign(&self) -> Sign;
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum Sign {
-    Negative,
-    Zero,
-    Positive,
 }
 
 /// Modular arithmetic for BigInt
