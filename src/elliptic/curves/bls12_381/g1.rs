@@ -22,8 +22,7 @@ use pairing_plus::EncodedPoint;
 use pairing_plus::{CurveAffine, CurveProjective, Engine};
 use sha2::Sha256;
 
-use serde::de;
-use serde::de::{MapAccess, SeqAccess, Visitor};
+use serde::de::{self, Error, MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
@@ -31,7 +30,7 @@ use serde::{Deserialize, Deserializer};
 pub type SK = <pairing_plus::bls12_381::Bls12 as ScalarEngine>::Fr;
 pub type PK = <pairing_plus::bls12_381::Bls12 as Engine>::G1Affine;
 
-use crate::arithmetic::traits::{Converter, Samplable};
+use crate::arithmetic::traits::*;
 use crate::BigInt;
 use crate::ErrorKey::{self};
 
@@ -94,7 +93,7 @@ impl ECScalar for FieldScalar {
 
     fn from(n: &BigInt) -> FieldScalar {
         let n_mod = BigInt::modulus(n, &FE::q());
-        let mut v = BigInt::to_vec(&n_mod);
+        let mut v = BigInt::to_bytes(&n_mod);
         let mut bytes_array: [u8; SECRET_KEY_SIZE];
         if v.len() < SECRET_KEY_SIZE {
             let mut template = vec![0; SECRET_KEY_SIZE - v.len()];
@@ -257,7 +256,7 @@ impl<'de> Visitor<'de> for BLS12_381ScalarVisitor {
     }
 
     fn visit_str<E: de::Error>(self, s: &str) -> Result<FieldScalar, E> {
-        let v = BigInt::from_str_radix(s, 16).expect("Failed in serde");
+        let v = BigInt::from_hex(s).map_err(E::custom)?;
         Ok(ECScalar::from(&v))
     }
 }
@@ -268,7 +267,7 @@ impl Debug for G1Point {
             f,
             "Point {{ purpose: {:?}, bytes: {:?} }}",
             self.purpose,
-            self.bytes_compressed_to_big_int().to_str_radix(16)
+            self.bytes_compressed_to_big_int().to_hex()
         )
     }
 }
@@ -324,7 +323,7 @@ impl ECPoint for G1Point {
         let tmp = G1Uncompressed::from_affine(self.ge);
         let bytes = tmp.as_ref();
         let x_coor = &bytes[0..COMPRESSED_SIZE];
-        let bn = BigInt::from(x_coor);
+        let bn = BigInt::from_bytes(x_coor);
         Some(bn)
     }
 
@@ -332,14 +331,14 @@ impl ECPoint for G1Point {
         let tmp = G1Uncompressed::from_affine(self.ge);
         let bytes = tmp.as_ref();
         let y_coor = &bytes[COMPRESSED_SIZE..COMPRESSED_SIZE * 2];
-        let bn = BigInt::from(y_coor);
+        let bn = BigInt::from_bytes(y_coor);
         Some(bn)
     }
 
     fn bytes_compressed_to_big_int(&self) -> BigInt {
         let tmp = G1Compressed::from_affine(self.ge);
         let bytes = tmp.as_ref();
-        BigInt::from(&bytes[..])
+        BigInt::from_bytes(&bytes[..])
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<G1Point, ErrorKey> {
@@ -477,7 +476,7 @@ impl Serialize for G1Point {
         S: Serializer,
     {
         let bytes = self.pk_to_key_slice();
-        let bytes_as_bn = BigInt::from(&bytes[..]);
+        let bytes_as_bn = BigInt::from_bytes(&bytes[..]);
         let mut state = serializer.serialize_struct("Bls12381G1Point", 1)?;
         state.serialize_field("bytes_str", &bytes_as_bn.to_hex())?;
         state.end()
@@ -509,10 +508,10 @@ impl<'de> Visitor<'de> for Bls12381G1PointVisitor {
     {
         let bytes_str = seq
             .next_element()?
-            .ok_or_else(|| panic!("deserialization failed"))?;
-        let bytes_bn = BigInt::from_hex(bytes_str);
-        let bytes = BigInt::to_vec(&bytes_bn);
-        Ok(G1Point::from_bytes(&bytes[..]).expect("error deserializing point"))
+            .ok_or_else(|| V::Error::invalid_length(0, &"a single element"))?;
+        let bytes_bn = BigInt::from_hex(bytes_str).map_err(V::Error::custom)?;
+        let bytes = BigInt::to_bytes(&bytes_bn);
+        G1Point::from_bytes(&bytes[..]).map_err(|_| V::Error::custom("failed to parse g1 point"))
     }
 
     fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<G1Point, E::Error> {
@@ -524,13 +523,13 @@ impl<'de> Visitor<'de> for Bls12381G1PointVisitor {
                 "bytes_str" => {
                     bytes_str = String::from(v);
                 }
-                _ => panic!("deserialization failed!"),
+                _ => return Err(E::Error::unknown_field(key, &["bytes_str"])),
             }
         }
-        let bytes_bn = BigInt::from_hex(&bytes_str);
-        let bytes = BigInt::to_vec(&bytes_bn);
+        let bytes_bn = BigInt::from_hex(&bytes_str).map_err(E::Error::custom)?;
+        let bytes = BigInt::to_bytes(&bytes_bn);
 
-        Ok(G1Point::from_bytes(&bytes[..]).expect("error deserializing point"))
+        G1Point::from_bytes(&bytes[..]).map_err(|_| E::Error::custom("failed to parse g1 point"))
     }
 }
 
@@ -559,7 +558,7 @@ mod tests {
     use sha2::Sha256;
 
     use super::G1Point;
-    use crate::arithmetic::traits::Modulo;
+    use crate::arithmetic::traits::*;
     use crate::elliptic::curves::bls12_381::g1::{FE, GE};
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
@@ -620,11 +619,11 @@ mod tests {
         let point_ab2 = point_a.sub_point(&point_b.get_element());
         println!(
             "point ab1: {:?}",
-            point_ab1.bytes_compressed_to_big_int().to_str_radix(16)
+            point_ab1.bytes_compressed_to_big_int().to_hex()
         );
         println!(
             "point ab2: {:?}",
-            point_ab2.bytes_compressed_to_big_int().to_str_radix(16)
+            point_ab2.bytes_compressed_to_big_int().to_hex()
         );
 
         assert_eq!(point_ab1, point_ab2);
@@ -660,7 +659,7 @@ mod tests {
             0, 10, 10, 10,
         ];
 
-        let a_bn = BigInt::from(&a[..]);
+        let a_bn = BigInt::from_bytes(&a[..]);
         let a_fe: FE = ECScalar::from(&a_bn);
 
         let five = BigInt::from(5);
@@ -693,7 +692,7 @@ mod tests {
         let a_bn = a.to_big_int();
 
         let a_inv = a.invert();
-        let a_inv_bn_1 = a_bn.invert(&FE::q()).unwrap();
+        let a_inv_bn_1 = BigInt::mod_inv(&a_bn, &FE::q()).unwrap();
         let a_inv_bn_2 = a_inv.to_big_int();
 
         assert_eq!(a_inv_bn_1, a_inv_bn_2);

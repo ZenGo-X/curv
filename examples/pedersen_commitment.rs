@@ -1,5 +1,5 @@
+use curv::arithmetic::{traits::*, BigInt};
 use curv::elliptic::curves::traits::ECPoint;
-use curv::BigInt;
 
 use std::fmt::Debug;
 
@@ -18,7 +18,6 @@ pub fn ped_com<P>(message: &BigInt)
 where
     P: ECPoint + Debug,
 {
-    use curv::arithmetic::traits::Samplable;
     use curv::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
     use curv::cryptographic_primitives::commitments::traits::Commitment;
 
@@ -38,7 +37,7 @@ where
 fn main() {
     let message = "commit me!";
     let message_bytes = message.as_bytes();
-    let _message_bn = BigInt::from(message_bytes);
+    let _message_bn = BigInt::from_bytes(message_bytes);
     let curve_name = std::env::args().nth(1);
     match curve_name.as_deref() {
         Some("secp256k1") => ped_com::<curv::elliptic::curves::secp256_k1::GE>(&_message_bn),

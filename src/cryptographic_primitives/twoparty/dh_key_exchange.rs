@@ -5,10 +5,13 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-/// in ECDH Alice chooses at random a secret "a" and sends Bob public key A = aG
-/// Bob chooses at random a secret "b" and sends to Alice B = bG.
-/// Both parties can compute a joint secret: C =aB = bA = abG which cannot be computed by
-/// a man in the middle attacker.
+//! in ECDH Alice chooses at random a secret "a" and sends Bob public key A = aG
+//! Bob chooses at random a secret "b" and sends to Alice B = bG.
+//! Both parties can compute a joint secret: C = aB = bA = abG which cannot be computed by
+//! a man in the middle attacker.
+
+use serde::{Deserialize, Serialize};
+
 use crate::elliptic::curves::traits::*;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -103,6 +106,7 @@ where
 mod tests {
     use std::fmt::Debug;
 
+    use crate::arithmetic::traits::*;
     use crate::cryptographic_primitives::twoparty::dh_key_exchange::*;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::test_for_all_curves;

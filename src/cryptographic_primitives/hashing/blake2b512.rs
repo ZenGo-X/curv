@@ -4,7 +4,7 @@
     (https://github.com/KZen-networks/curv)
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
-use crate::arithmetic::traits::Converter;
+use crate::arithmetic::traits::*;
 use crate::elliptic::curves::traits::{ECPoint, ECScalar};
 use crate::BigInt;
 use blake2b_simd::Params;
@@ -16,10 +16,10 @@ impl Blake {
         let mut digest = Params::new().hash_length(64).personal(persona).to_state();
         // let mut digest = Blake2b::with_params(64, &[], &[], persona);
         for value in big_ints {
-            digest.update(&BigInt::to_vec(value));
+            digest.update(&BigInt::to_bytes(value));
         }
 
-        BigInt::from(digest.finalize().as_ref())
+        BigInt::from_bytes(digest.finalize().as_ref())
     }
 
     pub fn create_hash_from_ge<P: ECPoint>(ge_vec: &[&P], persona: &[u8]) -> P::Scalar {
@@ -30,7 +30,7 @@ impl Blake {
             digest.update(&value.pk_to_key_slice());
         }
 
-        let result = BigInt::from(digest.finalize().as_ref());
+        let result = BigInt::from_bytes(digest.finalize().as_ref());
         ECScalar::from(&result)
     }
 }
@@ -38,8 +38,8 @@ impl Blake {
 #[cfg(test)]
 mod tests {
     use super::Blake;
-    use crate::elliptic::curves::traits::ECPoint;
-    use crate::elliptic::curves::traits::ECScalar;
+    use crate::arithmetic::traits::*;
+    use crate::elliptic::curves::traits::{ECPoint, ECScalar};
     use crate::BigInt;
 
     #[test]
@@ -58,7 +58,7 @@ mod tests {
     {
         let point = P::base_point2();
         let result1 = Blake::create_hash_from_ge(&[&point, &P::generator()], b"Zcash_RedJubjubH");
-        assert!(result1.to_big_int().to_str_radix(2).len() > 240);
+        assert!(result1.to_big_int().bit_length() > 240);
         let result2 = Blake::create_hash_from_ge(&[&P::generator(), &point], b"Zcash_RedJubjubH");
         assert_ne!(result1, result2);
         let result3 = Blake::create_hash_from_ge(&[&P::generator(), &point], b"Zcash_RedJubjubH");

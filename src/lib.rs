@@ -5,13 +5,10 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-#[macro_use]
-extern crate serde_derive;
-
 pub mod elliptic;
 
 pub mod arithmetic;
-pub use crate::arithmetic::big_gmp::BigInt;
+pub use crate::arithmetic::BigInt;
 
 pub mod cryptographic_primitives;
 

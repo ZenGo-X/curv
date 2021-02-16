@@ -1,6 +1,6 @@
 [package]
 name = "curv"
-version = "0.5.9"
+version = "0.6.0"
 edition = "2018"
 authors = ["Omer Shlomovits"]
 license = "MIT"
@@ -22,20 +22,21 @@ generic-array = "0.14"
 hex = "^0.3"
 hmac = "0.7.1"
 merkle-sha3 = "^0.1"
+lazy_static = "1.4.0"
 num-traits = "0.2"
+num-integer = "0.1"
 pairing-plus = "0.19"
 rand = "0.6"
 ring-algorithm = "0.2.3"
 rust-crypto = "^0.2"
-serde = "1.0"
+serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 sha2 = "0.8.0"
 sha3 = "0.8.2"
 zeroize = "0.10"
 
-[dependencies.rust-gmp-kzen]
-version = "0.5.0"
-features = ["serde_support"]
+rust-gmp-kzen = { version = "0.5", features = ["serde_support"], optional = true }
+num-bigint = { version = "0.3", features = ["serde"], optional = true }
 
 [dependencies.secp256k1]
 version = "0.15.3"
@@ -50,3 +51,7 @@ bincode = "1.1"
 serde_json = "1.0"
 paste = "1.0.2"
 proptest = "0.10"
+proptest-derive = "0.2"
+
+[features]
+default = ["rust-gmp-kzen"]

@@ -6,6 +6,9 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
+use serde::{Deserialize, Serialize};
+
+use crate::arithmetic::traits::*;
 use crate::elliptic::curves::traits::*;
 use crate::BigInt;
 use crate::ErrorSS::{self, VerifyShareError};
