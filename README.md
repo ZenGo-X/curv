@@ -49,6 +49,9 @@ You can choose any one which you prefer by specifying a feature:
   default-features = false
   features = ["num-bigint"]
   ```
+  
+  **_Warning:_** `num-bigint` support is experimental and should not be used in production. For this
+  bigint implementation, we use prime numbers generator which is not considered secure.
 
 ### Examples
 The library includes some basic examples to get you going. To run them: 
