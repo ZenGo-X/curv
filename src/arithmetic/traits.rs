@@ -35,7 +35,7 @@ pub trait Converter: Sized {
     ///
     /// ## Examples
     /// ```
-    /// # use curv::arithmetic::{BigInt, Converter, Sign};
+    /// # use curv::arithmetic::{BigInt, Converter};
     /// assert_eq!(BigInt::from(31).to_bytes(), &[31]);
     /// assert_eq!(BigInt::from(1_000_000).to_bytes(), &[15, 66, 64]);
     /// ```
@@ -43,7 +43,7 @@ pub trait Converter: Sized {
     /// Constructs BigInt from its byte representation
     ///
     /// ```
-    /// # use curv::arithmetic::{BigInt, Converter, Sign};
+    /// # use curv::arithmetic::{BigInt, Converter};
     /// assert_eq!(BigInt::from_bytes(&[15, 66, 64]), BigInt::from(1_000_000))
     /// ```
     fn from_bytes(bytes: &[u8]) -> Self;
