@@ -385,11 +385,19 @@ mod test {
         BigInt: Add<u64, Output = BigInt>
             + Sub<u64, Output = BigInt>
             + Mul<u64, Output = BigInt>
-            + Div<u64, Output = BigInt>,
+            + Div<u64, Output = BigInt>
+            + Rem<u64, Output = BigInt>,
         for<'a> &'a BigInt: Add<u64, Output = BigInt>
             + Sub<u64, Output = BigInt>
             + Mul<u64, Output = BigInt>
-            + Div<u64, Output = BigInt>,
+            + Div<u64, Output = BigInt>
+            + Rem<u64, Output = BigInt>,
+        u64: Add<BigInt, Output = BigInt>
+            + Sub<BigInt, Output = BigInt>
+            + Mul<BigInt, Output = BigInt>,
+        for<'a> u64: Add<&'a BigInt, Output = BigInt>
+            + Sub<&'a BigInt, Output = BigInt>
+            + Mul<&'a BigInt, Output = BigInt>,
         // Assigns traits
         for<'a> BigInt: AddAssign
             + AddAssign<&'a BigInt>

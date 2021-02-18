@@ -74,18 +74,26 @@ impl Converter for BigInt {
                 radix: 16,
             })
     }
-}
 
-impl Num for BigInt {
-    type FromStrRadixErr = ParseBigIntError;
+    fn to_str_radix(&self, radix: u8) -> String {
+        self.num.to_str_radix(radix.into())
+    }
 
-    fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
-        BN::parse_bytes(str.as_bytes(), radix)
+    fn from_str_radix(str: &str, radix: u8) -> Result<Self, ParseBigIntError> {
+        BN::parse_bytes(str.as_bytes(), radix.into())
             .map(Wrap::wrap)
             .ok_or(ParseBigIntError {
                 reason: ParseErrorReason::NumBigint,
-                radix,
+                radix: radix.into(),
             })
+    }
+}
+
+impl num_traits::Num for BigInt {
+    type FromStrRadixErr = ParseBigIntError;
+
+    fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
+        <Self as Converter>::from_str_radix(str, radix.try_into().unwrap())
     }
 }
 
@@ -310,9 +318,9 @@ crate::__bigint_impl_ops! {
     Shl shl usize,
     Shr shr usize,
 
-    Add add u64,
-    Sub sub u64,
-    Mul mul u64,
+    Add add u64 [swap],
+    Sub sub u64 [swap],
+    Mul mul u64 [swap],
     Div div u64,
     Rem rem u64,
 }
