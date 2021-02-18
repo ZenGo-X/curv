@@ -401,6 +401,7 @@ mod test {
         // Assigns traits
         for<'a> BigInt: AddAssign
             + AddAssign<&'a BigInt>
+            + AddAssign<u64>
             + BitAndAssign
             + BitAndAssign<&'a BigInt>
             + BitOrAssign
@@ -409,12 +410,16 @@ mod test {
             + BitXorAssign<&'a BigInt>
             + DivAssign
             + DivAssign<&'a BigInt>
+            + DivAssign<u64>
             + MulAssign
             + MulAssign<&'a BigInt>
+            + MulAssign<u64>
             + RemAssign
             + RemAssign<&'a BigInt>
+            + RemAssign<u64>
             + SubAssign
-            + SubAssign<&'a BigInt>,
+            + SubAssign<&'a BigInt>
+            + SubAssign<u64>,
     {
     }
 }

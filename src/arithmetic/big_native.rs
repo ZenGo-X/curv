@@ -327,15 +327,20 @@ crate::__bigint_impl_ops! {
 
 crate::__bigint_impl_assigns! {
     AddAssign add_assign,
+    AddAssign add_assign u64,
     BitAndAssign bitand_assign,
     BitOrAssign bitor_assign,
     BitXorAssign bitxor_assign,
     DivAssign div_assign,
+    DivAssign div_assign u64,
     MulAssign mul_assign,
+    MulAssign mul_assign u64,
     RemAssign rem_assign,
+    RemAssign rem_assign u64,
     ShlAssign shl_assign usize,
     ShrAssign shr_assign usize,
     SubAssign sub_assign,
+    SubAssign sub_assign u64,
 }
 
 impl ops::Neg for BigInt {
