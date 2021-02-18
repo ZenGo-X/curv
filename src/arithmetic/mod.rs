@@ -264,6 +264,12 @@ mod test {
         assert_eq!(one, BigInt::one());
     }
 
+    #[test]
+    #[should_panic]
+    fn mod_pow_panics_if_exp_is_negative() {
+        BigInt::mod_pow(&BigInt::from(3), &(-BigInt::one()), &BigInt::from(7));
+    }
+
     const PRIMES: &[&str] = &[
         "2",
         "3",

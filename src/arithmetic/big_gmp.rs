@@ -151,6 +151,7 @@ impl Primes for BigInt {
 
 impl Modulo for BigInt {
     fn mod_pow(base: &Self, exponent: &Self, modulus: &Self) -> Self {
+        assert!(exponent >= &BigInt::zero(), "exponent must be non-negative");
         base.gmp.powm(&exponent.gmp, &modulus.gmp).wrap()
     }
 

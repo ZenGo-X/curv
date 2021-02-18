@@ -117,12 +117,19 @@ pub trait BasicOps {
 
 /// Modular arithmetic for BigInt
 pub trait Modulo: Sized {
-    fn mod_pow(base: &Self, exponent: &Self, modulus: &Self) -> Self;
+    /// Calculates base^(exponent) (mod m)
+    ///
+    /// Exponent must not be negative. Function will panic otherwise.
+    fn mod_pow(base: &Self, exponent: &Self, m: &Self) -> Self;
+    /// Calculates a * b (mod m)
     fn mod_mul(a: &Self, b: &Self, modulus: &Self) -> Self;
+    /// Calculates a - b (mod m)
     fn mod_sub(a: &Self, b: &Self, modulus: &Self) -> Self;
+    /// Calculates a + b (mod m)
     fn mod_add(a: &Self, b: &Self, modulus: &Self) -> Self;
-    /// Returns b = a^-1 (mod m). Returns None if `a` and `m` are not coprimes.
+    /// Calculates a^-1 (mod m). Returns None if `a` and `m` are not coprimes.
     fn mod_inv(a: &Self, m: &Self) -> Option<Self>;
+    /// Calculates a mod m
     fn modulus(&self, modulus: &Self) -> Self;
 }
 
