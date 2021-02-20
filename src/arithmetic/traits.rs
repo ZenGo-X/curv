@@ -19,7 +19,7 @@ use super::errors::ParseBigIntError;
 /// Reuse common traits from [num_integer] crate
 pub use num_integer::{Integer, Roots};
 /// Reuse common traits from [num_traits] crate
-pub use num_traits::{Num, One, Zero};
+pub use num_traits::{One, Zero};
 
 #[deprecated(
     since = "0.6.0",
@@ -47,6 +47,7 @@ pub trait Converter: Sized {
     /// assert_eq!(BigInt::from_bytes(&[15, 66, 64]), BigInt::from(1_000_000))
     /// ```
     fn from_bytes(bytes: &[u8]) -> Self;
+
     /// Converts BigInt to hex representation.
     ///
     /// If the number is negative, it will be serialized by absolute value, and minus character
@@ -58,7 +59,9 @@ pub trait Converter: Sized {
     /// assert_eq!(BigInt::from(31).to_hex(), "1f");
     /// assert_eq!(BigInt::from(1_000_000).to_hex(), "f4240");
     /// ```
-    fn to_hex(&self) -> String;
+    fn to_hex(&self) -> String {
+        self.to_str_radix(16)
+    }
     /// Parses given hex string.
     ///
     /// Follows the same format as was described in [to_hex](Self::to_hex).
@@ -71,7 +74,33 @@ pub trait Converter: Sized {
     /// assert_eq!(BigInt::from_hex("f4240").unwrap(), BigInt::from(1_000_000));
     /// assert_eq!(BigInt::from_hex("-f4240").unwrap(), BigInt::from(-1_000_000));
     /// ```
-    fn from_hex(n: &str) -> Result<Self, ParseBigIntError>;
+    fn from_hex(n: &str) -> Result<Self, ParseBigIntError> {
+        Self::from_str_radix(n, 16)
+    }
+
+    /// Converts BigInt to radix representation.
+    ///
+    /// If the number is negative, it will be serialized by absolute value, and minus character
+    /// will be prepended to resulting string.
+    ///
+    /// ## Examples
+    /// ```
+    /// # use curv::arithmetic::{BigInt, Converter};
+    /// assert_eq!(BigInt::from(31).to_str_radix(16), "1f");
+    /// assert_eq!(BigInt::from(1_000_000).to_str_radix(16), "f4240");
+    /// ```
+    fn to_str_radix(&self, radix: u8) -> String;
+    /// Parses given radix string.
+    ///
+    /// Radix must be in `[2; 36]` range. Otherwise, function will **panic**.
+    ///
+    /// ## Examples
+    /// ```
+    /// # use curv::arithmetic::{BigInt, Converter};
+    /// assert_eq!(BigInt::from_str_radix("1f", 16).unwrap(), BigInt::from(31));
+    /// assert_eq!(BigInt::from_str_radix("f4240", 16).unwrap(), BigInt::from(1_000_000));
+    /// ```
+    fn from_str_radix(s: &str, radix: u8) -> Result<Self, ParseBigIntError>;
 }
 
 /// Provides basic arithmetic operators for BigInt
@@ -88,12 +117,19 @@ pub trait BasicOps {
 
 /// Modular arithmetic for BigInt
 pub trait Modulo: Sized {
-    fn mod_pow(base: &Self, exponent: &Self, modulus: &Self) -> Self;
+    /// Calculates base^(exponent) (mod m)
+    ///
+    /// Exponent must not be negative. Function will panic otherwise.
+    fn mod_pow(base: &Self, exponent: &Self, m: &Self) -> Self;
+    /// Calculates a * b (mod m)
     fn mod_mul(a: &Self, b: &Self, modulus: &Self) -> Self;
+    /// Calculates a - b (mod m)
     fn mod_sub(a: &Self, b: &Self, modulus: &Self) -> Self;
+    /// Calculates a + b (mod m)
     fn mod_add(a: &Self, b: &Self, modulus: &Self) -> Self;
-    /// Returns b = a^-1 (mod m). Returns None if `a` and `m` are not coprimes.
+    /// Calculates a^-1 (mod m). Returns None if `a` and `m` are not coprimes.
     fn mod_inv(a: &Self, m: &Self) -> Option<Self>;
+    /// Calculates a mod m
     fn modulus(&self, modulus: &Self) -> Self;
 }
 

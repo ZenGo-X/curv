@@ -264,6 +264,12 @@ mod test {
         assert_eq!(one, BigInt::one());
     }
 
+    #[test]
+    #[should_panic]
+    fn mod_pow_panics_if_exp_is_negative() {
+        BigInt::mod_pow(&BigInt::from(3), &(-BigInt::one()), &BigInt::from(7));
+    }
+
     const PRIMES: &[&str] = &[
         "2",
         "3",
@@ -385,14 +391,23 @@ mod test {
         BigInt: Add<u64, Output = BigInt>
             + Sub<u64, Output = BigInt>
             + Mul<u64, Output = BigInt>
-            + Div<u64, Output = BigInt>,
+            + Div<u64, Output = BigInt>
+            + Rem<u64, Output = BigInt>,
         for<'a> &'a BigInt: Add<u64, Output = BigInt>
             + Sub<u64, Output = BigInt>
             + Mul<u64, Output = BigInt>
-            + Div<u64, Output = BigInt>,
+            + Div<u64, Output = BigInt>
+            + Rem<u64, Output = BigInt>,
+        u64: Add<BigInt, Output = BigInt>
+            + Sub<BigInt, Output = BigInt>
+            + Mul<BigInt, Output = BigInt>,
+        for<'a> u64: Add<&'a BigInt, Output = BigInt>
+            + Sub<&'a BigInt, Output = BigInt>
+            + Mul<&'a BigInt, Output = BigInt>,
         // Assigns traits
         for<'a> BigInt: AddAssign
             + AddAssign<&'a BigInt>
+            + AddAssign<u64>
             + BitAndAssign
             + BitAndAssign<&'a BigInt>
             + BitOrAssign
@@ -401,12 +416,16 @@ mod test {
             + BitXorAssign<&'a BigInt>
             + DivAssign
             + DivAssign<&'a BigInt>
+            + DivAssign<u64>
             + MulAssign
             + MulAssign<&'a BigInt>
+            + MulAssign<u64>
             + RemAssign
             + RemAssign<&'a BigInt>
+            + RemAssign<u64>
             + SubAssign
-            + SubAssign<&'a BigInt>,
+            + SubAssign<&'a BigInt>
+            + SubAssign<u64>,
     {
     }
 }

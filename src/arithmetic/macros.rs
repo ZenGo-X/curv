@@ -58,6 +58,33 @@ macro_rules! __bigint_impl_ops {
         }
         $crate::__bigint_impl_ops!{ $($rest)* }
     };
+    ($op: ident $func:ident $primitive:ty [swap], $($rest:tt)*) => {
+        impl ops::$op<$primitive> for BigInt {
+            type Output = BigInt;
+            fn $func(self, rhs: $primitive) -> Self::Output {
+                self.into_inner().$func(rhs).wrap()
+            }
+        }
+        impl ops::$op<$primitive> for &BigInt {
+            type Output = BigInt;
+            fn $func(self, rhs: $primitive) -> Self::Output {
+                (&self.inner_ref()).$func(rhs).wrap()
+            }
+        }
+        impl ops::$op<BigInt> for $primitive {
+            type Output = BigInt;
+            fn $func(self, rhs: BigInt) -> Self::Output {
+                self.$func(rhs.into_inner()).wrap()
+            }
+        }
+        impl ops::$op<&BigInt> for $primitive {
+            type Output = BigInt;
+            fn $func(self, rhs: &BigInt) -> Self::Output {
+                self.$func(rhs.inner_ref()).wrap()
+            }
+        }
+        $crate::__bigint_impl_ops!{ $($rest)* }
+    };
 }
 
 #[doc(hidden)]

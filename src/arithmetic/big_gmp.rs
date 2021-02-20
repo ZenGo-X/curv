@@ -14,7 +14,7 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::sync::atomic;
 use std::{fmt, ops, ptr};
 
@@ -91,18 +91,25 @@ impl Converter for BigInt {
                 radix: 16,
             })
     }
-}
 
-impl Num for BigInt {
-    type FromStrRadixErr = ParseBigIntError;
+    fn to_str_radix(&self, radix: u8) -> String {
+        self.gmp.to_str_radix(radix)
+    }
 
-    fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
-        Mpz::from_str_radix(str, radix as u8)
+    fn from_str_radix(str: &str, radix: u8) -> Result<Self, ParseBigIntError> {
+        Mpz::from_str_radix(str, radix)
             .map(Wrap::wrap)
             .map_err(|e| ParseBigIntError {
                 reason: ParseErrorReason::Gmp(e),
-                radix,
+                radix: radix.into(),
             })
+    }
+}
+
+impl num_traits::Num for BigInt {
+    type FromStrRadixErr = ParseBigIntError;
+    fn from_str_radix(str: &str, radix: u32) -> Result<Self, ParseBigIntError> {
+        <Self as Converter>::from_str_radix(str, radix.try_into().unwrap())
     }
 }
 
@@ -144,6 +151,7 @@ impl Primes for BigInt {
 
 impl Modulo for BigInt {
     fn mod_pow(base: &Self, exponent: &Self, modulus: &Self) -> Self {
+        assert!(exponent >= &BigInt::zero(), "exponent must be non-negative");
         base.gmp.powm(&exponent.gmp, &modulus.gmp).wrap()
     }
 
@@ -309,24 +317,29 @@ crate::__bigint_impl_ops! {
     Shl shl usize,
     Shr shr usize,
 
-    Add add u64,
-    Sub sub u64,
-    Mul mul u64,
+    Add add u64 [swap],
+    Sub sub u64 [swap],
+    Mul mul u64 [swap],
     Div div u64,
     Rem rem u64,
 }
 
 crate::__bigint_impl_assigns! {
     AddAssign add_assign,
+    AddAssign add_assign u64,
     BitAndAssign bitand_assign,
     BitOrAssign bitor_assign,
     BitXorAssign bitxor_assign,
     DivAssign div_assign,
+    DivAssign div_assign u64,
     MulAssign mul_assign,
+    MulAssign mul_assign u64,
     RemAssign rem_assign,
+    RemAssign rem_assign u64,
     ShlAssign shl_assign usize,
     ShrAssign shr_assign usize,
     SubAssign sub_assign,
+    SubAssign sub_assign u64,
 }
 
 impl ops::Neg for BigInt {
