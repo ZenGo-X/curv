@@ -338,7 +338,7 @@ impl ECPoint for G1Point {
     fn bytes_compressed_to_big_int(&self) -> BigInt {
         let tmp = G1Compressed::from_affine(self.ge);
         let bytes = tmp.as_ref();
-        BigInt::from_bytes(&bytes[..])
+        BigInt::from_bytes(bytes)
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<G1Point, ErrorKey> {

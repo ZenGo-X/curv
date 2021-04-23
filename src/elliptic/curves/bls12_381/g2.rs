@@ -346,7 +346,7 @@ impl ECPoint for G2Point {
     fn bytes_compressed_to_big_int(&self) -> BigInt {
         let tmp = G2Compressed::from_affine(self.ge);
         let bytes = tmp.as_ref();
-        BigInt::from_bytes(&bytes[..])
+        BigInt::from_bytes(bytes)
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<G2Point, ErrorKey> {
@@ -520,8 +520,7 @@ impl<'de> Visitor<'de> for Bls12381G2PointVisitor {
             .ok_or_else(|| V::Error::invalid_length(0, &"a single element"))?;
         let bytes_bn = BigInt::from_hex(bytes_str).map_err(V::Error::custom)?;
         let bytes = BigInt::to_bytes(&bytes_bn);
-        Ok(G2Point::from_bytes(&bytes[..])
-            .map_err(|_| V::Error::custom("failed to parse g2 point"))?)
+        G2Point::from_bytes(&bytes[..]).map_err(|_| V::Error::custom("failed to parse g2 point"))
     }
 
     fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<G2Point, E::Error> {
@@ -539,8 +538,7 @@ impl<'de> Visitor<'de> for Bls12381G2PointVisitor {
         let bytes_bn = BigInt::from_hex(&bytes_str).map_err(E::Error::custom)?;
         let bytes = BigInt::to_bytes(&bytes_bn);
 
-        Ok(G2Point::from_bytes(&bytes[..])
-            .map_err(|_| E::Error::custom("failed to parse g2 point"))?)
+        G2Point::from_bytes(&bytes[..]).map_err(|_| E::Error::custom("failed to parse g2 point"))
     }
 }
 

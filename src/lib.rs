@@ -5,6 +5,8 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
+#![allow(clippy::upper_case_acronyms)]
+
 pub mod elliptic;
 
 pub mod arithmetic;
