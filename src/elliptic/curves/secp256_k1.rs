@@ -95,10 +95,20 @@ impl ECScalar for Secp256k1Scalar {
 
     fn new_random() -> Secp256k1Scalar {
         let mut arr = [0u8; 32];
-        thread_rng().fill(&mut arr[..]);
-        Secp256k1Scalar {
-            purpose: "random",
-            fe: SK::from_slice(&arr[0..arr.len()]).unwrap(),
+        let mut rng = thread_rng();
+
+        rng.fill(&mut arr[..]);
+        let mut fe = SK::from_slice(&arr[..]);
+        loop {
+            if let Ok(fe) = fe {
+                return Secp256k1Scalar {
+                    purpose: "random",
+                    fe,
+                };
+            } else {
+                rng.fill(&mut arr[..]);
+                fe = SK::from_slice(&arr[..]);
+            }
         }
     }
 
