@@ -27,7 +27,7 @@ use crypto::digest::Digest;
 use crypto::sha3::Sha3;
 #[cfg(feature = "merkle")]
 use merkle::Hashable;
-use rand::{thread_rng, Rng};
+use rand::thread_rng;
 use secp256k1::constants::{
     CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
@@ -94,11 +94,9 @@ impl ECScalar for Secp256k1Scalar {
     type SecretKey = SK;
 
     fn new_random() -> Secp256k1Scalar {
-        let mut arr = [0u8; 32];
-        thread_rng().fill(&mut arr[..]);
         Secp256k1Scalar {
             purpose: "random",
-            fe: SK::from_slice(&arr[0..arr.len()]).unwrap(),
+            fe: SecretKey::new(&mut thread_rng()),
         }
     }
 
