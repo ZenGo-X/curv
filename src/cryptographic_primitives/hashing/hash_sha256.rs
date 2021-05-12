@@ -50,12 +50,10 @@ impl Hash for HSha256 {
 mod tests {
     use super::HSha256;
     use super::Hash;
+    use crate::arithmetic::traits::*;
     use crate::elliptic::curves::traits::ECPoint;
     use crate::elliptic::curves::traits::ECScalar;
     use crate::BigInt;
-    extern crate hex;
-    extern crate sha2;
-    use crate::arithmetic::traits::*;
     use sha2::Digest;
     use sha2::Sha256;
 
