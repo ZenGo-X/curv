@@ -99,6 +99,12 @@ impl num_traits::Num for BigInt {
 
 crate::__bigint_impl_from! { u32, i32, u64 }
 
+impl From<u16> for BigInt {
+    fn from(n: u16) -> Self {
+        BigInt::from(u64::from(n))
+    }
+}
+
 impl BasicOps for BigInt {
     fn pow(&self, exponent: u32) -> Self {
         self.num.pow(exponent).wrap()

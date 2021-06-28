@@ -389,6 +389,12 @@ impl ring_algorithm::RingNormalize for BigInt {
 
 crate::__bigint_impl_from! { u32, i32, u64 }
 
+impl From<u16> for BigInt {
+    fn from(n: u16) -> Self {
+        BigInt::from(u64::from(n))
+    }
+}
+
 /// Internal helper trait. Creates short-hand for wrapping Mpz into BigInt.
 trait Wrap {
     fn wrap(self) -> BigInt;
