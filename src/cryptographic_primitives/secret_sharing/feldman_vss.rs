@@ -6,9 +6,12 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
+use std::convert::{TryFrom, TryInto};
+
 use serde::{Deserialize, Serialize};
 
 use crate::arithmetic::traits::*;
+use crate::cryptographic_primitives::Polynomial;
 use crate::elliptic::curves::traits::*;
 use crate::BigInt;
 use crate::ErrorSS::{self, VerifyShareError};
@@ -38,22 +41,27 @@ where
         self.parameters.threshold + 1
     }
 
+    // TODO: share should accept u16 rather than usize
     // generate VerifiableSS from a secret
     pub fn share(t: usize, n: usize, secret: &P::Scalar) -> (VerifiableSS<P>, Vec<P::Scalar>) {
         assert!(t < n);
-        let poly = VerifiableSS::<P>::sample_polynomial(t, secret);
-        let index_vec: Vec<usize> = (1..=n).collect();
-        let secret_shares = VerifiableSS::<P>::evaluate_polynomial(&poly, &index_vec);
+        let t = u16::try_from(t).unwrap();
+        let n = u16::try_from(n).unwrap();
+
+        let poly = Polynomial::<P>::sample_fixed_coef0(t, secret.clone());
+        let secret_shares = poly.evaluate_many_bigint(1..=n).collect();
 
         let G: P = ECPoint::generator();
-        let commitments = (0..poly.len())
-            .map(|i| G.clone() * poly[i].clone())
+        let commitments = poly
+            .coefficients()
+            .iter()
+            .map(|coef| G.clone() * coef.clone())
             .collect::<Vec<P>>();
         (
             VerifiableSS {
                 parameters: ShamirSecretSharing {
-                    threshold: t,
-                    share_count: n,
+                    threshold: t.into(),
+                    share_count: n.into(),
                 },
                 commitments,
             },
@@ -63,16 +71,19 @@ where
 
     // takes given VSS and generates a new VSS for the same secret and a secret shares vector to match the new commitments
     pub fn reshare(&self) -> (VerifiableSS<P>, Vec<P::Scalar>) {
+        // TODO: ShamirSecretSharing::{threshold, share_count} should be u16 rather than usize
+        let t = u16::try_from(self.parameters.threshold).unwrap();
+        let n = u16::try_from(self.parameters.share_count).unwrap();
+
         let one: P::Scalar = ECScalar::from(&BigInt::one());
-        let poly = VerifiableSS::<P>::sample_polynomial(self.parameters.threshold, &one);
-        let index_vec: Vec<usize> = (1..=self.parameters.share_count).collect();
-        let secret_shares_biased = VerifiableSS::<P>::evaluate_polynomial(&poly, &index_vec);
+        let poly = Polynomial::<P>::sample_fixed_coef0(t, one.clone());
+        let secret_shares_biased: Vec<_> = poly.evaluate_many_bigint(1..=n).collect();
         let secret_shares: Vec<_> = (0..secret_shares_biased.len())
             .map(|i| secret_shares_biased[i].sub(&one.get_element()))
             .collect();
         let G: P = ECPoint::generator();
         let mut new_commitments = vec![self.commitments[0].clone()];
-        for (poly, commitment) in poly.iter().zip(&self.commitments).skip(1) {
+        for (poly, commitment) in poly.coefficients().iter().zip(&self.commitments).skip(1) {
             new_commitments.push((G.clone() * poly.clone()) + commitment.clone())
         }
         (
@@ -92,18 +103,25 @@ where
         index_vec: &[usize],
     ) -> (VerifiableSS<P>, Vec<P::Scalar>) {
         assert_eq!(n, index_vec.len());
-        let poly = VerifiableSS::<P>::sample_polynomial(t, secret);
-        let secret_shares = VerifiableSS::<P>::evaluate_polynomial(&poly, index_vec);
+        // TODO: share_at_indices should accept u16 rather than usize (t, n, index_vec)
+        let t = u16::try_from(t).unwrap();
+        let n = u16::try_from(n).unwrap();
+        let index_vec = index_vec.iter().map(|&i| u16::try_from(i).unwrap());
+
+        let poly = Polynomial::<P>::sample_fixed_coef0(t, secret.clone());
+        let secret_shares = poly.evaluate_many_bigint(index_vec).collect();
 
         let G: P = ECPoint::generator();
-        let commitments = (0..poly.len())
-            .map(|i| G.clone() * poly[i].clone())
+        let commitments = poly
+            .coefficients()
+            .iter()
+            .map(|coef| G.clone() * coef.clone())
             .collect::<Vec<P>>();
         (
             VerifiableSS {
                 parameters: ShamirSecretSharing {
-                    threshold: t,
-                    share_count: n,
+                    threshold: t.into(),
+                    share_count: n.into(),
                 },
                 commitments,
             },
@@ -112,25 +130,24 @@ where
     }
 
     // returns vector of coefficients
+    #[deprecated(since = "0.7.1", note = "please use Polynomial::sample instead")]
     pub fn sample_polynomial(t: usize, coef0: &P::Scalar) -> Vec<P::Scalar> {
-        let mut coefficients = vec![coef0.clone()];
-        // sample the remaining coefficients randomly using secure randomness
-        let random_coefficients: Vec<P::Scalar> = (0..t).map(|_| ECScalar::new_random()).collect();
-        coefficients.extend(random_coefficients);
-        // return
-        coefficients
+        Polynomial::<P>::sample_fixed_coef0(t.try_into().unwrap(), coef0.clone())
+            .coefficients()
+            .to_vec()
     }
 
+    #[deprecated(
+        since = "0.7.1",
+        note = "please use Polynomial::evaluate_many_bigint instead"
+    )]
     pub fn evaluate_polynomial(coefficients: &[P::Scalar], index_vec: &[usize]) -> Vec<P::Scalar> {
-        (0..index_vec.len())
-            .map(|point| {
-                let point_bn = BigInt::from(index_vec[point] as u32);
-
-                VerifiableSS::<P>::mod_evaluate_polynomial(coefficients, ECScalar::from(&point_bn))
-            })
+        Polynomial::<P>::from_coefficients(coefficients.to_vec())
+            .evaluate_many_bigint(index_vec.iter().map(|&i| u64::try_from(i).unwrap()))
             .collect()
     }
 
+    #[deprecated(since = "0.7.1", note = "please use Polynomial::evaluate instead")]
     pub fn mod_evaluate_polynomial(coefficients: &[P::Scalar], point: P::Scalar) -> P::Scalar {
         // evaluate using Horner's rule
         //  - to combine with fold we consider the coefficients in reverse order
