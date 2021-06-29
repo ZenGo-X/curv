@@ -1,13 +1,25 @@
 language: rust
 cache: cargo
-rust:
-  - stable
+rust: stable
+virt: lxd
 
-before_script:
-  - rustup component add rustfmt-preview clippy
-  - cargo fmt --all -- --check
-  - cargo clippy -- -D clippy::all
+env:
+  - BIGINT_BACKEND=rust-gmp-kzen
+  - BIGINT_BACKEND=num-bigint
+
+before_install:
+  - rustup component add rustfmt clippy
 
 script:
-  - cargo build --verbose
-  - cargo test --verbose
+  - cargo build --verbose --no-default-features --features $BIGINT_BACKEND
+  - cargo test --verbose --no-default-features --features $BIGINT_BACKEND
+  - if [[ "$BIGINT_BACKEND" = "rust-gmp-kzen" ]]; then cargo fmt --all -- --check; fi
+  - if [[ "$BIGINT_BACKEND" = "rust-gmp-kzen" ]]; then cargo clippy -- -D clippy::all; fi
+
+deploy:
+  provider: cargo
+  token:
+    secure: "FE6A1XRyJtTK92rV3y5e0go+FDKn1HpJbYkHOacDqabTkUluXrCTw3ERFcQQ13QZdc9xkxoAs7roKp8ivl0Xg1IJCzI+yLb0ZR6YcYebKEqd06YFbBmejjvMsyyZHKPTQmroe+tBwcA1IqLLcAY8vmY5EGhJTsGUhovIomw1RvqM6gu9yUwII/sF0a5gqY761cJd4QoLlWTb1Er7DqZxoU9drhWAJQP7sLsspjLu6dOyWzb0A2mTmnek+iuVnt9mGPtjGk4FcNPGbEmNu3UPOVuXcyibFPIALEWrH0ouZB7E9k312g45LucSeKSimgQYQBNAzdsnkKyBwyTpGuaosGnMbI7mhoi3visV21RTbw61N05dmZTYb4VAMcx+93TslKMDv5nmIlUmKxULNRBSTPPtrg0/X7KuKaoHVstrxx0ohd8GFwGYQBB64mQaOxFBhoy//prpHjhFl+1cti4JHyaHFSV/PfaryvUfRg4q2Dlq1HP+ey5cPRPbwfpSO1RmXlIDWe21ncRnKSpgMHTPBzYNtil+gZyzHl5X4ZLvLCaHsZwZQPMFB+otlabFaS1caqkk1F1fHMrj8NMak/snb2IyUJqXgQivqzEn38G3k9/QHeQXhNVwyGDtdWV51P9XfXFpxrEuuWlXF56ABiWcF7bY7Y3DeCbnFNLkVkGZYvY="
+  on:
+    tags: true
+    condition: '"$TRAVIS_TAG" =~ ^v[0-9.]+$ && "$BIGINT_BACKEND" = "rust-gmp-kzen"'
