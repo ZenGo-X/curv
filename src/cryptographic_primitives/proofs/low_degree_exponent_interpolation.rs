@@ -159,7 +159,7 @@ mod tests {
         P: ECPoint + Clone + PartialEq,
         P::Scalar: ECScalar + Clone + PartialEq,
     {
-        let poly = Polynomial::<P>::sample(5);
+        let poly = Polynomial::<P>::sample_exact(5);
 
         let alpha: Vec<P::Scalar> = (1..=10).map(|i| ECScalar::from(&BigInt::from(i))).collect();
         let g: Vec<P> = iter::repeat_with(ECScalar::new_random)
@@ -180,7 +180,7 @@ mod tests {
         P: ECPoint + Clone + PartialEq + fmt::Debug,
         P::Scalar: ECScalar + Clone + PartialEq + fmt::Debug,
     {
-        let poly = Polynomial::<P>::sample(5);
+        let poly = Polynomial::<P>::sample_exact(5);
 
         // Test that prove requires alphas.len() == g.len()
         {

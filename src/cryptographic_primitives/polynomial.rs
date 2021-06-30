@@ -22,17 +22,18 @@ pub struct Polynomial<P: ECPoint> {
 impl<P> Polynomial<P>
 where
     P: ECPoint,
-    P::Scalar: Clone,
 {
-    /// Constructs polynomial `f(x)` from list of coefficients `a`.
+    /// Constructs polynomial `f(x)` from list of coefficients `a`
     ///
     /// ## Order
     ///
     /// `a[i]` should corresponds to coefficient `a_i` of polynomial `f(x) = ... + a_i * x^i + ...`
     ///
-    /// ## Panics
+    /// ## Polynomial degree
     ///
-    /// Panics if list of coefficients is empty
+    /// Note that it's not guaranteed that constructed polynomial degree equals to `coefficients.len()-1`
+    /// as it's allowed to end with zero coefficients. Actual polynomial degree equals to index of last
+    /// non-zero coefficient or zero if all the coefficients are zero.
     ///
     /// ## Example
     ///
@@ -47,13 +48,15 @@ where
     /// assert_eq!(coefs, poly.coefficients());
     /// ```
     pub fn from_coefficients(coefficients: Vec<P::Scalar>) -> Self {
-        assert!(
-            !coefficients.is_empty(),
-            "coefficients must have at least one coefficient"
-        );
         Self { coefficients }
     }
+}
 
+impl<P> Polynomial<P>
+where
+    P: ECPoint,
+    P::Scalar: PartialEq,
+{
     /// Sample a random polynomial of given degree
     ///
     /// ## Example
@@ -62,15 +65,19 @@ where
     /// # use curv::elliptic::curves::traits::ECScalar;
     /// use curv::elliptic::curves::p256::{GE, FE};
     ///
-    /// let polynomial = Polynomial::<GE>::sample(3);
+    /// let polynomial = Polynomial::<GE>::sample_exact(3);
     /// assert_eq!(polynomial.degree(), 3);
     /// ```
-    ///
-    pub fn sample(degree: u16) -> Self {
-        Polynomial {
-            coefficients: iter::repeat_with(ECScalar::new_random)
-                .take(usize::from(degree + 1))
-                .collect(),
+    pub fn sample_exact(degree: u16) -> Self {
+        if degree == 0 {
+            Self::from_coefficients(vec![ECScalar::new_random()])
+        } else {
+            Self::from_coefficients(
+                iter::repeat_with(ECScalar::new_random)
+                    .take(usize::from(degree))
+                    .chain(iter::once(new_random_nonzero()))
+                    .collect(),
+            )
         }
     }
 
@@ -83,16 +90,103 @@ where
     /// use curv::elliptic::curves::p256::{GE, FE};
     ///
     /// let const_term: FE = ECScalar::new_random();
-    /// let polynomial = Polynomial::<GE>::sample_fixed_const_term(3, const_term);
+    /// let polynomial = Polynomial::<GE>::sample_exact_with_fixed_const_term(3, const_term);
+    /// assert_eq!(polynomial.degree(), 3);
     /// assert_eq!(polynomial.evaluate(&FE::zero()), const_term);
     /// ```
-    pub fn sample_fixed_const_term(n: u16, const_term: P::Scalar) -> Self {
-        let random_coefficients = iter::repeat_with(ECScalar::new_random).take(usize::from(n));
+    pub fn sample_exact_with_fixed_const_term(n: u16, const_term: P::Scalar) -> Self {
+        if n == 0 {
+            Self::from_coefficients(vec![const_term])
+        } else {
+            let random_coefficients = iter::repeat_with(ECScalar::new_random)
+                .take(usize::from(n - 1))
+                .chain(iter::once(new_random_nonzero::<P::Scalar>()));
+            Self::from_coefficients(iter::once(const_term).chain(random_coefficients).collect())
+        }
+    }
+
+    /// Returns degree `d` of polynomial `f(x)`: `d = deg(f)`
+    ///
+    /// ```rust
+    /// # use curv::cryptographic_primitives::Polynomial;
+    /// # use curv::elliptic::curves::traits::ECScalar;
+    /// # use curv::arithmetic::BigInt;
+    /// use curv::elliptic::curves::secp256_k1::{GE, FE};
+    ///
+    /// let polynomial = Polynomial::<GE>::from_coefficients(vec![
+    ///     ECScalar::from(&BigInt::from(1)), ECScalar::from(&BigInt::from(2)),
+    /// ]);
+    /// assert_eq!(polynomial.degree(), 1);
+    ///
+    /// let polynomial = Polynomial::<GE>::from_coefficients(vec![
+    ///     ECScalar::from(&BigInt::from(1)), ECScalar::zero(),
+    /// ]);
+    /// assert_eq!(polynomial.degree(), 0);
+    /// ```
+    pub fn degree(&self) -> u16 {
+        let zero = P::Scalar::zero();
+        let i = self
+            .coefficients()
+            .iter()
+            .enumerate()
+            .rev()
+            .find(|(_, a)| a != &&zero)
+            .map(|(i, _)| i)
+            .unwrap_or(0);
+        u16::try_from(i).expect("polynomial degree guaranteed to fit into u16")
+    }
+}
+
+impl<P> Polynomial<P>
+where
+    P: ECPoint,
+{
+    /// Samples a random polynomial of degree less or equal to given degree
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use curv::cryptographic_primitives::Polynomial;
+    /// # use curv::elliptic::curves::traits::ECScalar;
+    /// use curv::elliptic::curves::p256::{GE, FE};
+    ///
+    /// let polynomial = Polynomial::<GE>::sample(3);
+    /// assert!(polynomial.degree() <= 3);
+    /// ```
+    pub fn sample(degree: u16) -> Self {
+        Polynomial::from_coefficients(
+            iter::repeat_with(ECScalar::new_random)
+                .take(usize::from(degree + 1))
+                .collect(),
+        )
+    }
+
+    /// Samples a random polynomial of degree less or equal to given degree with fixed constant term
+    /// (ie. `a_0 = const_term`)
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use curv::cryptographic_primitives::Polynomial;
+    /// # use curv::elliptic::curves::traits::ECScalar;
+    /// use curv::elliptic::curves::p256::{GE, FE};
+    ///
+    /// let const_term = FE::new_random();
+    /// let polynomial = Polynomial::<GE>::sample_with_fixed_const_term(3, const_term);
+    /// assert!(polynomial.degree() <= 3);
+    /// assert_eq!(polynomial.evaluate(&FE::zero()), const_term);
+    /// ```
+    pub fn sample_with_fixed_const_term(degree: u16, const_term: P::Scalar) -> Self {
+        let random_coefficients = iter::repeat_with(ECScalar::new_random).take(usize::from(degree));
         Polynomial {
             coefficients: iter::once(const_term).chain(random_coefficients).collect(),
         }
     }
+}
 
+impl<P> Polynomial<P>
+where
+    P: ECPoint,
+    P::Scalar: Clone,
+{
     /// Takes scalar `x` and evaluates `f(x)`
     ///
     /// ## Example
@@ -102,7 +196,7 @@ where
     /// # use curv::arithmetic::BigInt;
     /// use curv::elliptic::curves::p256::{GE, FE};
     ///
-    /// let polynomial = Polynomial::<GE>::sample(2);
+    /// let polynomial = Polynomial::<GE>::sample_exact(2);
     ///
     /// let x: FE = ECScalar::from(&BigInt::from(10));
     /// let y: FE = polynomial.evaluate(&x);
@@ -131,7 +225,7 @@ where
     /// # use curv::arithmetic::BigInt;
     /// use curv::elliptic::curves::p256::{GE, FE};
     ///
-    /// let polynomial = Polynomial::<GE>::sample(2);
+    /// let polynomial = Polynomial::<GE>::sample_exact(2);
     ///
     /// let x: u16 = 10;
     /// let y: FE = polynomial.evaluate_bigint(x);
@@ -156,7 +250,7 @@ where
     /// # use curv::arithmetic::BigInt;
     /// use curv::elliptic::curves::p256::{GE, FE};
     ///
-    /// let polynomial = Polynomial::<GE>::sample(2);
+    /// let polynomial = Polynomial::<GE>::sample_exact(2);
     ///
     /// let xs: &[FE] = &[ECScalar::from(&BigInt::from(10)), ECScalar::from(&BigInt::from(11))];
     /// let ys = polynomial.evaluate_many(xs);
@@ -183,7 +277,7 @@ where
     /// # use curv::arithmetic::BigInt;
     /// use curv::elliptic::curves::p256::{GE, FE};
     ///
-    /// let polynomial = Polynomial::<GE>::sample(2);
+    /// let polynomial = Polynomial::<GE>::sample_exact(2);
     ///
     /// let xs: &[u16] = &[10, 11];
     /// let ys = polynomial.evaluate_many_bigint(xs.iter().copied());
@@ -204,23 +298,12 @@ where
     {
         points_x.into_iter().map(move |x| self.evaluate_bigint(x))
     }
+}
 
-    /// Returns degree of polynomial
-    ///
-    /// ```rust
-    /// # use curv::cryptographic_primitives::Polynomial;
-    /// # use curv::elliptic::curves::traits::ECScalar;
-    /// use curv::elliptic::curves::secp256_k1::{GE, FE};
-    ///
-    /// let polynomial = Polynomial::<GE>::sample(3);
-    /// assert_eq!(polynomial.degree(), 3);
-    /// ```
-    pub fn degree(&self) -> u16 {
-        let len =
-            u16::try_from(self.coefficients.len()).expect("degree guaranteed to fit into u16");
-        len - 1
-    }
-
+impl<P> Polynomial<P>
+where
+    P: ECPoint,
+{
     /// Returns list of polynomial coefficients `a`: `a[i]` corresponds to coefficient `a_i` of
     /// polynomial `f(x) = ... + a_i * x^i + ...`
     ///
@@ -231,7 +314,7 @@ where
     /// # use curv::elliptic::curves::traits::ECScalar;
     /// use curv::elliptic::curves::secp256_k1::{GE, FE};
     ///
-    /// let polynomial = Polynomial::<GE>::sample(3);
+    /// let polynomial = Polynomial::<GE>::sample_exact(3);
     /// let a = polynomial.coefficients();
     /// let x: FE = ECScalar::new_random();
     /// assert_eq!(polynomial.evaluate(&x), a[0] + a[1] * x + a[2] * x*x + a[3] * x*x*x);
@@ -250,7 +333,7 @@ where
 /// # use curv::elliptic::curves::traits::ECScalar;
 /// use curv::elliptic::curves::secp256_k1::{GE, FE};
 ///
-/// let f = Polynomial::<GE>::sample(3);
+/// let f = Polynomial::<GE>::sample_exact(3);
 ///
 /// let s: FE = ECScalar::new_random();
 /// let g = &f * &s;
@@ -285,8 +368,8 @@ where
 /// # use curv::arithmetic::BigInt;
 /// use curv::elliptic::curves::secp256_k1::{GE, FE};
 ///
-/// let f = Polynomial::<GE>::sample(2);
-/// let g = Polynomial::<GE>::sample(3);
+/// let f = Polynomial::<GE>::sample_exact(2);
+/// let g = Polynomial::<GE>::sample_exact(3);
 /// let h = &f + &g;
 ///
 /// let x: FE = ECScalar::from(&BigInt::from(10));
@@ -327,8 +410,8 @@ where
 /// # use curv::arithmetic::BigInt;
 /// use curv::elliptic::curves::secp256_k1::{GE, FE};
 ///
-/// let f = Polynomial::<GE>::sample(2);
-/// let g = Polynomial::<GE>::sample(3);
+/// let f = Polynomial::<GE>::sample_exact(2);
+/// let g = Polynomial::<GE>::sample_exact(3);
 /// let h = &f - &g;
 ///
 /// let x: FE = ECScalar::from(&BigInt::from(10));
@@ -363,5 +446,16 @@ where
         };
 
         Polynomial::from_coefficients(overlapped.chain(tail.into_iter()).collect())
+    }
+}
+
+/// Samples a scalar guaranteed to be not zero
+fn new_random_nonzero<S: ECScalar + PartialEq>() -> S {
+    let zero = S::zero();
+    loop {
+        let s = S::new_random();
+        if s != zero {
+            break s;
+        }
     }
 }

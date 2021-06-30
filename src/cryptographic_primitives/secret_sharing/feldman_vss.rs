@@ -48,7 +48,7 @@ where
         let t = u16::try_from(t).unwrap();
         let n = u16::try_from(n).unwrap();
 
-        let poly = Polynomial::<P>::sample_fixed_const_term(t, secret.clone());
+        let poly = Polynomial::<P>::sample_with_fixed_const_term(t, secret.clone());
         let secret_shares = poly.evaluate_many_bigint(1..=n).collect();
 
         let G: P = ECPoint::generator();
@@ -76,7 +76,7 @@ where
         let n = u16::try_from(self.parameters.share_count).unwrap();
 
         let one: P::Scalar = ECScalar::from(&BigInt::one());
-        let poly = Polynomial::<P>::sample_fixed_const_term(t, one.clone());
+        let poly = Polynomial::<P>::sample_with_fixed_const_term(t, one.clone());
         let secret_shares_biased: Vec<_> = poly.evaluate_many_bigint(1..=n).collect();
         let secret_shares: Vec<_> = (0..secret_shares_biased.len())
             .map(|i| secret_shares_biased[i].sub(&one.get_element()))
@@ -108,7 +108,7 @@ where
         let n = u16::try_from(n).unwrap();
         let index_vec = index_vec.iter().map(|&i| u16::try_from(i).unwrap());
 
-        let poly = Polynomial::<P>::sample_fixed_const_term(t, secret.clone());
+        let poly = Polynomial::<P>::sample_with_fixed_const_term(t, secret.clone());
         let secret_shares = poly.evaluate_many_bigint(index_vec).collect();
 
         let G: P = ECPoint::generator();
@@ -132,7 +132,7 @@ where
     // returns vector of coefficients
     #[deprecated(since = "0.7.1", note = "please use Polynomial::sample instead")]
     pub fn sample_polynomial(t: usize, coef0: &P::Scalar) -> Vec<P::Scalar> {
-        Polynomial::<P>::sample_fixed_const_term(t.try_into().unwrap(), coef0.clone())
+        Polynomial::<P>::sample_with_fixed_const_term(t.try_into().unwrap(), coef0.clone())
             .coefficients()
             .to_vec()
     }
