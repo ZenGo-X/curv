@@ -11,7 +11,7 @@ use std::convert::{TryFrom, TryInto};
 use serde::{Deserialize, Serialize};
 
 use crate::arithmetic::traits::*;
-use crate::cryptographic_primitives::Polynomial;
+use crate::cryptographic_primitives::secret_sharing::Polynomial;
 use crate::elliptic::curves::traits::*;
 use crate::BigInt;
 use crate::ErrorSS::{self, VerifyShareError};

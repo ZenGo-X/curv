@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::cryptographic_primitives::hashing::traits::Hash;
 use crate::cryptographic_primitives::proofs::ProofError;
-use crate::cryptographic_primitives::Polynomial;
+use crate::cryptographic_primitives::secret_sharing::Polynomial;
 use crate::elliptic::curves::traits::ECPoint;
 
 /// Claims that there's polynomial `w(x)` of degree `deg(w) <= degree`, and

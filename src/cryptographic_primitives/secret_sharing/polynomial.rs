@@ -38,7 +38,7 @@ where
     /// ## Example
     ///
     /// ```rust
-    /// # use curv::cryptographic_primitives::Polynomial;
+    /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
     /// # use curv::elliptic::curves::traits::ECScalar;
     /// use curv::elliptic::curves::p256::{GE, FE};
     ///
@@ -61,7 +61,7 @@ where
     ///
     /// ## Example
     /// ```rust
-    /// # use curv::cryptographic_primitives::Polynomial;
+    /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
     /// # use curv::elliptic::curves::traits::ECScalar;
     /// use curv::elliptic::curves::p256::{GE, FE};
     ///
@@ -85,7 +85,7 @@ where
     ///
     /// ## Example
     /// ```rust
-    /// # use curv::cryptographic_primitives::Polynomial;
+    /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
     /// # use curv::elliptic::curves::traits::ECScalar;
     /// use curv::elliptic::curves::p256::{GE, FE};
     ///
@@ -108,7 +108,7 @@ where
     /// Returns degree `d` of polynomial `f(x)`: `d = deg(f)`
     ///
     /// ```rust
-    /// # use curv::cryptographic_primitives::Polynomial;
+    /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
     /// # use curv::elliptic::curves::traits::ECScalar;
     /// # use curv::arithmetic::BigInt;
     /// use curv::elliptic::curves::secp256_k1::{GE, FE};
@@ -145,7 +145,7 @@ where
     ///
     /// ## Example
     /// ```rust
-    /// # use curv::cryptographic_primitives::Polynomial;
+    /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
     /// # use curv::elliptic::curves::traits::ECScalar;
     /// use curv::elliptic::curves::p256::{GE, FE};
     ///
@@ -165,7 +165,7 @@ where
     ///
     /// ## Example
     /// ```rust
-    /// # use curv::cryptographic_primitives::Polynomial;
+    /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
     /// # use curv::elliptic::curves::traits::ECScalar;
     /// use curv::elliptic::curves::p256::{GE, FE};
     ///
@@ -191,7 +191,7 @@ where
     ///
     /// ## Example
     /// ```rust
-    /// # use curv::cryptographic_primitives::Polynomial;
+    /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
     /// # use curv::elliptic::curves::traits::ECScalar;
     /// # use curv::arithmetic::BigInt;
     /// use curv::elliptic::curves::p256::{GE, FE};
@@ -220,7 +220,7 @@ where
     ///
     /// ## Example
     /// ```rust
-    /// # use curv::cryptographic_primitives::Polynomial;
+    /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
     /// # use curv::elliptic::curves::traits::ECScalar;
     /// # use curv::arithmetic::BigInt;
     /// use curv::elliptic::curves::p256::{GE, FE};
@@ -245,7 +245,7 @@ where
     ///
     /// ## Example
     /// ```rust
-    /// # use curv::cryptographic_primitives::Polynomial;
+    /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
     /// # use curv::elliptic::curves::traits::ECScalar;
     /// # use curv::arithmetic::BigInt;
     /// use curv::elliptic::curves::p256::{GE, FE};
@@ -272,7 +272,7 @@ where
     ///
     /// ## Example
     /// ```rust
-    /// # use curv::cryptographic_primitives::Polynomial;
+    /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
     /// # use curv::elliptic::curves::traits::ECScalar;
     /// # use curv::arithmetic::BigInt;
     /// use curv::elliptic::curves::p256::{GE, FE};
@@ -310,7 +310,7 @@ where
     /// ## Example
     ///
     /// ```rust
-    /// # use curv::cryptographic_primitives::Polynomial;
+    /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
     /// # use curv::elliptic::curves::traits::ECScalar;
     /// use curv::elliptic::curves::secp256_k1::{GE, FE};
     ///
@@ -329,7 +329,7 @@ where
 /// ## Example
 ///
 /// ```rust
-/// # use curv::cryptographic_primitives::Polynomial;
+/// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
 /// # use curv::elliptic::curves::traits::ECScalar;
 /// use curv::elliptic::curves::secp256_k1::{GE, FE};
 ///
@@ -363,7 +363,7 @@ where
 /// ## Example
 ///
 /// ```rust
-/// # use curv::cryptographic_primitives::Polynomial;
+/// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
 /// # use curv::elliptic::curves::traits::ECScalar;
 /// # use curv::arithmetic::BigInt;
 /// use curv::elliptic::curves::secp256_k1::{GE, FE};
@@ -405,7 +405,7 @@ where
 /// ## Example
 ///
 /// ```rust
-/// # use curv::cryptographic_primitives::Polynomial;
+/// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
 /// # use curv::elliptic::curves::traits::ECScalar;
 /// # use curv::arithmetic::BigInt;
 /// use curv::elliptic::curves::secp256_k1::{GE, FE};

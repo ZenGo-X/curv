@@ -7,9 +7,6 @@
 
 pub mod commitments;
 pub mod hashing;
-mod polynomial;
 pub mod proofs;
 pub mod secret_sharing;
 pub mod twoparty;
-
-pub use polynomial::Polynomial;
