@@ -46,19 +46,19 @@ where
         w: &Polynomial<P>,
         alpha: Vec<P::Scalar>,
         g: Vec<P>,
-    ) -> Result<(LdeiStatement<P>, LdeiProof<P>), LdeiProveError>
+    ) -> Result<(LdeiStatement<P>, LdeiProof<P>), LdeiProofError>
     where
         H: Hash,
     {
         if alpha.len() != g.len() {
-            return Err(LdeiProveError::AlphaLengthDoesntMatchG);
+            return Err(LdeiProofError::AlphaLengthDoesntMatchG);
         }
 
         // Check that alphas are pairwise distinct
         for (i, a1) in alpha.iter().enumerate() {
             for (j, a2) in alpha.iter().enumerate() {
                 if i != j && a1 == a2 {
-                    return Err(LdeiProveError::AlphaNotPairwiseDistinct);
+                    return Err(LdeiProofError::AlphaNotPairwiseDistinct);
                 }
             }
         }
@@ -135,7 +135,7 @@ where
 }
 
 #[derive(Debug, Error)]
-pub enum LdeiProveError {
+pub enum LdeiProofError {
     #[error("`alpha`s are not pairwise distinct")]
     AlphaNotPairwiseDistinct,
     #[error("alpha.len() != g.len()")]
@@ -191,7 +191,7 @@ mod tests {
                 .take(10)
                 .collect();
             let result = LdeiProof::prove::<HSha256>(&poly, alpha, g);
-            if !matches!(result, Err(LdeiProveError::AlphaLengthDoesntMatchG)) {
+            if !matches!(result, Err(LdeiProofError::AlphaLengthDoesntMatchG)) {
                 panic!("Unexpected result: {:?}", result);
             }
         }
@@ -207,7 +207,7 @@ mod tests {
                 .take(10)
                 .collect();
             let result = LdeiProof::prove::<HSha256>(&poly, alpha, g);
-            if !matches!(result, Err(LdeiProveError::AlphaNotPairwiseDistinct)) {
+            if !matches!(result, Err(LdeiProofError::AlphaNotPairwiseDistinct)) {
                 panic!("Unexpected result: {:?}", result);
             }
         }
