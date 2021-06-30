@@ -74,7 +74,7 @@ where
         }
     }
 
-    /// Samples random polynomial of degree `n` with fixed coefficient `a_0 = coef0`
+    /// Samples random polynomial of degree `n` with fixed constant term (ie. `a_0 = constant_term`)
     ///
     /// ## Example
     /// ```rust
@@ -82,14 +82,14 @@ where
     /// # use curv::elliptic::curves::traits::ECScalar;
     /// use curv::elliptic::curves::p256::{GE, FE};
     ///
-    /// let coef0: FE = ECScalar::new_random();
-    /// let polynomial = Polynomial::<GE>::sample_fixed_coef0(3, coef0);
-    /// assert_eq!(polynomial.evaluate(&FE::zero()), coef0);
+    /// let const_term: FE = ECScalar::new_random();
+    /// let polynomial = Polynomial::<GE>::sample_fixed_const_term(3, const_term);
+    /// assert_eq!(polynomial.evaluate(&FE::zero()), const_term);
     /// ```
-    pub fn sample_fixed_coef0(n: u16, coef0: P::Scalar) -> Self {
+    pub fn sample_fixed_const_term(n: u16, const_term: P::Scalar) -> Self {
         let random_coefficients = iter::repeat_with(ECScalar::new_random).take(usize::from(n));
         Polynomial {
-            coefficients: iter::once(coef0).chain(random_coefficients).collect(),
+            coefficients: iter::once(const_term).chain(random_coefficients).collect(),
         }
     }
 
@@ -102,8 +102,7 @@ where
     /// # use curv::arithmetic::BigInt;
     /// use curv::elliptic::curves::p256::{GE, FE};
     ///
-    /// let coef0: FE = ECScalar::new_random();
-    /// let polynomial = Polynomial::<GE>::sample_fixed_coef0(2, coef0);
+    /// let polynomial = Polynomial::<GE>::sample(2);
     ///
     /// let x: FE = ECScalar::from(&BigInt::from(10));
     /// let y: FE = polynomial.evaluate(&x);
@@ -132,8 +131,7 @@ where
     /// # use curv::arithmetic::BigInt;
     /// use curv::elliptic::curves::p256::{GE, FE};
     ///
-    /// let coef0: FE = ECScalar::new_random();
-    /// let polynomial = Polynomial::<GE>::sample_fixed_coef0(2, coef0);
+    /// let polynomial = Polynomial::<GE>::sample(2);
     ///
     /// let x: u16 = 10;
     /// let y: FE = polynomial.evaluate_bigint(x);
@@ -158,8 +156,7 @@ where
     /// # use curv::arithmetic::BigInt;
     /// use curv::elliptic::curves::p256::{GE, FE};
     ///
-    /// let coef0: FE = ECScalar::new_random();
-    /// let polynomial = Polynomial::<GE>::sample_fixed_coef0(2, coef0);
+    /// let polynomial = Polynomial::<GE>::sample(2);
     ///
     /// let xs: &[FE] = &[ECScalar::from(&BigInt::from(10)), ECScalar::from(&BigInt::from(11))];
     /// let ys = polynomial.evaluate_many(xs);
@@ -186,8 +183,7 @@ where
     /// # use curv::arithmetic::BigInt;
     /// use curv::elliptic::curves::p256::{GE, FE};
     ///
-    /// let coef0: FE = ECScalar::new_random();
-    /// let polynomial = Polynomial::<GE>::sample_fixed_coef0(2, coef0);
+    /// let polynomial = Polynomial::<GE>::sample(2);
     ///
     /// let xs: &[u16] = &[10, 11];
     /// let ys = polynomial.evaluate_many_bigint(xs.iter().copied());
@@ -216,8 +212,7 @@ where
     /// # use curv::elliptic::curves::traits::ECScalar;
     /// use curv::elliptic::curves::secp256_k1::{GE, FE};
     ///
-    /// let coef0: FE = ECScalar::new_random();
-    /// let polynomial = Polynomial::<GE>::sample_fixed_coef0(3, coef0);
+    /// let polynomial = Polynomial::<GE>::sample(3);
     /// assert_eq!(polynomial.degree(), 3);
     /// ```
     pub fn degree(&self) -> u16 {
@@ -236,9 +231,10 @@ where
     /// # use curv::elliptic::curves::traits::ECScalar;
     /// use curv::elliptic::curves::secp256_k1::{GE, FE};
     ///
-    /// let coef0: FE = ECScalar::new_random();
-    /// let polynomial = Polynomial::<GE>::sample_fixed_coef0(3, coef0);
-    /// assert_eq!(polynomial.coefficients()[0], coef0);
+    /// let polynomial = Polynomial::<GE>::sample(3);
+    /// let a = polynomial.coefficients();
+    /// let x: FE = ECScalar::new_random();
+    /// assert_eq!(polynomial.evaluate(&x), a[0] + a[1] * x + a[2] * x*x + a[3] * x*x*x);
     /// ```
     pub fn coefficients(&self) -> &[P::Scalar] {
         &self.coefficients
@@ -254,7 +250,7 @@ where
 /// # use curv::elliptic::curves::traits::ECScalar;
 /// use curv::elliptic::curves::secp256_k1::{GE, FE};
 ///
-/// let f = Polynomial::<GE>::sample_fixed_coef0(3, ECScalar::new_random());
+/// let f = Polynomial::<GE>::sample(3);
 ///
 /// let s: FE = ECScalar::new_random();
 /// let g = &f * &s;
@@ -289,8 +285,8 @@ where
 /// # use curv::arithmetic::BigInt;
 /// use curv::elliptic::curves::secp256_k1::{GE, FE};
 ///
-/// let f = Polynomial::<GE>::sample_fixed_coef0(2, ECScalar::new_random());
-/// let g = Polynomial::<GE>::sample_fixed_coef0(3, ECScalar::new_random());
+/// let f = Polynomial::<GE>::sample(2);
+/// let g = Polynomial::<GE>::sample(3);
 /// let h = &f + &g;
 ///
 /// let x: FE = ECScalar::from(&BigInt::from(10));
@@ -331,8 +327,8 @@ where
 /// # use curv::arithmetic::BigInt;
 /// use curv::elliptic::curves::secp256_k1::{GE, FE};
 ///
-/// let f = Polynomial::<GE>::sample_fixed_coef0(2, ECScalar::new_random());
-/// let g = Polynomial::<GE>::sample_fixed_coef0(3, ECScalar::new_random());
+/// let f = Polynomial::<GE>::sample(2);
+/// let g = Polynomial::<GE>::sample(3);
 /// let h = &f - &g;
 ///
 /// let x: FE = ECScalar::from(&BigInt::from(10));
