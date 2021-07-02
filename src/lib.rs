@@ -12,7 +12,7 @@ pub mod elliptic;
 pub mod arithmetic;
 pub use crate::arithmetic::BigInt;
 
-pub mod cryptographic_primitives;
+// pub mod cryptographic_primitives;
 
 #[derive(Copy, PartialEq, Eq, Clone, Debug)]
 pub enum ErrorKey {
