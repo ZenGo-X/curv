@@ -46,28 +46,64 @@ impl<E: Curve> PointZ<E> {
         Point::try_from(self).ok()
     }
 
+    /// Constructs zero point
+    ///
+    /// Zero point is usually denoted as O. It's curve neutral element, i.e. `forall A. A + O = A`.
+    ///
+    /// Weierstrass and Montgomery curves employ special "point at infinity" that represent a neutral
+    /// element, such points don't have coordinates (i.e. [from_coords], [x_coord], [y_coord] return
+    /// `None`). Edwards curves' neutral element has coordinates.
+    ///
+    /// [from_coords]: Self::from_coords
+    /// [x_coord]: Self::x_coord
+    /// [y_coord]: Self::y_coord
     pub fn zero() -> Self {
         Self::from_raw(E::Point::zero())
     }
 
+    /// Checks whether point is zero
     pub fn iz_zero(&self) -> bool {
-        self.0.is_zero()
+        self.as_raw().is_zero()
     }
 
+    /// Returns point coordinates
+    ///
+    /// Point might not have coordinates (specifically, "point at infinity" doesn't), in this case
+    /// `None` is returned
     pub fn coords(&self) -> Option<PointCoords> {
-        self.0.coords()
+        self.as_raw().coords()
     }
 
+    /// Returns point x coordinate
+    ///
+    /// See [coords](Self::coords) method that retrieves both x and y at once.
     pub fn x_coord(&self) -> Option<BigInt> {
-        self.0.x_coord()
+        self.as_raw().x_coord()
     }
 
+    /// Returns point y coordinate
+    ///
+    /// See [coords](Self::coords) method that retrieves both x and y at once.
     pub fn y_coord(&self) -> Option<BigInt> {
-        self.0.y_coord()
+        self.as_raw().y_coord()
+    }
+
+    /// Constructs a point from its coordinates, returns error if coordinates don't satisfy
+    /// curve equation
+    pub fn from_coords(x: &BigInt, y: &BigInt) -> Result<Self, NotOnCurve> {
+        E::Point::from_coords(x, y).map(Self::from_raw)
     }
 
     fn from_raw(point: E::Point) -> Self {
         Self(point)
+    }
+
+    fn as_raw(&self) -> &E::Point {
+        &self.0
+    }
+
+    fn into_raw(self) -> E::Point {
+        self.0
     }
 }
 
@@ -139,17 +175,11 @@ impl<E: Curve> fmt::Debug for PointZ<E> {
 ///     (a + (b * c).ensure_nonzero()?).ensure_nonzero()
 /// }
 /// ```
-pub struct Point<E: Curve>(E::Point);
+pub struct Point<E: Curve> {
+    raw_point: E::Point,
+}
 
 impl<E: Curve> Point<E> {
-    fn from_raw(point: E::Point) -> Result<Self, ZeroPointError> {
-        if point.is_zero() {
-            Err(ZeroPointError(()))
-        } else {
-            Ok(Self(point))
-        }
-    }
-
     /// Curve generator
     ///
     /// Returns a static reference on actual value because in most cases referenced value is fine.
@@ -208,22 +238,22 @@ impl<E: Curve> Point<E> {
     }
 
     /// Adds two points, returns the result, or `None` if resulting point is zero
-    pub fn add_checked(&self, point: PointRef<E>) -> Option<Self> {
+    pub fn add_checked(&self, point: PointRef<E>) -> Result<Self, ZeroPointError> {
         self.as_point_ref().add_checked(point)
     }
 
     /// Substrates two points, returns the result, or `None` if resulting point is zero
-    pub fn sub_checked(&self, point: PointRef<E>) -> Option<Self> {
+    pub fn sub_checked(&self, point: PointRef<E>) -> Result<Self, ZeroPointError> {
         self.as_point_ref().sub_checked(point)
     }
 
     /// Multiplies a point at scalar, returns the result, or `None` if resulting point is zero
-    pub fn mul_checked_z(&self, scalar: &ScalarZ<E>) -> Option<Self> {
+    pub fn mul_checked_z(&self, scalar: &ScalarZ<E>) -> Result<Self, ZeroPointError> {
         self.as_point_ref().mul_checked_z(scalar)
     }
 
     /// Multiplies a point at nonzero scalar, returns the result, or `None` if resulting point is zero
-    pub fn mul_checked(&self, scalar: &Scalar<E>) -> Option<Self> {
+    pub fn mul_checked(&self, scalar: &Scalar<E>) -> Result<Self, ZeroPointError> {
         self.as_point_ref().mul_checked(scalar)
     }
 
@@ -234,26 +264,47 @@ impl<E: Curve> Point<E> {
 
     /// Creates [PointRef] that holds a reference on `self`
     pub fn as_point_ref(&self) -> PointRef<E> {
-        PointRef(&self.0)
+        PointRef::from(self)
+    }
+
+    fn from_raw(raw_point: E::Point) -> Result<Self, ZeroPointError> {
+        if raw_point.is_zero() {
+            Err(ZeroPointError(()))
+        } else {
+            Ok(Self { raw_point })
+        }
+    }
+
+    unsafe fn from_raw_unchecked(point: E::Point) -> Self {
+        Point { raw_point: point }
+    }
+
+    fn as_raw(&self) -> &E::Point {
+        &self.raw_point
+    }
+
+    fn into_raw(self) -> E::Point {
+        self.raw_point
     }
 }
 
 impl<E: Curve> Clone for Point<E> {
     fn clone(&self) -> Self {
-        Point(self.0.clone())
+        //  Safety: `self` is guaranteed to be non-zero
+        unsafe { Point::from_raw_unchecked(self.as_raw().clone()) }
     }
 }
 
 impl<E: Curve> fmt::Debug for Point<E> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
+        self.as_raw().fmt(f)
     }
 }
 
 impl<E: Curve> TryFrom<PointZ<E>> for Point<E> {
     type Error = ZeroPointError;
     fn try_from(point: PointZ<E>) -> Result<Self, Self::Error> {
-        Self::from_raw(point.0)
+        Self::from_raw(point.into_raw())
     }
 }
 
@@ -261,20 +312,8 @@ impl<E: Curve> TryFrom<PointZ<E>> for Point<E> {
 ///
 /// Holds internally a reference on [`Point<E>`](Point), refer to its documentation to learn
 /// more about Point/PointRef guarantees, security notes, and arithmetics.
-pub struct PointRef<'p, E: Curve>(&'p E::Point);
-
-impl<'p, E: Curve> Clone for PointRef<'p, E> {
-    fn clone(&self) -> Self {
-        Self(self.0)
-    }
-}
-
-impl<'p, E: Curve> Copy for PointRef<'p, E> {}
-
-impl<'p, E: Curve> fmt::Debug for PointRef<'p, E> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
-    }
+pub struct PointRef<'p, E: Curve> {
+    raw_point: &'p E::Point,
 }
 
 impl<E: Curve> PointRef<'static, E> {
@@ -291,19 +330,11 @@ impl<'p, E> PointRef<'p, E>
 where
     E: Curve,
 {
-    fn from_raw(point: &'p E::Point) -> Option<Self> {
-        if point.is_zero() {
-            None
-        } else {
-            Some(Self(point))
-        }
-    }
-
     /// Returns point coordinates (`x` and `y`)
     ///
     /// Method never fails as Point is guaranteed to have coordinates
     pub fn coords(&self) -> PointCoords {
-        self.0
+        self.as_raw()
             .coords()
             .expect("Point guaranteed to have coordinates")
     }
@@ -312,7 +343,7 @@ where
     ///
     /// Method never fails as Point is guaranteed to have coordinates
     pub fn x_coord(&self) -> BigInt {
-        self.0
+        self.as_raw()
             .x_coord()
             .expect("Point guaranteed to have coordinates")
     }
@@ -321,65 +352,88 @@ where
     ///
     /// Method never fails as Point is guaranteed to have coordinates
     pub fn y_coord(&self) -> BigInt {
-        self.0
+        self.as_raw()
             .y_coord()
             .expect("Point guaranteed to have coordinates")
     }
 
     /// Adds two points, returns the result, or `None` if resulting point is at infinity
-    pub fn add_checked(&self, point: Self) -> Option<Point<E>> {
-        let new_point = self.0.add_point(&point.0);
-        if new_point.is_zero() {
-            None
-        } else {
-            Some(Point(new_point))
-        }
+    pub fn add_checked(&self, point: Self) -> Result<Point<E>, ZeroPointError> {
+        let new_point = self.as_raw().add_point(point.as_raw());
+        Point::from_raw(new_point)
     }
 
     /// Substrates two points, returns the result, or `None` if resulting point is at infinity
-    pub fn sub_checked(&self, point: Self) -> Option<Point<E>> {
-        let new_point = self.0.sub_point(&point.0);
-        if new_point.is_zero() {
-            None
-        } else {
-            Some(Point(new_point))
-        }
+    pub fn sub_checked(&self, point: Self) -> Result<Point<E>, ZeroPointError> {
+        let new_point = self.as_raw().sub_point(point.as_raw());
+        Point::from_raw(new_point)
     }
 
     /// Multiplies a point at scalar, returns the result, or `None` if resulting point is at infinity
-    pub fn mul_checked_z(&self, scalar: &ScalarZ<E>) -> Option<Point<E>> {
-        let new_point = self.0.scalar_mul(&scalar.0);
-        if new_point.is_zero() {
-            None
-        } else {
-            Some(Point(new_point))
-        }
+    pub fn mul_checked_z(&self, scalar: &ScalarZ<E>) -> Result<Point<E>, ZeroPointError> {
+        let new_point = self.as_raw().scalar_mul(scalar.as_raw());
+        Point::from_raw(new_point)
     }
 
     /// Multiplies a point at nonzero scalar, returns the result, or `None` if resulting point is at infinity
-    pub fn mul_checked(&self, scalar: &Scalar<E>) -> Option<Point<E>> {
-        let new_point = self.0.scalar_mul(&scalar.0);
-        if new_point.is_zero() {
-            None
-        } else {
-            Some(Point(new_point))
-        }
+    pub fn mul_checked(&self, scalar: &Scalar<E>) -> Result<Point<E>, ZeroPointError> {
+        let new_point = self.as_raw().scalar_mul(scalar.as_raw());
+        Point::from_raw(new_point)
     }
 
     /// Serializes point into (un)compressed form
     pub fn to_bytes(&self, compressed: bool) -> Vec<u8> {
-        self.0
+        self.as_raw()
             .serialize(compressed)
             .expect("non-zero point must always be serializable")
     }
 
     /// Clones the referenced point
     pub fn to_point_owned(&self) -> Point<E> {
-        Point(self.0.clone())
+        // Safety: `self` is guaranteed to be non-zero
+        unsafe { Point::from_raw_unchecked(self.as_raw().clone()) }
+    }
+
+    fn from_raw(raw_point: &'p E::Point) -> Option<Self> {
+        if raw_point.is_zero() {
+            None
+        } else {
+            Some(Self { raw_point })
+        }
+    }
+
+    unsafe fn from_raw_unchecked(raw_point: &'p E::Point) -> Self {
+        PointRef { raw_point }
+    }
+
+    fn as_raw(self) -> &'p E::Point {
+        self.raw_point
     }
 }
 
-/// Converting PointZ to Point error
+impl<'p, E: Curve> Clone for PointRef<'p, E> {
+    fn clone(&self) -> Self {
+        // Safety: `self` is guaranteed to be non-zero
+        unsafe { Self::from_raw_unchecked(self.as_raw()) }
+    }
+}
+
+impl<'p, E: Curve> Copy for PointRef<'p, E> {}
+
+impl<'p, E: Curve> fmt::Debug for PointRef<'p, E> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.as_raw().fmt(f)
+    }
+}
+
+impl<'p, E: Curve> From<&'p Point<E>> for PointRef<'p, E> {
+    fn from(point: &'p Point<E>) -> Self {
+        // Safety: `point` is guaranteed to be non-zero
+        unsafe { PointRef::from_raw_unchecked(point.as_raw()) }
+    }
+}
+
+/// Indicates that conversion or computation failed due to occurred zero point
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct ZeroPointError(());
 
@@ -390,6 +444,18 @@ impl fmt::Display for ZeroPointError {
 }
 
 impl std::error::Error for ZeroPointError {}
+
+/// Indicates that conversion or computation failed due to occurred zero scalar
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct ZeroScalarError(());
+
+impl fmt::Display for ZeroScalarError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "nonzero check failed: scalar is zero")
+    }
+}
+
+impl std::error::Error for ZeroScalarError {}
 
 /// Constructing Point from its coordinates error
 #[derive(Debug, Error)]
@@ -421,8 +487,8 @@ pub enum PointFromBytesError {
 ///
 /// * Belongs to the curve prime field
 ///
-///   Denoting curve modulus as `q`, any instance `s` of `ScalarZ<E>` is guaranteed to be non-negative
-///   integer modulo `q`: `0 <= s < q`
+///   Denoting [curve order](Self::curve_order) as `n`, any instance `s` of `ScalarZ<E>` is guaranteed
+///   to be non-negative integer modulo `n`: `0 <= s < n`
 ///
 /// ## Arithmetics
 ///
@@ -444,69 +510,91 @@ pub enum PointFromBytesError {
 /// ```
 #[derive(Serialize, Deserialize)]
 #[serde(try_from = "ScalarFormat<E>", into = "ScalarFormat<E>")]
-pub struct ScalarZ<E: Curve>(E::Scalar);
+pub struct ScalarZ<E: Curve> {
+    raw_scalar: E::Scalar,
+}
 
 impl<E: Curve> ScalarZ<E> {
+    /// Converts a scalar into [`Scalar<E>`](ScalarZ) if it's non-zero, returns None otherwise
     pub fn ensure_nonzero(self) -> Option<Scalar<E>> {
-        Scalar::from_raw(self.0)
+        Scalar::from_raw(self.into_raw()).ok()
     }
 
-    fn from_raw(scalar: E::Scalar) -> Self {
-        Self(scalar)
-    }
-
+    /// Samples a random scalar
     pub fn random() -> Self {
         Self::from_raw(E::Scalar::random())
     }
 
+    /// Constructs zero scalar
     pub fn zero() -> Self {
         Self::from_raw(E::Scalar::zero())
     }
 
+    /// Checks if a scalar is zero
     pub fn is_zero(&self) -> bool {
-        self.0.is_zero()
+        self.as_raw().is_zero()
     }
 
+    /// Converts a scalar to [BigInt]
     pub fn to_bigint(&self) -> BigInt {
-        self.0.to_bigint()
+        self.as_raw().to_bigint()
     }
 
+    /// Constructs a scalar `n % curve_order` from give `n`
     pub fn from_bigint(n: &BigInt) -> Self {
         Self::from_raw(E::Scalar::from_bigint(n))
     }
 
+    /// Returns a curve order
+    pub fn curve_order() -> &'static BigInt {
+        E::Scalar::curve_order()
+    }
+
+    /// Returns inversion `self^-1 mod curve_order`, or None if `self` is zero
     pub fn invert(&self) -> Option<Self> {
-        self.0.invert().map(Self::from_raw)
+        self.as_raw().invert().map(Self::from_raw)
+    }
+
+    fn from_raw(raw_scalar: E::Scalar) -> Self {
+        Self { raw_scalar }
+    }
+
+    fn as_raw(&self) -> &E::Scalar {
+        &self.raw_scalar
+    }
+
+    fn into_raw(self) -> E::Scalar {
+        self.raw_scalar
     }
 }
 
 impl<E: Curve> Clone for ScalarZ<E> {
     fn clone(&self) -> Self {
-        Self::from_raw(self.0.clone())
+        Self::from_raw(self.as_raw().clone())
     }
 }
 
 impl<E: Curve> fmt::Debug for ScalarZ<E> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
+        self.as_raw().fmt(f)
     }
 }
 
 impl<E: Curve> PartialEq for ScalarZ<E> {
     fn eq(&self, other: &Self) -> bool {
-        self.0.eq(&other.0)
+        self.as_raw().eq(other.as_raw())
     }
 }
 
 impl<E: Curve> PartialEq<Scalar<E>> for ScalarZ<E> {
     fn eq(&self, other: &Scalar<E>) -> bool {
-        self.0.eq(&other.0)
+        self.as_raw().eq(other.as_raw())
     }
 }
 
 impl<E: Curve> From<Scalar<E>> for ScalarZ<E> {
     fn from(scalar: Scalar<E>) -> Self {
-        ScalarZ::from_raw(scalar.0)
+        ScalarZ::from_raw(scalar.into_raw())
     }
 }
 
@@ -558,13 +646,13 @@ impl<E: Curve> From<BigInt> for ScalarZ<E> {
 ///
 /// * Belongs to the curve prime field
 ///
-///   Denoting curve modulus as `q`, any instance `s` of `Scalar<E>` is guaranteed to be less than `q`:
-///   `s < q`
+///   Denoting curve order as `n`, any instance `s` of `Scalar<E>` is guaranteed to be less than `q`:
+///   `s < n`
 /// * Not a zero
 ///
 ///   Any instance `s` of `Scalar<E>` is guaranteed to be more than zero: `s > 0`
 ///
-/// Combining two rules above, any instance `s` of `Scalar<E>` is guaranteed to be: `0 < s < q`.
+/// Combining two rules above, any instance `s` of `Scalar<E>` is guaranteed to be: `0 < s < n`.
 ///
 /// ## Arithmetic
 ///
@@ -594,7 +682,9 @@ impl<E: Curve> From<BigInt> for ScalarZ<E> {
 /// ```
 #[derive(Serialize, Deserialize)]
 #[serde(try_from = "ScalarFormat<E>", into = "ScalarFormat<E>")]
-pub struct Scalar<E: Curve>(E::Scalar);
+pub struct Scalar<E: Curve> {
+    raw_scalar: E::Scalar,
+}
 
 impl<E: Curve> Scalar<E> {
     /// Samples a random non-zero scalar
@@ -611,60 +701,88 @@ impl<E: Curve> Scalar<E> {
     /// Inverse of non-zero scalar is always defined in a prime field, and inverted scalar is also
     /// guaranteed to be non-zero.
     pub fn invert(&self) -> Self {
-        self.0
+        self.as_raw()
             .invert()
-            .map(Self)
+            .map(|s| Scalar::from_raw(s).expect("inversion must be non-zero"))
             .expect("non-zero scalar must have corresponding inversion")
     }
 
+    /// Returns a curve order
+    pub fn curve_order() -> &'static BigInt {
+        E::Scalar::curve_order()
+    }
+
+    /// Converts a scalar to [BigInt]
+    pub fn to_bigint(&self) -> BigInt {
+        self.as_raw().to_bigint()
+    }
+
+    /// Constructs a scalar from [BigInt] or returns error if it's zero
+    pub fn from_bigint(n: &BigInt) -> Result<Self, ZeroScalarError> {
+        Self::from_raw(E::Scalar::from_bigint(n))
+    }
+
     /// Adds two scalars, returns the result by modulo `q`, or `None` if resulting scalar is zero
-    pub fn add_checked(&self, scalar: &Scalar<E>) -> Option<Self> {
-        let scalar = self.0.add(&scalar.0);
+    pub fn add_checked(&self, scalar: &Scalar<E>) -> Result<Self, ZeroScalarError> {
+        let scalar = self.as_raw().add(scalar.as_raw());
         Self::from_raw(scalar)
     }
 
     /// Subtracts two scalars, returns the result by modulo `q`, or `None` if resulting scalar is zero
-    pub fn sub_checked(&self, scalar: &Scalar<E>) -> Option<Self> {
-        let scalar = self.0.sub(&scalar.0);
+    pub fn sub_checked(&self, scalar: &Scalar<E>) -> Result<Self, ZeroScalarError> {
+        let scalar = self.as_raw().sub(scalar.as_raw());
         Self::from_raw(scalar)
     }
 
     /// Multiplies two scalars, returns the result by modulo `q`, or `None` if resulting scalar is zero
-    pub fn mul_checked(&self, scalar: &Scalar<E>) -> Option<Self> {
-        let scalar = self.0.mul(&scalar.0);
+    pub fn mul_checked(&self, scalar: &Scalar<E>) -> Result<Self, ZeroScalarError> {
+        let scalar = self.as_raw().mul(scalar.as_raw());
         Self::from_raw(scalar)
     }
 
-    fn from_raw(scalar: E::Scalar) -> Option<Self> {
-        if scalar.is_zero() {
-            None
+    fn from_raw(raw_scalar: E::Scalar) -> Result<Self, ZeroScalarError> {
+        if raw_scalar.is_zero() {
+            Err(ZeroScalarError(()))
         } else {
-            Some(Self(scalar))
+            Ok(Self { raw_scalar })
         }
+    }
+
+    unsafe fn from_raw_unchecked(raw_scalar: E::Scalar) -> Self {
+        Self { raw_scalar }
+    }
+
+    fn as_raw(&self) -> &E::Scalar {
+        &self.raw_scalar
+    }
+
+    fn into_raw(self) -> E::Scalar {
+        self.raw_scalar
     }
 }
 
 impl<E: Curve> Clone for Scalar<E> {
     fn clone(&self) -> Self {
-        Scalar(self.0.clone())
+        // Safety: `self` is guaranteed to be non-zero
+        unsafe { Scalar::from_raw_unchecked(self.as_raw().clone()) }
     }
 }
 
 impl<E: Curve> fmt::Debug for Scalar<E> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
+        self.as_raw().fmt(f)
     }
 }
 
 impl<E: Curve> PartialEq for Scalar<E> {
     fn eq(&self, other: &Self) -> bool {
-        self.0.eq(&other.0)
+        self.as_raw().eq(other.as_raw())
     }
 }
 
 impl<E: Curve> PartialEq<ScalarZ<E>> for Scalar<E> {
     fn eq(&self, other: &ScalarZ<E>) -> bool {
-        self.0.eq(&other.0)
+        self.as_raw().eq(other.as_raw())
     }
 }
 
@@ -673,7 +791,7 @@ macro_rules! matrix {
         trait = $trait:ident,
         trait_fn = $trait_fn:ident,
         output = $output:ty,
-        output_new = $output_new:ident,
+        output_new = $output_new:expr,
         point_fn = $point_fn:ident,
         point_assign_fn = $point_assign_fn:ident,
         pairs = {(r_<$($l:lifetime),*> $lhs_ref:ty, $rhs:ty), $($rest:tt)*}
@@ -681,7 +799,7 @@ macro_rules! matrix {
         impl<$($l,)* E: Curve> ops::$trait<$rhs> for $lhs_ref {
             type Output = $output;
             fn $trait_fn(self, rhs: $rhs) -> Self::Output {
-                let p = self.0.$point_fn(&rhs.0);
+                let p = self.as_raw().$point_fn(rhs.as_raw());
                 $output_new(p)
             }
         }
@@ -700,7 +818,7 @@ macro_rules! matrix {
         trait = $trait:ident,
         trait_fn = $trait_fn:ident,
         output = $output:ty,
-        output_new = $output_new:ident,
+        output_new = $output_new:expr,
         point_fn = $point_fn:ident,
         point_assign_fn = $point_assign_fn:ident,
         pairs = {(_r<$($l:lifetime),*> $lhs:ty, $rhs_ref:ty), $($rest:tt)*}
@@ -708,7 +826,7 @@ macro_rules! matrix {
         impl<$($l,)* E: Curve> ops::$trait<$rhs_ref> for $lhs {
             type Output = $output;
             fn $trait_fn(self, rhs: $rhs_ref) -> Self::Output {
-                let p = rhs.0.$point_fn(&self.0);
+                let p = rhs.as_raw().$point_fn(self.as_raw());
                 $output_new(p)
             }
         }
@@ -727,16 +845,17 @@ macro_rules! matrix {
         trait = $trait:ident,
         trait_fn = $trait_fn:ident,
         output = $output:ty,
-        output_new = $output_new:ident,
+        output_new = $output_new:expr,
         point_fn = $point_fn:ident,
         point_assign_fn = $point_assign_fn:ident,
         pairs = {(o_<$($l:lifetime),*> $lhs_owned:ty, $rhs:ty), $($rest:tt)*}
     ) => {
         impl<$($l,)* E: Curve> ops::$trait<$rhs> for $lhs_owned {
             type Output = $output;
-            fn $trait_fn(mut self, rhs: $rhs) -> Self::Output {
-                self.0.$point_assign_fn(&rhs.0);
-                $output_new(self.0)
+            fn $trait_fn(self, rhs: $rhs) -> Self::Output {
+                let mut raw = self.into_raw();
+                raw.$point_assign_fn(rhs.as_raw());
+                $output_new(raw)
             }
         }
         matrix!{
@@ -754,16 +873,17 @@ macro_rules! matrix {
         trait = $trait:ident,
         trait_fn = $trait_fn:ident,
         output = $output:ty,
-        output_new = $output_new:ident,
+        output_new = $output_new:expr,
         point_fn = $point_fn:ident,
         point_assign_fn = $point_assign_fn:ident,
         pairs = {(_o<$($l:lifetime),*> $lhs:ty, $rhs_owned:ty), $($rest:tt)*}
     ) => {
         impl<$($l,)* E: Curve> ops::$trait<$rhs_owned> for $lhs {
             type Output = $output;
-            fn $trait_fn(self, mut rhs: $rhs_owned) -> Self::Output {
-                rhs.0.$point_assign_fn(&self.0);
-                $output_new(rhs.0)
+            fn $trait_fn(self, rhs: $rhs_owned) -> Self::Output {
+                let mut raw = rhs.into_raw();
+                raw.$point_assign_fn(self.as_raw());
+                $output_new(raw)
             }
         }
         matrix!{
@@ -781,7 +901,7 @@ macro_rules! matrix {
         trait = $trait:ident,
         trait_fn = $trait_fn:ident,
         output = $output:ty,
-        output_new = $output_new:ident,
+        output_new = $output_new:expr,
         point_fn = $point_fn:ident,
         point_assign_fn = $point_assign_fn:ident,
         pairs = {}
@@ -794,7 +914,7 @@ matrix! {
     trait = Add,
     trait_fn = add,
     output = PointZ<E>,
-    output_new = PointZ,
+    output_new = PointZ::from_raw,
     point_fn = add_point,
     point_assign_fn = add_point_assign,
     pairs = {
@@ -823,7 +943,7 @@ matrix! {
     trait = Sub,
     trait_fn = sub,
     output = PointZ<E>,
-    output_new = PointZ,
+    output_new = PointZ::from_raw,
     point_fn = sub_point,
     point_assign_fn = sub_point_assign,
     pairs = {
@@ -852,7 +972,7 @@ matrix! {
     trait = Mul,
     trait_fn = mul,
     output = PointZ<E>,
-    output_new = PointZ,
+    output_new = PointZ::from_raw,
     point_fn = scalar_mul,
     point_assign_fn = scalar_mul_assign,
     pairs = {
@@ -890,7 +1010,7 @@ matrix! {
     trait = Add,
     trait_fn = add,
     output = ScalarZ<E>,
-    output_new = ScalarZ,
+    output_new = ScalarZ::from_raw,
     point_fn = add,
     point_assign_fn = add_assign,
     pairs = {
@@ -909,7 +1029,7 @@ matrix! {
     trait = Sub,
     trait_fn = sub,
     output = ScalarZ<E>,
-    output_new = ScalarZ,
+    output_new = ScalarZ::from_raw,
     point_fn = sub,
     point_assign_fn = sub_assign,
     pairs = {
@@ -928,7 +1048,7 @@ matrix! {
     trait = Mul,
     trait_fn = mul,
     output = ScalarZ<E>,
-    output_new = ScalarZ,
+    output_new = ScalarZ::from_raw,
     point_fn = mul,
     point_assign_fn = mul_assign,
     pairs = {
@@ -947,7 +1067,7 @@ impl<E: Curve> ops::Neg for Scalar<E> {
     type Output = Scalar<E>;
 
     fn neg(self) -> Self::Output {
-        Scalar::from_raw(self.0.neg()).expect("neg must not produce zero point")
+        Scalar::from_raw(self.as_raw().neg()).expect("neg must not produce zero point")
     }
 }
 
@@ -955,7 +1075,7 @@ impl<E: Curve> ops::Neg for &Scalar<E> {
     type Output = Scalar<E>;
 
     fn neg(self) -> Self::Output {
-        Scalar::from_raw(self.0.neg()).expect("neg must not produce zero point")
+        Scalar::from_raw(self.as_raw().neg()).expect("neg must not produce zero point")
     }
 }
 
@@ -963,7 +1083,7 @@ impl<E: Curve> ops::Neg for ScalarZ<E> {
     type Output = ScalarZ<E>;
 
     fn neg(self) -> Self::Output {
-        ScalarZ::from_raw(self.0.neg())
+        ScalarZ::from_raw(self.as_raw().neg())
     }
 }
 
@@ -971,7 +1091,7 @@ impl<E: Curve> ops::Neg for &ScalarZ<E> {
     type Output = ScalarZ<E>;
 
     fn neg(self) -> Self::Output {
-        ScalarZ::from_raw(self.0.neg())
+        ScalarZ::from_raw(self.as_raw().neg())
     }
 }
 
@@ -979,7 +1099,7 @@ impl<E: Curve> ops::Neg for Point<E> {
     type Output = Point<E>;
 
     fn neg(self) -> Self::Output {
-        Point::from_raw(self.0.neg_point()).expect("neg must not produce zero point")
+        Point::from_raw(self.as_raw().neg_point()).expect("neg must not produce zero point")
     }
 }
 
@@ -987,7 +1107,7 @@ impl<E: Curve> ops::Neg for &Point<E> {
     type Output = Point<E>;
 
     fn neg(self) -> Self::Output {
-        Point::from_raw(self.0.neg_point()).expect("neg must not produce zero point")
+        Point::from_raw(self.as_raw().neg_point()).expect("neg must not produce zero point")
     }
 }
 
@@ -995,7 +1115,7 @@ impl<'p, E: Curve> ops::Neg for PointRef<'p, E> {
     type Output = Point<E>;
 
     fn neg(self) -> Self::Output {
-        Point::from_raw(self.0.neg_point()).expect("neg must not produce zero point")
+        Point::from_raw(self.as_raw().neg_point()).expect("neg must not produce zero point")
     }
 }
 
@@ -1003,7 +1123,7 @@ impl<E: Curve> ops::Neg for PointZ<E> {
     type Output = PointZ<E>;
 
     fn neg(self) -> Self::Output {
-        PointZ::from_raw(self.0.neg_point())
+        PointZ::from_raw(self.as_raw().neg_point())
     }
 }
 
@@ -1011,7 +1131,7 @@ impl<E: Curve> ops::Neg for &PointZ<E> {
     type Output = PointZ<E>;
 
     fn neg(self) -> Self::Output {
-        PointZ::from_raw(self.0.neg_point())
+        PointZ::from_raw(self.as_raw().neg_point())
     }
 }
 
@@ -1042,7 +1162,7 @@ impl<E: Curve> From<ScalarZ<E>> for ScalarFormat<E> {
     fn from(s: ScalarZ<E>) -> Self {
         ScalarFormat {
             curve_name: E::curve_name().into(),
-            scalar: ScalarHex(s.0),
+            scalar: ScalarHex(s.into_raw()),
         }
     }
 }
@@ -1068,7 +1188,7 @@ impl<E: Curve> From<Scalar<E>> for ScalarFormat<E> {
     fn from(s: Scalar<E>) -> Self {
         ScalarFormat {
             curve_name: E::curve_name().into(),
-            scalar: ScalarHex(s.0),
+            scalar: ScalarHex(s.into_raw()),
         }
     }
 }
