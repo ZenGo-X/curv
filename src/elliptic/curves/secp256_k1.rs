@@ -659,6 +659,14 @@ mod test {
         assert_eq!(point, deserialized);
     }
 
+    #[test]
+    fn generator_mul_curve_order_is_zero() {
+        let g = GE::generator();
+        let n = FE::curve_order() - 1;
+        let s = FE::from_bigint(&n);
+        assert!(g.scalar_mul(&s).add_point(&g).is_zero());
+    }
+
     // #[test]
     // fn test_base_point2() {
     //     /* Show that base_point2() is returning a point of unknown discrete logarithm.
