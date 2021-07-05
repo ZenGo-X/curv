@@ -97,6 +97,19 @@ impl<E: Curve> PointZ<E> {
         E::Point::from_coords(x, y).map(Self::from_raw)
     }
 
+    /// Tries to parse a point from its (un)compressed form
+    ///
+    /// Whether it's a compressed or uncompressed form will be deduced from its length
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, DeserializationError> {
+        let p = E::Point::deserialize(bytes)?;
+        Ok(Self::from_raw(p))
+    }
+
+    /// Serializes point into (un)compressed form
+    pub fn to_bytes(&self, compressed: bool) -> Option<Vec<u8>> {
+        self.as_raw().serialize(compressed)
+    }
+
     fn from_raw(point: E::Point) -> Self {
         Self(point)
     }
@@ -125,6 +138,12 @@ impl<E: Curve> Clone for PointZ<E> {
 impl<E: Curve> fmt::Debug for PointZ<E> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+impl<E: Curve> From<Point<E>> for PointZ<E> {
+    fn from(p: Point<E>) -> Self {
+        PointZ::from_raw(p.into_raw())
     }
 }
 
