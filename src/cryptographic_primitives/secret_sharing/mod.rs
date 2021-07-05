@@ -5,7 +5,7 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
-// pub mod feldman_vss;
+pub mod feldman_vss;
 mod polynomial;
 
 pub use polynomial::Polynomial;
