@@ -5,13 +5,14 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
-use crate::elliptic::curves::traits::ECPoint;
+use crate::elliptic::curves::{Curve, Point, PointZ, ScalarZ};
 use crate::BigInt;
 
 pub trait Hash {
     fn create_hash(big_ints: &[&BigInt]) -> BigInt;
     fn create_hash_from_slice(byte_slice: &[u8]) -> BigInt;
-    fn create_hash_from_ge<P: ECPoint>(ge_vec: &[&P]) -> P::Scalar;
+    fn create_hash_from_ge<E: Curve>(ge_vec: &[&Point<E>]) -> ScalarZ<E>;
+    fn create_hash_from_ge_z<E: Curve>(ge_vec: &[&PointZ<E>]) -> ScalarZ<E>;
 }
 
 pub trait KeyedHash {
