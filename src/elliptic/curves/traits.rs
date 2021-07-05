@@ -7,8 +7,10 @@
 
 use std::fmt;
 
-use crate::BigInt;
+use serde::{Deserialize, Serialize};
 use zeroize::Zeroize;
+
+use crate::BigInt;
 
 /// Elliptic curve implementation
 ///
@@ -188,6 +190,7 @@ pub trait ECPoint: Zeroize + Clone + PartialEq + fmt::Debug + 'static {
     fn from_underlying(u: Self::Underlying) -> Self;
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct PointCoords {
     pub x: BigInt,
     pub y: BigInt,

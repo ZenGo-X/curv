@@ -38,6 +38,8 @@ use crate::arithmetic::{BigInt, Converter};
 ///     a + b * c
 /// }
 /// ```
+#[derive(Serialize, Deserialize)]
+#[serde(try_from = "PointFormat<E>", into = "PointFormat<E>", bound = "")]
 pub struct PointZ<E: Curve>(E::Point);
 
 impl<E: Curve> PointZ<E> {
@@ -189,6 +191,8 @@ impl<E: Curve> fmt::Debug for PointZ<E> {
 ///     (a + (b * c).ensure_nonzero()?).ensure_nonzero()
 /// }
 /// ```
+#[derive(Serialize, Deserialize)]
+#[serde(try_from = "PointFormat<E>", into = "PointFormat<E>", bound = "")]
 pub struct Point<E: Curve> {
     raw_point: E::Point,
 }
@@ -567,7 +571,7 @@ pub enum PointFromBytesError {
 /// }
 /// ```
 #[derive(Serialize, Deserialize)]
-#[serde(try_from = "ScalarFormat<E>", into = "ScalarFormat<E>")]
+#[serde(try_from = "ScalarFormat<E>", into = "ScalarFormat<E>", bound = "")]
 pub struct ScalarZ<E: Curve> {
     raw_scalar: E::Scalar,
 }
@@ -739,7 +743,7 @@ impl<E: Curve> From<BigInt> for ScalarZ<E> {
 /// }
 /// ```
 #[derive(Serialize, Deserialize)]
-#[serde(try_from = "ScalarFormat<E>", into = "ScalarFormat<E>")]
+#[serde(try_from = "ScalarFormat<E>", into = "ScalarFormat<E>", bound = "")]
 pub struct Scalar<E: Curve> {
     raw_scalar: E::Scalar,
 }
@@ -841,6 +845,48 @@ impl<E: Curve> PartialEq for Scalar<E> {
 impl<E: Curve> PartialEq<ScalarZ<E>> for Scalar<E> {
     fn eq(&self, other: &ScalarZ<E>) -> bool {
         self.as_raw().eq(other.as_raw())
+    }
+}
+
+impl<E: Curve> TryFrom<u16> for Scalar<E> {
+    type Error = ZeroScalarError;
+    fn try_from(n: u16) -> Result<Self, ZeroScalarError> {
+        Self::from_bigint(&BigInt::from(n))
+    }
+}
+
+impl<E: Curve> TryFrom<u32> for Scalar<E> {
+    type Error = ZeroScalarError;
+    fn try_from(n: u32) -> Result<Self, ZeroScalarError> {
+        Self::from_bigint(&BigInt::from(n))
+    }
+}
+
+impl<E: Curve> TryFrom<u64> for Scalar<E> {
+    type Error = ZeroScalarError;
+    fn try_from(n: u64) -> Result<Self, ZeroScalarError> {
+        Self::from_bigint(&BigInt::from(n))
+    }
+}
+
+impl<E: Curve> TryFrom<i32> for Scalar<E> {
+    type Error = ZeroScalarError;
+    fn try_from(n: i32) -> Result<Self, ZeroScalarError> {
+        Self::from_bigint(&BigInt::from(n))
+    }
+}
+
+impl<E: Curve> TryFrom<&BigInt> for Scalar<E> {
+    type Error = ZeroScalarError;
+    fn try_from(n: &BigInt) -> Result<Self, ZeroScalarError> {
+        Self::from_bigint(n)
+    }
+}
+
+impl<E: Curve> TryFrom<BigInt> for Scalar<E> {
+    type Error = ZeroScalarError;
+    fn try_from(n: BigInt) -> Result<Self, ZeroScalarError> {
+        Self::from_bigint(&n)
     }
 }
 
@@ -1242,8 +1288,95 @@ impl<E: Curve> ops::Neg for &PointZ<E> {
 
 #[derive(Serialize, Deserialize)]
 #[serde(bound = "")]
+struct PointFormat<E: Curve> {
+    curve: Cow<'static, str>,
+    point: Option<PointCoords>,
+    #[serde(skip, default = "PointFormat::<E>::_ph")]
+    _ph: PhantomData<E>,
+}
+
+impl<E: Curve> PointFormat<E> {
+    fn _ph() -> PhantomData<E> {
+        PhantomData
+    }
+}
+
+impl<E: Curve> TryFrom<PointFormat<E>> for PointZ<E> {
+    type Error = ConvertParsedPointError;
+    fn try_from(parsed: PointFormat<E>) -> Result<Self, ConvertParsedPointError> {
+        if parsed.curve != E::curve_name() {
+            return Err(ConvertParsedPointError::MismatchedCurve {
+                expected: E::curve_name(),
+                got: parsed.curve,
+            });
+        }
+        match parsed.point {
+            None => Ok(PointZ::zero()),
+            Some(coords) => PointZ::from_coords(&coords.x, &coords.y)
+                .map_err(|_: NotOnCurve| ConvertParsedPointError::NotOnCurve),
+        }
+    }
+}
+
+impl<E: Curve> From<PointZ<E>> for PointFormat<E> {
+    fn from(point: PointZ<E>) -> Self {
+        Self {
+            curve: E::curve_name().into(),
+            point: point.coords(),
+            _ph: PhantomData,
+        }
+    }
+}
+
+impl<E: Curve> TryFrom<PointFormat<E>> for Point<E> {
+    type Error = ConvertParsedPointError;
+    fn try_from(parsed: PointFormat<E>) -> Result<Self, ConvertParsedPointError> {
+        if parsed.curve != E::curve_name() {
+            return Err(ConvertParsedPointError::MismatchedCurve {
+                expected: E::curve_name(),
+                got: parsed.curve,
+            });
+        }
+        match parsed.point {
+            None => Err(ConvertParsedPointError::ZeroPoint),
+            Some(coords) => match Point::from_coords(&coords.x, &coords.y) {
+                Ok(p) => Ok(p),
+                Err(PointFromCoordsError::PointNotOnCurve) => {
+                    Err(ConvertParsedPointError::NotOnCurve)
+                }
+                Err(PointFromCoordsError::ZeroPoint) => Err(ConvertParsedPointError::ZeroPoint),
+            },
+        }
+    }
+}
+
+impl<E: Curve> From<Point<E>> for PointFormat<E> {
+    fn from(point: Point<E>) -> Self {
+        Self {
+            curve: E::curve_name().into(),
+            point: Some(point.coords()),
+            _ph: PhantomData,
+        }
+    }
+}
+
+#[derive(Debug, Error)]
+enum ConvertParsedPointError {
+    #[error("point must not be zero")]
+    ZeroPoint,
+    #[error("expected point of curve {expected}, but got point of curve {got}")]
+    MismatchedCurve {
+        got: Cow<'static, str>,
+        expected: &'static str,
+    },
+    #[error("point not on the curve: x,y don't satisfy curve equation")]
+    NotOnCurve,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(bound = "")]
 struct ScalarFormat<E: Curve> {
-    curve_name: Cow<'static, str>,
+    curve: Cow<'static, str>,
     #[serde(with = "hex")]
     scalar: ScalarHex<E>,
 }
@@ -1252,9 +1385,9 @@ impl<E: Curve> TryFrom<ScalarFormat<E>> for ScalarZ<E> {
     type Error = ConvertParsedScalarError;
 
     fn try_from(parsed: ScalarFormat<E>) -> Result<Self, Self::Error> {
-        if parsed.curve_name != E::curve_name() {
+        if parsed.curve != E::curve_name() {
             return Err(ConvertParsedScalarError::MismatchedCurve {
-                got: parsed.curve_name,
+                got: parsed.curve,
                 expected: E::curve_name(),
             });
         }
@@ -1266,7 +1399,7 @@ impl<E: Curve> TryFrom<ScalarFormat<E>> for ScalarZ<E> {
 impl<E: Curve> From<ScalarZ<E>> for ScalarFormat<E> {
     fn from(s: ScalarZ<E>) -> Self {
         ScalarFormat {
-            curve_name: E::curve_name().into(),
+            curve: E::curve_name().into(),
             scalar: ScalarHex(s.into_raw()),
         }
     }
@@ -1276,9 +1409,9 @@ impl<E: Curve> TryFrom<ScalarFormat<E>> for Scalar<E> {
     type Error = ConvertParsedScalarError;
 
     fn try_from(parsed: ScalarFormat<E>) -> Result<Self, Self::Error> {
-        if parsed.curve_name != E::curve_name() {
+        if parsed.curve != E::curve_name() {
             return Err(ConvertParsedScalarError::MismatchedCurve {
-                got: parsed.curve_name,
+                got: parsed.curve,
                 expected: E::curve_name(),
             });
         }
@@ -1292,7 +1425,7 @@ impl<E: Curve> TryFrom<ScalarFormat<E>> for Scalar<E> {
 impl<E: Curve> From<Scalar<E>> for ScalarFormat<E> {
     fn from(s: Scalar<E>) -> Self {
         ScalarFormat {
-            curve_name: E::curve_name().into(),
+            curve: E::curve_name().into(),
             scalar: ScalarHex(s.into_raw()),
         }
     }
