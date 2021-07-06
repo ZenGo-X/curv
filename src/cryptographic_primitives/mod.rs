@@ -5,7 +5,7 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-// pub mod commitments;
+pub mod commitments;
 pub mod hashing;
 // pub mod proofs;
 pub mod secret_sharing;
