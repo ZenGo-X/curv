@@ -16,7 +16,7 @@
 // The Public Key codec: Point <> SecretKey
 //
 
-use std::ops::{self, Deref};
+use std::ops;
 use std::ptr;
 use std::sync::atomic;
 
@@ -197,7 +197,7 @@ impl ECScalar for Secp256k1Scalar {
     }
 
     fn to_bigint(&self) -> BigInt {
-        match self.fe.deref() {
+        match &*self.fe {
             Some(sk) => BigInt::from_bytes(&sk[..]),
             None => BigInt::zero(),
         }
@@ -423,7 +423,7 @@ impl ECPoint for Secp256k1Point {
                 };
             }
         };
-        let scalar = match scalar.fe.deref() {
+        let scalar = match &*scalar.fe {
             Some(s) => s,
             None => {
                 // Scalar is zero => p * 0 = O
