@@ -9,7 +9,7 @@ use std::error::Error;
 use std::fmt;
 
 pub mod low_degree_exponent_interpolation;
-// pub mod sigma_correct_homomorphic_elgamal_enc;
+pub mod sigma_correct_homomorphic_elgamal_enc;
 // pub mod sigma_correct_homomorphic_elgamal_encryption_of_dlog;
 // pub mod sigma_dlog;
 // pub mod sigma_ec_ddh;

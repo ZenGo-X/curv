@@ -40,7 +40,9 @@ use crate::arithmetic::{BigInt, Converter};
 /// ```
 #[derive(Serialize, Deserialize)]
 #[serde(try_from = "PointFormat<E>", into = "PointFormat<E>", bound = "")]
-pub struct PointZ<E: Curve>(E::Point);
+pub struct PointZ<E: Curve> {
+    raw_point: E::Point,
+}
 
 impl<E: Curve> PointZ<E> {
     /// Checks if `self` is not zero and converts it into [`Point<E>`](Point). Returns `None` if
@@ -110,34 +112,36 @@ impl<E: Curve> PointZ<E> {
         self.as_raw().serialize(compressed)
     }
 
-    fn from_raw(point: E::Point) -> Self {
-        Self(point)
+    fn from_raw(raw_point: E::Point) -> Self {
+        Self { raw_point }
     }
 
     fn as_raw(&self) -> &E::Point {
-        &self.0
+        &self.raw_point
     }
 
     fn into_raw(self) -> E::Point {
-        self.0
+        self.raw_point
     }
 }
 
 impl<E: Curve> PartialEq for PointZ<E> {
     fn eq(&self, other: &Self) -> bool {
-        self.0.eq(&other.0)
+        self.raw_point.eq(&other.raw_point)
     }
 }
 
 impl<E: Curve> Clone for PointZ<E> {
     fn clone(&self) -> Self {
-        PointZ(self.0.clone())
+        PointZ {
+            raw_point: self.as_raw().clone(),
+        }
     }
 }
 
 impl<E: Curve> fmt::Debug for PointZ<E> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
+        self.raw_point.fmt(f)
     }
 }
 
@@ -321,6 +325,12 @@ impl<E: Curve> Point<E> {
 
     fn into_raw(self) -> E::Point {
         self.raw_point
+    }
+}
+
+impl<E: Curve> PartialEq for Point<E> {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_raw().eq(&other.as_raw())
     }
 }
 
