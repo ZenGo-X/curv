@@ -1111,19 +1111,19 @@ matrix! {
     pairs = {
         (_o<> Scalar<E>, Point<E>), (_o<> Scalar<E>, PointZ<E>),
         (_r<> Scalar<E>, &Point<E>), (_r<> Scalar<E>, &PointZ<E>),
-        (_r<'p> Scalar<E>, PointRef<'p, E>), /*(_r<> Scalar<E>, Generator<E>),*/
+        (_r<'p> Scalar<E>, PointRef<'p, E>),
 
         (_o<> ScalarZ<E>, Point<E>), (_o<> ScalarZ<E>, PointZ<E>),
         (_r<> ScalarZ<E>, &Point<E>), (_r<> ScalarZ<E>, &PointZ<E>),
-        (_r<'p> ScalarZ<E>, PointRef<'p, E>), (_r<> ScalarZ<E>, Generator<E>),
+        (_r<'p> ScalarZ<E>, PointRef<'p, E>),
 
         (_o<> &Scalar<E>, Point<E>), (_o<> &Scalar<E>, PointZ<E>),
         (_r<> &Scalar<E>, &Point<E>), (_r<> &Scalar<E>, &PointZ<E>),
-        (_r<'p> &Scalar<E>, PointRef<'p, E>), /*(_r<> &Scalar<E>, Generator<E>),*/
+        (_r<'p> &Scalar<E>, PointRef<'p, E>),
 
         (_o<> &ScalarZ<E>, Point<E>), (_o<> &ScalarZ<E>, PointZ<E>),
         (_r<> &ScalarZ<E>, &Point<E>), (_r<> &ScalarZ<E>, &PointZ<E>),
-        (_r<'p> &ScalarZ<E>, PointRef<'p, E>), (_r<> &ScalarZ<E>, Generator<E>),
+        (_r<'p> &ScalarZ<E>, PointRef<'p, E>),
 
         // --- and vice-versa ---
 
@@ -1141,9 +1141,6 @@ matrix! {
 
         (r_<'p> PointRef<'p, E>, Scalar<E>), (r_<'p> PointRef<'p, E>, ScalarZ<E>),
         (r_<'p> PointRef<'p, E>, &Scalar<E>), (r_<'p> PointRef<'p, E>, &ScalarZ<E>),
-
-        /*(r_<> Generator<E>, Scalar<E>),*/ (r_<> Generator<E>, ScalarZ<E>),
-        /*(r_<> Generator<E>, &Scalar<E>),*/ (r_<> Generator<E>, &ScalarZ<E>),
     }
 }
 
@@ -1207,7 +1204,7 @@ matrix! {
 impl<E: Curve> ops::Mul<&Scalar<E>> for Generator<E> {
     type Output = Point<E>;
     fn mul(self, rhs: &Scalar<E>) -> Self::Output {
-        Point::from_raw(self.as_raw().scalar_mul(&rhs.as_raw()))
+        Point::from_raw(E::Point::generator_mul(rhs.as_raw()))
             .expect("generator multiplied by non-zero scalar is always non-zero point")
     }
 }
@@ -1228,6 +1225,34 @@ impl<E: Curve> ops::Mul<Generator<E>> for &Scalar<E> {
 
 impl<E: Curve> ops::Mul<Generator<E>> for Scalar<E> {
     type Output = Point<E>;
+    fn mul(self, rhs: Generator<E>) -> Self::Output {
+        rhs.mul(self)
+    }
+}
+
+impl<E: Curve> ops::Mul<&ScalarZ<E>> for Generator<E> {
+    type Output = PointZ<E>;
+    fn mul(self, rhs: &ScalarZ<E>) -> Self::Output {
+        PointZ::from_raw(E::Point::generator_mul(rhs.as_raw()))
+    }
+}
+
+impl<E: Curve> ops::Mul<ScalarZ<E>> for Generator<E> {
+    type Output = PointZ<E>;
+    fn mul(self, rhs: ScalarZ<E>) -> Self::Output {
+        self.mul(&rhs)
+    }
+}
+
+impl<E: Curve> ops::Mul<Generator<E>> for &ScalarZ<E> {
+    type Output = PointZ<E>;
+    fn mul(self, rhs: Generator<E>) -> Self::Output {
+        rhs.mul(self)
+    }
+}
+
+impl<E: Curve> ops::Mul<Generator<E>> for ScalarZ<E> {
+    type Output = PointZ<E>;
     fn mul(self, rhs: Generator<E>) -> Self::Output {
         rhs.mul(self)
     }
@@ -1282,6 +1307,14 @@ impl<E: Curve> ops::Neg for &Point<E> {
 }
 
 impl<'p, E: Curve> ops::Neg for PointRef<'p, E> {
+    type Output = Point<E>;
+
+    fn neg(self) -> Self::Output {
+        Point::from_raw(self.as_raw().neg_point()).expect("neg must not produce zero point")
+    }
+}
+
+impl<E: Curve> ops::Neg for Generator<E> {
     type Output = Point<E>;
 
     fn neg(self) -> Self::Output {

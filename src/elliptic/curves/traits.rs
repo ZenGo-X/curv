@@ -158,6 +158,18 @@ pub trait ECPoint: Zeroize + Clone + PartialEq + fmt::Debug + 'static {
 
     /// Multiplies the point at scalar value
     fn scalar_mul(&self, scalar: &Self::Scalar) -> Self;
+    /// Multiplies curve generator at given scalar
+    ///
+    /// Basically, it's the same as `ECPoint::generator().scalar_mul(&s)`, but can be more efficient
+    /// because most curve libs have constant time high performance generator multiplication.
+    ///
+    /// ## Correctness
+    ///
+    /// Note that scalar is modulo [curve order](ECScalar::curve_order), so multiplying generator
+    /// at non-zero scalar **must** always produce non-zero point.
+    fn generator_mul(scalar: &Self::Scalar) -> Self {
+        Self::generator().scalar_mul(scalar)
+    }
     /// Adds two points
     fn add_point(&self, other: &Self) -> Self;
     /// Substrates `other` from `self`

@@ -32,7 +32,7 @@ use crate::arithmetic::*;
 use super::traits::*;
 
 lazy_static::lazy_static! {
-    static ref CONTEXT: secp256k1::Secp256k1<secp256k1::VerifyOnly> = secp256k1::Secp256k1::verification_only();
+    static ref CONTEXT: secp256k1::Secp256k1<secp256k1::All> = secp256k1::Secp256k1::new();
 
     static ref CURVE_ORDER: BigInt = BigInt::from_bytes(&constants::CURVE_ORDER);
 
@@ -445,6 +445,19 @@ impl ECPoint for Secp256k1Point {
         Secp256k1Point {
             purpose: "mul",
             ge: Some(new_point),
+        }
+    }
+
+    fn generator_mul(scalar: &Self::Scalar) -> Self {
+        match &*scalar.fe {
+            Some(sk) => Secp256k1Point {
+                purpose: "generator_mul",
+                ge: Some(PK(PublicKey::from_secret_key(&CONTEXT, sk))),
+            },
+            None => Secp256k1Point {
+                purpose: "generator_mul",
+                ge: None,
+            },
         }
     }
 
