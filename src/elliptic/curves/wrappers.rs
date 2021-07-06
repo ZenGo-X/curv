@@ -349,10 +349,42 @@ impl<E: Curve> TryFrom<PointZ<E>> for Point<E> {
 /// Holds internally a static reference on curve generator. Can be used in arithmetic interchangeably
 /// as [`PointRef<E>`](PointRef).
 ///
+/// You can convert the generator into `Point<E>` and `PointRef<E>` using
+/// [`to_point_owned`](Self::to_point_owned) and [`as_point_ref`](Self::as_point_ref)
+/// methods respectively.
+///
+/// ## Guarantees
+///
 /// Generator multiplied at non-zero scalar always produce non-zero point, thus output type of
 /// the multiplication is [`Point<E>`](Point). This is the only difference compared to `Point<E>` and
-/// `PointRef<E>`. Use [`to_point_owned`](Self::to_point_owned) and [`as_point_ref`](Self::as_point_ref)
-/// methods to convert the generator into `Point<E>` and `PointRef<E>`.
+/// `PointRef<E>`.
+///
+/// ```rust
+/// # use curv::elliptic::curves::{PointZ, Point, Scalar, Secp256k1};
+/// let s = Scalar::<Secp256k1>::random();   // Non-zero scalar
+/// let g = Point::<Secp256k1>::generator(); // Curve generator
+/// let result: Point<Secp256k1> = s * g;    // Generator multiplied at non-zero scalar is
+///                                          // always a non-zero point
+/// ```
+///
+/// ## Performance
+///
+/// Generator multiplication is often more efficient than regular point multiplication, so avoid
+/// converting generator into the `Point<E>` as long as it's possible:
+///
+/// ```rust
+/// # use curv::elliptic::curves::{Point, Scalar, Secp256k1, Generator, PointZ};
+/// let s: Scalar<Secp256k1> = Scalar::random();
+/// // Generator multiplication:
+/// let g: Generator<Secp256k1> = Point::generator();
+/// let p1: Point<Secp256k1> = g * &s;
+/// // Point multiplication:
+/// let g: Point<Secp256k1> = g.to_point_owned();
+/// let p2: PointZ<Secp256k1> = g * &s;
+/// // Result will be the same, but generator multiplication is usually faster.
+/// // Plus, generator multiplication produces `Point<E>` instead of `PointZ<E>`
+/// assert_eq!(PointZ::from(p1), p2);
+/// ```
 pub struct Generator<E: Curve> {
     _ph: PhantomData<&'static E::Point>,
 }
