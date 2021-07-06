@@ -19,8 +19,8 @@ pub trait Curve {
     type Point: ECPoint<Scalar = Self::Scalar>;
     type Scalar: ECScalar;
 
-    /// Returns canonical name for this curve
-    fn curve_name() -> &'static str;
+    /// Canonical name for this curve
+    const CURVE_NAME: &'static str;
 }
 
 /// Scalar value modulus [curve order](Self::curve_order)

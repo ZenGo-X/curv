@@ -1323,9 +1323,9 @@ impl<E: Curve> PointFormat<E> {
 impl<E: Curve> TryFrom<PointFormat<E>> for PointZ<E> {
     type Error = ConvertParsedPointError;
     fn try_from(parsed: PointFormat<E>) -> Result<Self, ConvertParsedPointError> {
-        if parsed.curve != E::curve_name() {
+        if parsed.curve != E::CURVE_NAME {
             return Err(ConvertParsedPointError::MismatchedCurve {
-                expected: E::curve_name(),
+                expected: E::CURVE_NAME,
                 got: parsed.curve,
             });
         }
@@ -1340,7 +1340,7 @@ impl<E: Curve> TryFrom<PointFormat<E>> for PointZ<E> {
 impl<E: Curve> From<PointZ<E>> for PointFormat<E> {
     fn from(point: PointZ<E>) -> Self {
         Self {
-            curve: E::curve_name().into(),
+            curve: E::CURVE_NAME.into(),
             point: point.coords(),
             _ph: PhantomData,
         }
@@ -1350,9 +1350,9 @@ impl<E: Curve> From<PointZ<E>> for PointFormat<E> {
 impl<E: Curve> TryFrom<PointFormat<E>> for Point<E> {
     type Error = ConvertParsedPointError;
     fn try_from(parsed: PointFormat<E>) -> Result<Self, ConvertParsedPointError> {
-        if parsed.curve != E::curve_name() {
+        if parsed.curve != E::CURVE_NAME {
             return Err(ConvertParsedPointError::MismatchedCurve {
-                expected: E::curve_name(),
+                expected: E::CURVE_NAME,
                 got: parsed.curve,
             });
         }
@@ -1372,7 +1372,7 @@ impl<E: Curve> TryFrom<PointFormat<E>> for Point<E> {
 impl<E: Curve> From<Point<E>> for PointFormat<E> {
     fn from(point: Point<E>) -> Self {
         Self {
-            curve: E::curve_name().into(),
+            curve: E::CURVE_NAME.into(),
             point: Some(point.coords()),
             _ph: PhantomData,
         }
@@ -1404,10 +1404,10 @@ impl<E: Curve> TryFrom<ScalarFormat<E>> for ScalarZ<E> {
     type Error = ConvertParsedScalarError;
 
     fn try_from(parsed: ScalarFormat<E>) -> Result<Self, Self::Error> {
-        if parsed.curve != E::curve_name() {
+        if parsed.curve != E::CURVE_NAME {
             return Err(ConvertParsedScalarError::MismatchedCurve {
                 got: parsed.curve,
-                expected: E::curve_name(),
+                expected: E::CURVE_NAME,
             });
         }
 
@@ -1418,7 +1418,7 @@ impl<E: Curve> TryFrom<ScalarFormat<E>> for ScalarZ<E> {
 impl<E: Curve> From<ScalarZ<E>> for ScalarFormat<E> {
     fn from(s: ScalarZ<E>) -> Self {
         ScalarFormat {
-            curve: E::curve_name().into(),
+            curve: E::CURVE_NAME.into(),
             scalar: ScalarHex(s.into_raw()),
         }
     }
@@ -1428,10 +1428,10 @@ impl<E: Curve> TryFrom<ScalarFormat<E>> for Scalar<E> {
     type Error = ConvertParsedScalarError;
 
     fn try_from(parsed: ScalarFormat<E>) -> Result<Self, Self::Error> {
-        if parsed.curve != E::curve_name() {
+        if parsed.curve != E::CURVE_NAME {
             return Err(ConvertParsedScalarError::MismatchedCurve {
                 got: parsed.curve,
-                expected: E::curve_name(),
+                expected: E::CURVE_NAME,
             });
         }
 
@@ -1444,7 +1444,7 @@ impl<E: Curve> TryFrom<ScalarFormat<E>> for Scalar<E> {
 impl<E: Curve> From<Scalar<E>> for ScalarFormat<E> {
     fn from(s: Scalar<E>) -> Self {
         ScalarFormat {
-            curve: E::curve_name().into(),
+            curve: E::CURVE_NAME.into(),
             scalar: ScalarHex(s.into_raw()),
         }
     }

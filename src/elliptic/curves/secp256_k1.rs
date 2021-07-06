@@ -131,9 +131,7 @@ impl Curve for Secp256k1 {
     type Point = GE;
     type Scalar = FE;
 
-    fn curve_name() -> &'static str {
-        "secp256k1"
-    }
+    const CURVE_NAME: &'static str = "secp256k1";
 }
 
 #[derive(Clone, Debug)]
