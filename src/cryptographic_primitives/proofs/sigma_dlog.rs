@@ -6,13 +6,14 @@
 */
 
 use serde::{Deserialize, Serialize};
-use zeroize::Zeroize;
 
 use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use crate::cryptographic_primitives::hashing::traits::Hash;
-use crate::elliptic::curves::traits::*;
+use crate::elliptic::curves::{Curve, Point, Scalar, ScalarZ};
 
 use super::ProofError;
+use crate::arithmetic::Converter;
+use crate::BigInt;
 
 /// This is implementation of Schnorr's identification protocol for elliptic curve groups or a
 /// sigma protocol for Proof of knowledge of the discrete log of an Elliptic-curve point:
@@ -25,33 +26,30 @@ use super::ProofError;
 /// In Advances in Cryptology - CRYPTO ’86, Santa Barbara, California, USA, 1986, Proceedings,
 /// pages 186–194, 1986.
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct DLogProof<P: ECPoint> {
-    pub pk: P,
-    pub pk_t_rand_commitment: P,
-    pub challenge_response: P::Scalar,
+pub struct DLogProof<E: Curve> {
+    pub pk: Point<E>,
+    pub pk_t_rand_commitment: Point<E>,
+    pub challenge_response: ScalarZ<E>,
 }
 
-impl<P> DLogProof<P>
-where
-    P: ECPoint + Clone,
-    P::Scalar: Zeroize,
-{
-    pub fn prove(sk: &P::Scalar) -> DLogProof<P> {
-        let base_point: P = ECPoint::generator();
-        let generator_x = base_point.bytes_compressed_to_big_int();
-        let mut sk_t_rand_commitment: P::Scalar = ECScalar::new_random();
-        let pk_t_rand_commitment = base_point.scalar_mul(&sk_t_rand_commitment.get_element());
-        let ec_point: P = ECPoint::generator();
-        let pk = ec_point.scalar_mul(&sk.get_element());
+impl<E: Curve> DLogProof<E> {
+    pub fn prove(sk: &Scalar<E>) -> DLogProof<E> {
+        let generator = Point::<E>::generator();
+
+        let sk_t_rand_commitment = Scalar::random();
+        let pk_t_rand_commitment = generator * &sk_t_rand_commitment;
+
+        let pk = Point::generator() * sk;
+
         let challenge = HSha256::create_hash(&[
-            &pk_t_rand_commitment.bytes_compressed_to_big_int(),
-            &generator_x,
-            &pk.bytes_compressed_to_big_int(),
+            &BigInt::from_bytes(&pk_t_rand_commitment.to_bytes(true)),
+            &BigInt::from_bytes(&generator.as_point().to_bytes(true)),
+            &BigInt::from_bytes(&pk.to_bytes(true)),
         ]);
-        let challenge_fe: P::Scalar = ECScalar::from(&challenge);
-        let challenge_mul_sk = challenge_fe.mul(&sk.get_element());
-        let challenge_response = sk_t_rand_commitment.sub(&challenge_mul_sk.get_element());
-        sk_t_rand_commitment.zeroize();
+
+        let challenge_fe: ScalarZ<E> = ScalarZ::from(&challenge);
+        let challenge_mul_sk = challenge_fe * sk;
+        let challenge_response = &sk_t_rand_commitment - &challenge_mul_sk;
         DLogProof {
             pk,
             pk_t_rand_commitment,
@@ -59,23 +57,19 @@ where
         }
     }
 
-    pub fn verify(proof: &DLogProof<P>) -> Result<(), ProofError> {
-        let ec_point: P = ECPoint::generator();
+    pub fn verify(proof: &DLogProof<E>) -> Result<(), ProofError> {
+        let generator = Point::<E>::generator();
+
         let challenge = HSha256::create_hash(&[
-            &proof.pk_t_rand_commitment.bytes_compressed_to_big_int(),
-            &ec_point.bytes_compressed_to_big_int(),
-            &proof.pk.bytes_compressed_to_big_int(),
+            &BigInt::from_bytes(&proof.pk_t_rand_commitment.to_bytes(true)),
+            &BigInt::from_bytes(&generator.as_point().to_bytes(true)),
+            &BigInt::from_bytes(&proof.pk.to_bytes(true)),
         ]);
 
-        let sk_challenge: P::Scalar = ECScalar::from(&challenge);
-        let pk = proof.pk.clone();
-        let pk_challenge = pk.scalar_mul(&sk_challenge.get_element());
+        let sk_challenge = ScalarZ::<E>::from(&challenge);
+        let pk_challenge = &proof.pk * &sk_challenge;
 
-        let base_point: P = ECPoint::generator();
-
-        let mut pk_verifier = base_point.scalar_mul(&proof.challenge_response.get_element());
-
-        pk_verifier = pk_verifier.add_point(&pk_challenge.get_element());
+        let pk_verifier = generator * &proof.challenge_response + pk_challenge;
 
         if pk_verifier == proof.pk_t_rand_commitment {
             Ok(())
@@ -90,13 +84,9 @@ mod tests {
     use super::*;
 
     crate::test_for_all_curves!(test_dlog_proof);
-    fn test_dlog_proof<P>()
-    where
-        P: ECPoint + Clone,
-        P::Scalar: Zeroize,
-    {
-        let witness: P::Scalar = ECScalar::new_random();
-        let dlog_proof = DLogProof::<P>::prove(&witness);
+    fn test_dlog_proof<E: Curve>() {
+        let witness = Scalar::random();
+        let dlog_proof = DLogProof::<E>::prove(&witness);
         assert!(DLogProof::verify(&dlog_proof).is_ok());
     }
 }
