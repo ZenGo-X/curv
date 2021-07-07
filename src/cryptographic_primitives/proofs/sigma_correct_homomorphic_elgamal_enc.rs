@@ -112,7 +112,7 @@ mod tests {
         let D = &H * &witness.x + &Y * &witness.r;
         let E = G * &witness.r;
         let delta = HomoElGamalStatement {
-            G: G.to_point_owned(),
+            G: G.to_point(),
             H,
             Y,
             D,
@@ -134,8 +134,8 @@ mod tests {
         let D = G * &witness.x + &Y * &witness.r;
         let E = G * &witness.r;
         let delta = HomoElGamalStatement {
-            G: G.to_point_owned(),
-            H: G.to_point_owned(),
+            G: G.to_point(),
+            H: G.to_point(),
             Y,
             D,
             E,
@@ -159,7 +159,7 @@ mod tests {
         let D = &H * &witness.x + &Y * &witness.r;
         let E = G * &witness.r + G;
         let delta = HomoElGamalStatement {
-            G: G.to_point_owned(),
+            G: G.to_point(),
             H,
             Y,
             D,

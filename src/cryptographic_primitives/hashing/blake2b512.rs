@@ -66,8 +66,8 @@ mod tests {
     crate::test_for_all_curves!(create_hash_from_ge_test);
 
     fn create_hash_from_ge_test<E: Curve>() {
-        let base_point2 = Point::base_point2().to_point_owned();
-        let generator = Point::generator().to_point_owned();
+        let base_point2 = Point::base_point2().to_point();
+        let generator = Point::generator().to_point();
         let result1 =
             Blake::create_hash_from_ge::<E>(&[&base_point2, &generator], b"Zcash_RedJubjubH");
         assert!(result1.to_bigint().bit_length() > 240);

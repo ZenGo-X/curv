@@ -131,6 +131,24 @@ impl<E: Curve> PartialEq for PointZ<E> {
     }
 }
 
+impl<E: Curve> PartialEq<Point<E>> for PointZ<E> {
+    fn eq(&self, other: &Point<E>) -> bool {
+        self.as_raw().eq(other.as_raw())
+    }
+}
+
+impl<'p, E: Curve> PartialEq<PointRef<'p, E>> for PointZ<E> {
+    fn eq(&self, other: &PointRef<'p, E>) -> bool {
+        self.as_raw().eq(other.as_raw())
+    }
+}
+
+impl<E: Curve> PartialEq<Generator<E>> for PointZ<E> {
+    fn eq(&self, other: &Generator<E>) -> bool {
+        self.as_raw().eq(other.as_raw())
+    }
+}
+
 impl<E: Curve> Clone for PointZ<E> {
     fn clone(&self) -> Self {
         PointZ {
@@ -260,50 +278,50 @@ impl<E: Curve> Point<E> {
     ///
     /// Method never fails as Point is guaranteed to have coordinates
     pub fn coords(&self) -> PointCoords {
-        self.as_point_ref().coords()
+        self.as_point().coords()
     }
 
     /// Returns `x` coordinate of point
     ///
     /// Method never fails as Point is guaranteed to have coordinates
     pub fn x_coord(&self) -> BigInt {
-        self.as_point_ref().x_coord()
+        self.as_point().x_coord()
     }
 
     /// Returns `y` coordinate of point
     ///
     /// Method never fails as Point is guaranteed to have coordinates
     pub fn y_coord(&self) -> BigInt {
-        self.as_point_ref().y_coord()
+        self.as_point().y_coord()
     }
 
     /// Adds two points, returns the result, or `None` if resulting point is zero
     pub fn add_checked(&self, point: PointRef<E>) -> Result<Self, ZeroPointError> {
-        self.as_point_ref().add_checked(point)
+        self.as_point().add_checked(point)
     }
 
     /// Substrates two points, returns the result, or `None` if resulting point is zero
     pub fn sub_checked(&self, point: PointRef<E>) -> Result<Self, ZeroPointError> {
-        self.as_point_ref().sub_checked(point)
+        self.as_point().sub_checked(point)
     }
 
     /// Multiplies a point at scalar, returns the result, or `None` if resulting point is zero
     pub fn mul_checked_z(&self, scalar: &ScalarZ<E>) -> Result<Self, ZeroPointError> {
-        self.as_point_ref().mul_checked_z(scalar)
+        self.as_point().mul_checked_z(scalar)
     }
 
     /// Multiplies a point at nonzero scalar, returns the result, or `None` if resulting point is zero
     pub fn mul_checked(&self, scalar: &Scalar<E>) -> Result<Self, ZeroPointError> {
-        self.as_point_ref().mul_checked(scalar)
+        self.as_point().mul_checked(scalar)
     }
 
     /// Serializes point into (un)compressed form
     pub fn to_bytes(&self, compressed: bool) -> Vec<u8> {
-        self.as_point_ref().to_bytes(compressed)
+        self.as_point().to_bytes(compressed)
     }
 
     /// Creates [PointRef] that holds a reference on `self`
-    pub fn as_point_ref(&self) -> PointRef<E> {
+    pub fn as_point(&self) -> PointRef<E> {
         PointRef::from(self)
     }
 
@@ -334,9 +352,27 @@ impl<E: Curve> PartialEq for Point<E> {
     }
 }
 
+impl<E: Curve> PartialEq<PointZ<E>> for Point<E> {
+    fn eq(&self, other: &PointZ<E>) -> bool {
+        self.as_raw().eq(&other.as_raw())
+    }
+}
+
+impl<'p, E: Curve> PartialEq<PointRef<'p, E>> for Point<E> {
+    fn eq(&self, other: &PointRef<'p, E>) -> bool {
+        self.as_raw().eq(&other.as_raw())
+    }
+}
+
+impl<E: Curve> PartialEq<Generator<E>> for Point<E> {
+    fn eq(&self, other: &Generator<E>) -> bool {
+        self.as_raw().eq(&other.as_raw())
+    }
+}
+
 impl<E: Curve> Clone for Point<E> {
     fn clone(&self) -> Self {
-        //  Safety: `self` is guaranteed to be non-zero
+        // Safety: `self` is guaranteed to be non-zero
         unsafe { Point::from_raw_unchecked(self.as_raw().clone()) }
     }
 }
@@ -389,7 +425,7 @@ impl<E: Curve> TryFrom<PointZ<E>> for Point<E> {
 /// let g: Generator<Secp256k1> = Point::generator();
 /// let p1: Point<Secp256k1> = g * &s;
 /// // Point multiplication:
-/// let g: Point<Secp256k1> = g.to_point_owned();
+/// let g: Point<Secp256k1> = g.to_point();
 /// let p2: PointZ<Secp256k1> = g * &s;
 /// // Result will be the same, but generator multiplication is usually faster.
 /// // Plus, generator multiplication produces `Point<E>` instead of `PointZ<E>`
@@ -411,13 +447,13 @@ impl<E: Curve> Generator<E> {
     }
 
     /// Clones generator point, returns `Point<E>`
-    pub fn to_point_owned(self) -> Point<E> {
+    pub fn to_point(self) -> Point<E> {
         // Safety: curve generator must be non-zero point, otherwise nothing will work at all
         unsafe { Point::from_raw_unchecked(self.as_raw().clone()) }
     }
 
     /// Converts generator into `PointRef<E>`
-    pub fn as_point_ref(self) -> PointRef<'static, E> {
+    pub fn as_point(self) -> PointRef<'static, E> {
         // Safety: curve generator must be non-zero point, otherwise nothing will work at all
         unsafe { PointRef::from_raw_unchecked(self.as_raw()) }
     }
@@ -512,7 +548,7 @@ where
     }
 
     /// Clones the referenced point
-    pub fn to_point_owned(&self) -> Point<E> {
+    pub fn to_point(&self) -> Point<E> {
         // Safety: `self` is guaranteed to be non-zero
         unsafe { Point::from_raw_unchecked(self.as_raw().clone()) }
     }
@@ -553,6 +589,30 @@ impl<'p, E: Curve> From<&'p Point<E>> for PointRef<'p, E> {
     fn from(point: &'p Point<E>) -> Self {
         // Safety: `point` is guaranteed to be non-zero
         unsafe { PointRef::from_raw_unchecked(point.as_raw()) }
+    }
+}
+
+impl<'p, E: Curve> PartialEq for PointRef<'p, E> {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_raw().eq(other.as_raw())
+    }
+}
+
+impl<'p, E: Curve> PartialEq<Point<E>> for PointRef<'p, E> {
+    fn eq(&self, other: &Point<E>) -> bool {
+        self.as_raw().eq(other.as_raw())
+    }
+}
+
+impl<'p, E: Curve> PartialEq<PointZ<E>> for PointRef<'p, E> {
+    fn eq(&self, other: &PointZ<E>) -> bool {
+        self.as_raw().eq(other.as_raw())
+    }
+}
+
+impl<'p, E: Curve> PartialEq<Generator<E>> for PointRef<'p, E> {
+    fn eq(&self, other: &Generator<E>) -> bool {
+        self.as_raw().eq(other.as_raw())
     }
 }
 

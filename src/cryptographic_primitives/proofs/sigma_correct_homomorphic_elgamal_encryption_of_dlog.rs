@@ -110,7 +110,7 @@ mod tests {
         let E = G * &witness.r;
         let Q = G * &witness.x;
         let delta = HomoElGamalDlogStatement {
-            G: G.to_point_owned(),
+            G: G.to_point(),
             Y,
             Q,
             D,
@@ -134,7 +134,7 @@ mod tests {
         let E = (G * &witness.r + G).ensure_nonzero().unwrap();
         let Q = (G * &witness.x + G).ensure_nonzero().unwrap();
         let delta = HomoElGamalDlogStatement {
-            G: G.to_point_owned(),
+            G: G.to_point(),
             Y,
             Q,
             D,
