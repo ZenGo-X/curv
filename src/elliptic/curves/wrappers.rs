@@ -728,9 +728,9 @@ impl<E: Curve> ScalarZ<E> {
         Self::from_raw(E::Scalar::from_bigint(n))
     }
 
-    /// Returns a curve order
-    pub fn curve_order() -> &'static BigInt {
-        E::Scalar::curve_order()
+    /// Returns an order of generator point
+    pub fn group_order() -> &'static BigInt {
+        E::Scalar::group_order()
     }
 
     /// Returns inversion `self^-1 mod curve_order`, or None if `self` is zero
@@ -892,7 +892,7 @@ impl<E: Curve> Scalar<E> {
 
     /// Returns a curve order
     pub fn curve_order() -> &'static BigInt {
-        E::Scalar::curve_order()
+        E::Scalar::group_order()
     }
 
     /// Converts a scalar to [BigInt]

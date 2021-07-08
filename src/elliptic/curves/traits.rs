@@ -80,7 +80,8 @@ pub trait ECScalar: Clone + PartialEq + fmt::Debug + 'static {
         *self = self.neg()
     }
 
-    fn curve_order() -> &'static BigInt;
+    /// Returns an order of generator point
+    fn group_order() -> &'static BigInt;
 
     /// Returns a reference to underlying scalar value
     fn underlying_ref(&self) -> &Self::Underlying;

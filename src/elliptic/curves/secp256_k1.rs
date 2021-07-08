@@ -178,8 +178,8 @@ impl ECScalar for Secp256k1Scalar {
             return Self::zero();
         }
 
-        let curve_order = Self::curve_order();
-        let n_reduced = n.modulus(curve_order);
+        let group_order = Self::group_order();
+        let n_reduced = n.modulus(group_order);
         let bytes = BigInt::to_bytes(&n_reduced);
 
         let bytes = if bytes.len() < SECRET_KEY_SIZE {
@@ -206,7 +206,7 @@ impl ECScalar for Secp256k1Scalar {
     fn add(&self, other: &Self) -> Secp256k1Scalar {
         // TODO: use add_assign?
         //  https://docs.rs/secp256k1/0.20.3/secp256k1/key/struct.SecretKey.html#method.add_assign
-        let n = BigInt::mod_add(&self.to_bigint(), &other.to_bigint(), Self::curve_order());
+        let n = BigInt::mod_add(&self.to_bigint(), &other.to_bigint(), Self::group_order());
         Secp256k1Scalar {
             purpose: "add",
             fe: Self::from_bigint(&n).fe,
@@ -216,7 +216,7 @@ impl ECScalar for Secp256k1Scalar {
     fn mul(&self, other: &Self) -> Secp256k1Scalar {
         // TODO: use mul_assign?
         //  https://docs.rs/secp256k1/0.20.3/secp256k1/key/struct.SecretKey.html#method.mul_assign
-        let n = BigInt::mod_mul(&self.to_bigint(), &other.to_bigint(), Self::curve_order());
+        let n = BigInt::mod_mul(&self.to_bigint(), &other.to_bigint(), Self::group_order());
         Secp256k1Scalar {
             purpose: "mul",
             fe: Self::from_bigint(&n).fe,
@@ -227,7 +227,7 @@ impl ECScalar for Secp256k1Scalar {
         // TODO: use negate+add_assign?
         //  https://docs.rs/secp256k1/0.20.3/secp256k1/key/struct.SecretKey.html#method.negate_assign
         //  https://docs.rs/secp256k1/0.20.3/secp256k1/key/struct.SecretKey.html#method.add_assign
-        let n = BigInt::mod_sub(&self.to_bigint(), &other.to_bigint(), Self::curve_order());
+        let n = BigInt::mod_sub(&self.to_bigint(), &other.to_bigint(), Self::group_order());
         Secp256k1Scalar {
             purpose: "sub",
             fe: Self::from_bigint(&n).fe,
@@ -235,7 +235,7 @@ impl ECScalar for Secp256k1Scalar {
     }
 
     fn neg(&self) -> Self {
-        let n = BigInt::mod_sub(&BigInt::zero(), &self.to_bigint(), Self::curve_order());
+        let n = BigInt::mod_sub(&BigInt::zero(), &self.to_bigint(), Self::group_order());
         Secp256k1Scalar {
             purpose: "neg",
             fe: Self::from_bigint(&n).fe,
@@ -244,14 +244,14 @@ impl ECScalar for Secp256k1Scalar {
 
     fn invert(&self) -> Option<Secp256k1Scalar> {
         let n = self.to_bigint();
-        let n_inv = BigInt::mod_inv(&n, Self::curve_order());
+        let n_inv = BigInt::mod_inv(&n, Self::group_order());
         n_inv.map(|i| Secp256k1Scalar {
             purpose: "invert",
             fe: Self::from_bigint(&i).fe,
         })
     }
 
-    fn curve_order() -> &'static BigInt {
+    fn group_order() -> &'static BigInt {
         &CURVE_ORDER
     }
 
@@ -621,7 +621,7 @@ mod test {
 
     #[test]
     fn scalar_modulo_curve_order() {
-        let n = FE::curve_order();
+        let n = FE::group_order();
         let s = FE::from_bigint(n);
         assert!(s.is_zero());
 
@@ -673,7 +673,7 @@ mod test {
     #[test]
     fn generator_mul_curve_order_is_zero() {
         let g = GE::generator();
-        let n = FE::curve_order() - 1;
+        let n = FE::group_order() - 1;
         let s = FE::from_bigint(&n);
         assert!(g.scalar_mul(&s).add_point(&g).is_zero());
     }
