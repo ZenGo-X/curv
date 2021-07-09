@@ -1,8 +1,6 @@
 use curv::arithmetic::*;
 use curv::elliptic::curves::*;
 
-use std::fmt::Debug;
-
 /// Pedesen Commitment:
 /// compute c = mG + rH
 /// where m is the commited value, G is the group generator,
