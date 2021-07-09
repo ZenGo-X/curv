@@ -21,9 +21,9 @@ use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
 ///
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct HomoELGamalDlogProof<E: Curve> {
-    pub A1: PointZ<E>,
-    pub A2: PointZ<E>,
-    pub A3: PointZ<E>,
+    pub A1: Point<E>,
+    pub A2: Point<E>,
+    pub A3: Point<E>,
     pub z1: ScalarZ<E>,
     pub z2: ScalarZ<E>,
 }
@@ -54,9 +54,9 @@ impl<E: Curve> HomoELGamalDlogProof<E> {
         let A2 = &delta.Y * &s2;
         let A3 = &delta.G * &s2;
         let e = HSha256::create_hash_from_ge_z(&[
-            &A1,
-            &A2,
-            &A3,
+            &PointZ::from(A1.clone()),
+            &PointZ::from(A2.clone()),
+            &PointZ::from(A3.clone()),
             &PointZ::from(delta.G.clone()),
             &PointZ::from(delta.Y.clone()),
             &delta.D,
@@ -69,9 +69,9 @@ impl<E: Curve> HomoELGamalDlogProof<E> {
 
     pub fn verify(&self, delta: &HomoElGamalDlogStatement<E>) -> Result<(), ProofError> {
         let e = HSha256::create_hash_from_ge_z(&[
-            &self.A1,
-            &self.A2,
-            &self.A3,
+            &PointZ::from(self.A1.clone()),
+            &PointZ::from(self.A2.clone()),
+            &PointZ::from(self.A3.clone()),
             &PointZ::from(delta.G.clone()),
             &PointZ::from(delta.Y.clone()),
             &delta.D,

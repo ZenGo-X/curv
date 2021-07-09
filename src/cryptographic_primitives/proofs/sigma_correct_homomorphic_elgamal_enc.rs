@@ -22,7 +22,7 @@ use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct HomoELGamalProof<E: Curve> {
     pub T: PointZ<E>,
-    pub A3: PointZ<E>,
+    pub A3: Point<E>,
     pub z1: ScalarZ<E>,
     pub z2: ScalarZ<E>,
 }
@@ -55,12 +55,12 @@ impl<E: Curve> HomoELGamalProof<E> {
         let T = A1 + A2;
         let e = HSha256::create_hash_from_ge_z(&[
             &T,
-            &A3,
+            &PointZ::from(A3.clone()),
             &PointZ::from(delta.G.clone()),
             &PointZ::from(delta.H.clone()),
             &PointZ::from(delta.Y.clone()),
-            &PointZ::from(delta.D.clone()),
-            &PointZ::from(delta.E.clone()),
+            &delta.D,
+            &delta.E,
         ]);
         // dealing with zero field element
         let z1 = if !w.x.is_zero() {
@@ -74,12 +74,12 @@ impl<E: Curve> HomoELGamalProof<E> {
     pub fn verify(&self, delta: &HomoElGamalStatement<E>) -> Result<(), ProofError> {
         let e = HSha256::create_hash_from_ge_z(&[
             &self.T,
-            &self.A3,
+            &PointZ::from(self.A3.clone()),
             &PointZ::from(delta.G.clone()),
             &PointZ::from(delta.H.clone()),
             &PointZ::from(delta.Y.clone()),
-            &PointZ::from(delta.D.clone()),
-            &PointZ::from(delta.E.clone()),
+            &delta.D,
+            &delta.E,
         ]);
         let z1H_plus_z2Y = &delta.H * &self.z1 + &delta.Y * &self.z2;
         let T_plus_eD = &self.T + &delta.D * &e;

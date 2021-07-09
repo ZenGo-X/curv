@@ -23,7 +23,7 @@ pub trait Curve {
     const CURVE_NAME: &'static str;
 }
 
-/// Scalar value modulus [curve order](Self::curve_order)
+/// Scalar value modulus [group order](Self::group_order)
 ///
 /// ## Note
 /// This is a low-level trait, you should not use it directly. See wrappers [Point], [PointZ],
@@ -157,17 +157,33 @@ pub trait ECPoint: Zeroize + Clone + PartialEq + fmt::Debug + 'static {
     /// Whether point in compressed or uncompressed form will be deducted from its size
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError>;
 
+    /// Checks that order of this point equals to [group order](ECScalar::group_order)
+    ///
+    /// Generally, point might be composition of different subgroups points: `P = sG + kT` (`G` —
+    /// curve generator of order `q`=[group_order](ECScalar::group_order), `T` — generator of smaller
+    /// order). This function ensures that the point is of order `q`, ie. of form: `P = sG`.
+    ///
+    /// For curves with co-factor ≠ 1, following check must be carried out:
+    ///
+    /// ```text
+    /// P ≠ 0 ∧ qP ≠ 0
+    /// ```
+    ///
+    /// For curves with co-factor = 1, the check above can be reduced to: `P ≠ 0`.
+    fn check_point_order_equals_group_order(&self) -> bool {
+        let mut self_at_q = self.scalar_mul(&Self::Scalar::from_bigint(
+            &(Self::Scalar::group_order() - 1),
+        ));
+        self_at_q.add_point_assign(self);
+        !self.is_zero() && self_at_q.is_zero()
+    }
+
     /// Multiplies the point at scalar value
     fn scalar_mul(&self, scalar: &Self::Scalar) -> Self;
     /// Multiplies curve generator at given scalar
     ///
     /// Basically, it's the same as `ECPoint::generator().scalar_mul(&s)`, but can be more efficient
     /// because most curve libs have constant time high performance generator multiplication.
-    ///
-    /// ## Correctness
-    ///
-    /// Note that scalar is modulo [curve order](ECScalar::curve_order), so multiplying generator
-    /// at non-zero scalar **must** always produce non-zero point.
     fn generator_mul(scalar: &Self::Scalar) -> Self {
         Self::generator().scalar_mul(scalar)
     }

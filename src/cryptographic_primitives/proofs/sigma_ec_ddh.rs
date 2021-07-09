@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use super::ProofError;
 use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use crate::cryptographic_primitives::hashing::traits::Hash;
-use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
+use crate::elliptic::curves::{Curve, Point, Scalar, ScalarZ};
 
 /// This protocol is the elliptic curve form of the protocol from :
 ///  D. Chaum, T. P. Pedersen. Transferred cash grows in size. In Advances in Cryptology, EUROCRYPT , volume 658 of Lecture Notes in Computer Science, pages 390 - 407, 1993.
@@ -26,8 +26,8 @@ use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
 /// verifier checks that zG1 = A1 + eH1, zG2 = A2 + eH2
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct ECDDHProof<E: Curve> {
-    pub a1: PointZ<E>,
-    pub a2: PointZ<E>,
+    pub a1: Point<E>,
+    pub a2: Point<E>,
     pub z: ScalarZ<E>,
 }
 
@@ -49,26 +49,15 @@ impl<E: Curve> ECDDHProof<E> {
         let s = Scalar::random();
         let a1 = &delta.g1 * &s;
         let a2 = &delta.g2 * &s;
-        let e = HSha256::create_hash_from_ge_z(&[
-            &PointZ::from(delta.g1.clone()),
-            &PointZ::from(delta.h1.clone()),
-            &PointZ::from(delta.g2.clone()),
-            &PointZ::from(delta.h2.clone()),
-            &a1,
-            &a2,
-        ]);
+        let e =
+            HSha256::create_hash_from_ge(&[&delta.g1, &delta.h1, &delta.g2, &delta.h2, &a1, &a2]);
         let z = &s + e * &w.x;
         ECDDHProof { a1, a2, z }
     }
 
     pub fn verify(&self, delta: &ECDDHStatement<E>) -> Result<(), ProofError> {
-        let e = HSha256::create_hash_from_ge_z(&[
-            &PointZ::from(delta.g1.clone()),
-            &PointZ::from(delta.h1.clone()),
-            &PointZ::from(delta.g2.clone()),
-            &PointZ::from(delta.h2.clone()),
-            &self.a1,
-            &self.a2,
+        let e = HSha256::create_hash_from_ge(&[
+            &delta.g1, &delta.h1, &delta.g2, &delta.h2, &self.a1, &self.a2,
         ]);
         let z_g1 = &delta.g1 * &self.z;
         let z_g2 = &delta.g2 * &self.z;
@@ -94,7 +83,7 @@ mod tests {
         let g1 = Point::generator();
         let g2 = Point::base_point2();
         let h1 = g1 * &x;
-        let h2 = (g2 * &x).ensure_nonzero().unwrap();
+        let h2 = g2 * &x;
         let delta = ECDDHStatement {
             g1: g1.to_point(),
             g2: g2.to_point(),
@@ -113,7 +102,7 @@ mod tests {
         let g2 = Point::base_point2();
         let x2 = Scalar::<E>::random();
         let h1 = g1 * &x;
-        let h2 = (g2 * &x2).ensure_nonzero().unwrap();
+        let h2 = g2 * &x2;
         let delta = ECDDHStatement {
             g1: g1.to_point(),
             g2: g2.to_point(),

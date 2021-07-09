@@ -9,7 +9,7 @@ use thiserror::Error;
 use super::traits::*;
 use crate::arithmetic::{BigInt, Converter};
 
-/// Elliptic point that **might be zero**
+/// Either an elliptic point of a [group order](Scalar::group_order), or a zero point
 ///
 /// ## Security
 ///
@@ -19,10 +19,14 @@ use crate::arithmetic::{BigInt, Converter};
 ///
 /// ## Guarantees
 ///
-/// * Belongs to curve
+/// * On curve
 ///
 ///   Any instance of `PointZ<E>` is guaranteed to belong to curve `E`, i.e. its coordinates must
 ///   satisfy curve equations
+/// * Point order equals to [group order](Scalar::group_order) (unless it's zero point)
+///
+///   I.e. denoting `q = group_order`, following predicate is always true:
+///   `P = O ∨ qP = O ∧ forall 0 < s < q. sP ≠ O`
 ///
 /// ## Arithmetics
 ///
@@ -53,7 +57,7 @@ impl<E: Curve> PointZ<E> {
 
     /// Constructs zero point
     ///
-    /// Zero point is usually denoted as O. It's curve neutral element, i.e. `forall A. A + O = A`.
+    /// Zero point (or curve neutral element) is usually denoted as `O`. Its property: `forall A. A + O = A`.
     ///
     /// Weierstrass and Montgomery curves employ special "point at infinity" that represent a neutral
     /// element, such points don't have coordinates (i.e. [from_coords], [x_coord], [y_coord] return
@@ -63,11 +67,12 @@ impl<E: Curve> PointZ<E> {
     /// [x_coord]: Self::x_coord
     /// [y_coord]: Self::y_coord
     pub fn zero() -> Self {
-        Self::from_raw(E::Point::zero())
+        // Safety: `self` can be constructed to hold a zero point
+        unsafe { Self::from_raw_unchecked(E::Point::zero()) }
     }
 
     /// Checks whether point is zero
-    pub fn iz_zero(&self) -> bool {
+    pub fn is_zero(&self) -> bool {
         self.as_raw().is_zero()
     }
 
@@ -94,25 +99,38 @@ impl<E: Curve> PointZ<E> {
     }
 
     /// Constructs a point from its coordinates, returns error if coordinates don't satisfy
-    /// curve equation
-    pub fn from_coords(x: &BigInt, y: &BigInt) -> Result<Self, NotOnCurve> {
-        E::Point::from_coords(x, y).map(Self::from_raw)
+    /// curve equation or if point has invalid order
+    pub fn from_coords(x: &BigInt, y: &BigInt) -> Result<Self, PointZFromCoordsError> {
+        let raw_point = E::Point::from_coords(x, y)
+            .map_err(|_: NotOnCurve| PointZFromCoordsError::NotOnCurve)?;
+        Self::from_raw(raw_point).map_err(PointZFromCoordsError::InvalidPoint)
     }
 
-    /// Tries to parse a point from its (un)compressed form
+    /// Tries to parse a point in (un)compressed form
     ///
-    /// Whether it's a compressed or uncompressed form will be deduced from its length
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, DeserializationError> {
-        let p = E::Point::deserialize(bytes)?;
-        Ok(Self::from_raw(p))
+    /// Whether it's in compressed or uncompressed form will be deduced from its length
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, PointZDeserializationError> {
+        let p = E::Point::deserialize(bytes)
+            .map_err(|_: DeserializationError| PointZDeserializationError::DeserializationError)?;
+        Self::from_raw(p).map_err(PointZDeserializationError::InvalidPoint)
     }
 
-    /// Serializes point into (un)compressed form
+    /// Serializes a point in (un)compressed form
+    ///
+    /// Returns `None` if it's point at infinity
     pub fn to_bytes(&self, compressed: bool) -> Option<Vec<u8>> {
         self.as_raw().serialize(compressed)
     }
 
-    fn from_raw(raw_point: E::Point) -> Self {
+    fn from_raw(raw_point: E::Point) -> Result<Self, MismatchedPointOrder> {
+        if raw_point.is_zero() || raw_point.check_point_order_equals_group_order() {
+            Ok(Self { raw_point })
+        } else {
+            Err(MismatchedPointOrder(()))
+        }
+    }
+
+    unsafe fn from_raw_unchecked(raw_point: E::Point) -> Self {
         Self { raw_point }
     }
 
@@ -151,9 +169,8 @@ impl<E: Curve> PartialEq<Generator<E>> for PointZ<E> {
 
 impl<E: Curve> Clone for PointZ<E> {
     fn clone(&self) -> Self {
-        PointZ {
-            raw_point: self.as_raw().clone(),
-        }
+        // Safety: self is guaranteed to have correct order
+        unsafe { PointZ::from_raw_unchecked(self.as_raw().clone()) }
     }
 }
 
@@ -165,41 +182,54 @@ impl<E: Curve> fmt::Debug for PointZ<E> {
 
 impl<E: Curve> From<Point<E>> for PointZ<E> {
     fn from(p: Point<E>) -> Self {
-        PointZ::from_raw(p.into_raw())
+        // Safety: `Point` is guaranteed to have correct order
+        unsafe { PointZ::from_raw_unchecked(p.into_raw()) }
     }
 }
 
-/// Elliptic point that _guaranteed_ to be non zero
-///
-/// ## Security
-/// Non-zero points are preferred to be used in cryptographic algorithms. Lack of checking whether
-/// computation on elliptic points results into zero point might lead to vulnerabilities. Using
-/// `Point<E>` ensures you and reviewers that check on point not being zero was made.
+#[derive(Debug, Error, Clone, PartialEq)]
+#[error("invalid point (point order ≠ group order)")]
+pub struct MismatchedPointOrder(());
+
+#[derive(Debug, Error)]
+pub enum PointZDeserializationError {
+    #[error("failed to deserialize the point")]
+    DeserializationError,
+    #[error("invalid point ({0})")]
+    InvalidPoint(MismatchedPointOrder),
+}
+
+#[derive(Debug, Error)]
+pub enum PointZFromCoordsError {
+    #[error("{}", NotOnCurve)]
+    NotOnCurve,
+    #[error("invalid point ({0})")]
+    InvalidPoint(MismatchedPointOrder),
+}
+
+/// Elliptic point of [group order](Scalar::group_order)
 ///
 /// ## Guarantees
 ///
-/// * Belongs to curve
+/// * On curve
 ///
 ///   Any instance of `Point<E>` is guaranteed to belong to curve `E`, i.e. its coordinates must
 ///   satisfy curve equations
-/// * Not a neutral element
+/// * Point order equals to [group order](Scalar::group_order)
 ///
-///   Any instance of `Point<E>` is restricted not to be zero (neutral element), i.e. for any
-///   `a: PointZ<E> ∧ b: Point<E> → a + b ≢ a`.
+///   I.e. denoting `q = group_order`, following predicate is always true:
+///   `qP = O ∧ forall 0 < s < q. sP ≠ O`
 ///
-///   Weierstrass and Montgomery curves represent zero point
-///   using special "point at infinity", whereas Edwards curves zero point is a regular point that
-///   has coordinates. `Point<E>` cannot be instantiated with neither of these points.
-///
-///   Note also that `Point<E>` is guaranteed to have coordinates (only point at infinity doesn't).
+///   Note that this also means that `Point<E>` cannot be zero (zero point has `order=1`),
+///   ie. `forall a b. a: PointZ<E> ∧ b: Point<E> → a + b ≢ a`. It also implies that `Point<E>` is
+///   guaranteed to have coordinates (only point at infinity doesn't).
 ///
 /// ## Arithmetics
 ///
 /// You can add, subtract two points, or multiply point at scalar.
 ///
-/// Any arithmetic operation on non-zero point might result into zero point, so addition, subtraction,
-/// and multiplication operations output [PointZ]. Use [ensure_nonzero](PointZ::ensure_nonzero) method
-/// to ensure that computation doesn't produce zero-point:
+/// Addition or subtraction of two points might result into zero point, so these operators output
+/// [`PointZ<E>`](PointZ) that allowed to be zero.
 ///
 /// ```rust
 /// # use curv::elliptic::curves::{PointZ, Point, Scalar, Secp256k1};
@@ -212,8 +242,8 @@ impl<E: Curve> From<Point<E>> for PointZ<E> {
 /// let nonzero_result: Option<Point<Secp256k1>> = result.ensure_nonzero();
 /// ```
 ///
-/// Exception is [curve generator](Self::generator) that can be multiplied at non-zero scalar, and
-/// resulting point is guaranteed to be non-zero:
+/// Multiplying point at non-zero scalar is guaranteed to be non-zero (as point order is known
+/// to be equal to group order, and scalar is known to be less then group order):
 ///
 /// ```rust
 /// # use curv::elliptic::curves::{PointZ, Point, Scalar, Secp256k1};
@@ -221,16 +251,6 @@ impl<E: Curve> From<Point<E>> for PointZ<E> {
 /// let g = Point::<Secp256k1>::generator(); // Curve generator
 /// let result: Point<Secp256k1> = s * g;    // Generator multiplied at non-zero scalar is
 ///                                          // always a non-zero point
-/// ```
-///
-/// When evaluating complex expressions, you typically need to ensure that none of intermediate
-/// results are zero-points:
-///
-/// ```rust
-/// # use curv::elliptic::curves::{Curve, Point, Scalar};
-/// fn expression<E: Curve>(a: Point<E>, b: Point<E>, c: Scalar<E>) -> Option<Point<E>> {
-///     (a + (b * c).ensure_nonzero()?).ensure_nonzero()
-/// }
 /// ```
 #[derive(Serialize, Deserialize)]
 #[serde(try_from = "PointFormat<E>", into = "PointFormat<E>", bound = "")]
@@ -242,7 +262,7 @@ impl<E: Curve> Point<E> {
     /// Curve generator
     ///
     /// Returns a static reference on actual value because in most cases referenced value is fine.
-    /// Use [`.to_point_owned()`](PointRef::to_point_owned) if you need to take it by value.
+    /// Use [`.to_point()`](Generator::to_point) if you need to take it by value.
     pub fn generator() -> Generator<E> {
         Generator::default()
     }
@@ -252,10 +272,10 @@ impl<E: Curve> Point<E> {
     /// We provide an alternative generator value and prove that it was picked randomly.
     ///
     /// Returns a static reference on actual value because in most cases referenced value is fine.
-    /// Use [`.to_point_owned()`](PointRef::to_point_owned) if you need to take it by value.
+    /// Use [`.to_point()`](PointRef::to_point) if you need to take it by value.
     pub fn base_point2() -> PointRef<'static, E> {
         let p = E::Point::base_point2();
-        PointRef::from_raw(p).expect("base_point2 must be non-zero")
+        PointRef::from_raw(p).expect("base_point2 must have correct order")
     }
 
     /// Constructs a point from coordinates, returns error if x,y don't satisfy curve equation or
@@ -263,7 +283,7 @@ impl<E: Curve> Point<E> {
     pub fn from_coords(x: &BigInt, y: &BigInt) -> Result<Self, PointFromCoordsError> {
         let p = E::Point::from_coords(x, y)
             .map_err(|NotOnCurve { .. }| PointFromCoordsError::PointNotOnCurve)?;
-        Self::from_raw(p).map_err(|ZeroPointError(())| PointFromCoordsError::ZeroPoint)
+        Self::from_raw(p).map_err(PointFromCoordsError::InvalidPoint)
     }
 
     /// Tries to parse a point from its (un)compressed form
@@ -271,7 +291,7 @@ impl<E: Curve> Point<E> {
     /// Whether it's a compressed or uncompressed form will be deduced from its length
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, PointFromBytesError> {
         let p = E::Point::deserialize(bytes).map_err(PointFromBytesError::Deserialize)?;
-        Self::from_raw(p).map_err(|ZeroPointError(())| PointFromBytesError::ZeroPoint)
+        Self::from_raw(p).map_err(PointFromBytesError::InvalidPoint)
     }
 
     /// Returns point coordinates (`x` and `y`)
@@ -295,26 +315,6 @@ impl<E: Curve> Point<E> {
         self.as_point().y_coord()
     }
 
-    /// Adds two points, returns the result, or `None` if resulting point is zero
-    pub fn add_checked(&self, point: PointRef<E>) -> Result<Self, ZeroPointError> {
-        self.as_point().add_checked(point)
-    }
-
-    /// Substrates two points, returns the result, or `None` if resulting point is zero
-    pub fn sub_checked(&self, point: PointRef<E>) -> Result<Self, ZeroPointError> {
-        self.as_point().sub_checked(point)
-    }
-
-    /// Multiplies a point at scalar, returns the result, or `None` if resulting point is zero
-    pub fn mul_checked_z(&self, scalar: &ScalarZ<E>) -> Result<Self, ZeroPointError> {
-        self.as_point().mul_checked_z(scalar)
-    }
-
-    /// Multiplies a point at nonzero scalar, returns the result, or `None` if resulting point is zero
-    pub fn mul_checked(&self, scalar: &Scalar<E>) -> Result<Self, ZeroPointError> {
-        self.as_point().mul_checked(scalar)
-    }
-
     /// Serializes point into (un)compressed form
     pub fn to_bytes(&self, compressed: bool) -> Vec<u8> {
         self.as_point().to_bytes(compressed)
@@ -325,11 +325,13 @@ impl<E: Curve> Point<E> {
         PointRef::from(self)
     }
 
-    fn from_raw(raw_point: E::Point) -> Result<Self, ZeroPointError> {
+    fn from_raw(raw_point: E::Point) -> Result<Self, InvalidPoint> {
         if raw_point.is_zero() {
-            Err(ZeroPointError(()))
+            Err(InvalidPoint::ZeroPoint)
+        } else if !raw_point.check_point_order_equals_group_order() {
+            Err(InvalidPoint::MismatchedPointOrder)
         } else {
-            Ok(Self { raw_point })
+            Ok(Point { raw_point })
         }
     }
 
@@ -386,7 +388,11 @@ impl<E: Curve> fmt::Debug for Point<E> {
 impl<E: Curve> TryFrom<PointZ<E>> for Point<E> {
     type Error = ZeroPointError;
     fn try_from(point: PointZ<E>) -> Result<Self, Self::Error> {
-        Self::from_raw(point.into_raw())
+        match Self::from_raw(point.into_raw()) {
+            Ok(p) => Ok(p),
+            Err(InvalidPoint::ZeroPoint) => Err(ZeroPointError(())),
+            Err(InvalidPoint::MismatchedPointOrder) => panic!("Point must have correct order"),
+        }
     }
 }
 
@@ -396,14 +402,10 @@ impl<E: Curve> TryFrom<PointZ<E>> for Point<E> {
 /// as [`PointRef<E>`](PointRef).
 ///
 /// You can convert the generator into `Point<E>` and `PointRef<E>` using
-/// [`to_point_owned`](Self::to_point_owned) and [`as_point_ref`](Self::as_point_ref)
+/// [`to_point`](Self::to_point) and [`as_point`](Self::as_point)
 /// methods respectively.
 ///
-/// ## Guarantees
-///
-/// Generator multiplied at non-zero scalar always produce non-zero point, thus output type of
-/// the multiplication is [`Point<E>`](Point). This is the only difference compared to `Point<E>` and
-/// `PointRef<E>`.
+/// ## Example
 ///
 /// ```rust
 /// # use curv::elliptic::curves::{PointZ, Point, Scalar, Secp256k1};
@@ -426,10 +428,9 @@ impl<E: Curve> TryFrom<PointZ<E>> for Point<E> {
 /// let p1: Point<Secp256k1> = g * &s;
 /// // Point multiplication:
 /// let g: Point<Secp256k1> = g.to_point();
-/// let p2: PointZ<Secp256k1> = g * &s;
-/// // Result will be the same, but generator multiplication is usually faster.
-/// // Plus, generator multiplication produces `Point<E>` instead of `PointZ<E>`
-/// assert_eq!(PointZ::from(p1), p2);
+/// let p2: Point<Secp256k1> = g * &s;
+/// // Result will be the same, but generator multiplication is usually faster
+/// assert_eq!(p1, p2);
 /// ```
 pub struct Generator<E: Curve> {
     _ph: PhantomData<&'static E::Point>,
@@ -467,7 +468,7 @@ impl<E: Curve> Clone for Generator<E> {
 
 impl<E: Curve> Copy for Generator<E> {}
 
-/// Reference on elliptic point, _guaranteed_ to be non-zero
+/// Reference on elliptic point of [group order](Scalar::group_order)
 ///
 /// Holds internally a reference on [`Point<E>`](Point), refer to its documentation to learn
 /// more about Point/PointRef guarantees, security notes, and arithmetics.
@@ -516,30 +517,6 @@ where
             .expect("Point guaranteed to have coordinates")
     }
 
-    /// Adds two points, returns the result, or `None` if resulting point is at infinity
-    pub fn add_checked(&self, point: Self) -> Result<Point<E>, ZeroPointError> {
-        let new_point = self.as_raw().add_point(point.as_raw());
-        Point::from_raw(new_point)
-    }
-
-    /// Substrates two points, returns the result, or `None` if resulting point is at infinity
-    pub fn sub_checked(&self, point: Self) -> Result<Point<E>, ZeroPointError> {
-        let new_point = self.as_raw().sub_point(point.as_raw());
-        Point::from_raw(new_point)
-    }
-
-    /// Multiplies a point at scalar, returns the result, or `None` if resulting point is at infinity
-    pub fn mul_checked_z(&self, scalar: &ScalarZ<E>) -> Result<Point<E>, ZeroPointError> {
-        let new_point = self.as_raw().scalar_mul(scalar.as_raw());
-        Point::from_raw(new_point)
-    }
-
-    /// Multiplies a point at nonzero scalar, returns the result, or `None` if resulting point is at infinity
-    pub fn mul_checked(&self, scalar: &Scalar<E>) -> Result<Point<E>, ZeroPointError> {
-        let new_point = self.as_raw().scalar_mul(scalar.as_raw());
-        Point::from_raw(new_point)
-    }
-
     /// Serializes point into (un)compressed form
     pub fn to_bytes(&self, compressed: bool) -> Vec<u8> {
         self.as_raw()
@@ -549,15 +526,17 @@ where
 
     /// Clones the referenced point
     pub fn to_point(&self) -> Point<E> {
-        // Safety: `self` is guaranteed to be non-zero
+        // Safety: `self` is guaranteed to have order = group_order
         unsafe { Point::from_raw_unchecked(self.as_raw().clone()) }
     }
 
-    fn from_raw(raw_point: &'p E::Point) -> Option<Self> {
+    fn from_raw(raw_point: &'p E::Point) -> Result<Self, InvalidPoint> {
         if raw_point.is_zero() {
-            None
+            Err(InvalidPoint::ZeroPoint)
+        } else if !raw_point.check_point_order_equals_group_order() {
+            Err(InvalidPoint::MismatchedPointOrder)
         } else {
-            Some(Self { raw_point })
+            Ok(Self { raw_point })
         }
     }
 
@@ -640,20 +619,28 @@ impl fmt::Display for ZeroScalarError {
 
 impl std::error::Error for ZeroScalarError {}
 
+#[derive(Error, Debug)]
+pub enum InvalidPoint {
+    #[error("x,y correspond to zero point")]
+    ZeroPoint,
+    #[error("{}", MismatchedPointOrder(()))]
+    MismatchedPointOrder,
+}
+
 /// Constructing Point from its coordinates error
 #[derive(Debug, Error)]
 pub enum PointFromCoordsError {
-    #[error("x,y correspond to zero point")]
-    ZeroPoint,
-    #[error("point is not on the curve")]
+    #[error("invalid point ({0})")]
+    InvalidPoint(InvalidPoint),
+    #[error("{}", NotOnCurve)]
     PointNotOnCurve,
 }
 
 /// Constructing Point from its (un)compressed representation error
 #[derive(Debug, Error)]
 pub enum PointFromBytesError {
-    #[error("deserialized point corresponds to zero point")]
-    ZeroPoint,
+    #[error("invalid point ({0})")]
+    InvalidPoint(InvalidPoint),
     #[error("{0}")]
     Deserialize(#[source] DeserializationError),
 }
@@ -668,15 +655,15 @@ pub enum PointFromBytesError {
 ///
 /// ## Guarantees
 ///
-/// * Belongs to the curve prime field
+/// * Modulus group order
 ///
-///   Denoting [curve order](Self::curve_order) as `n`, any instance `s` of `ScalarZ<E>` is guaranteed
+///   Denoting [group order](Self::group_order) as `n`, any instance `s` of `ScalarZ<E>` is guaranteed
 ///   to be non-negative integer modulo `n`: `0 <= s < n`
 ///
 /// ## Arithmetics
 ///
 /// Supported operations:
-/// * Unary: you can [invert](Self::invert) and negate a scalar by modulo of prime field
+/// * Unary: you can [invert](Self::invert) and negate a scalar
 /// * Binary: you can add, subtract, and multiply two points
 ///
 /// ### Example
@@ -829,7 +816,7 @@ impl<E: Curve> From<BigInt> for ScalarZ<E> {
 ///
 /// * Belongs to the curve prime field
 ///
-///   Denoting curve order as `n`, any instance `s` of `Scalar<E>` is guaranteed to be less than `q`:
+///   Denoting group order as `n`, any instance `s` of `Scalar<E>` is guaranteed to be less than `n`:
 ///   `s < n`
 /// * Not a zero
 ///
@@ -843,25 +830,25 @@ impl<E: Curve> From<BigInt> for ScalarZ<E> {
 /// * Unary: you can [invert](Self::invert) and negate a scalar by modulo of prime field
 /// * Binary: you can add, subtract, and multiply two points
 ///
-/// Addition, subtraction, or multiplication of two (even non-zero) scalars might result into zero
+/// Addition or subtraction of two (even non-zero) scalars might result into zero
 /// scalar, so these operations output [ScalarZ]. Use [ensure_nonzero](ScalarZ::ensure_nonzero) method
-/// to ensure that computation doesn't produce zero scalar;
+/// to ensure that computation doesn't produce zero scalar:
 ///
 /// ```rust
 /// # use curv::elliptic::curves::{ScalarZ, Scalar, Secp256k1};
 /// let a = Scalar::<Secp256k1>::random();
 /// let b = Scalar::<Secp256k1>::random();
-/// let result: ScalarZ<Secp256k1> = a * b;
+/// let result: ScalarZ<Secp256k1> = a + b;
 /// let non_zero_result: Option<Scalar<Secp256k1>> = result.ensure_nonzero();
 /// ```
 ///
-/// When evaluating complex expressions, you typically need to ensure that none of intermediate
-/// results are zero scalars:
+/// Multiplication of two nonzero scalars is always nonzero scalar (as scalar is by prime modulo):
+///
 /// ```rust
-/// # use curv::elliptic::curves::{Scalar, Secp256k1};
-/// fn expression(a: Scalar<Secp256k1>, b: Scalar<Secp256k1>, c: Scalar<Secp256k1>) -> Option<Scalar<Secp256k1>> {
-///     (a + (b * c).ensure_nonzero()?).ensure_nonzero()
-/// }
+/// # use curv::elliptic::curves::{ScalarZ, Scalar, Secp256k1};
+/// let a = Scalar::<Secp256k1>::random();
+/// let b = Scalar::<Secp256k1>::random();
+/// let result: Scalar<Secp256k1> = a * b;
 /// ```
 #[derive(Serialize, Deserialize)]
 #[serde(try_from = "ScalarFormat<E>", into = "ScalarFormat<E>", bound = "")]
@@ -891,7 +878,7 @@ impl<E: Curve> Scalar<E> {
     }
 
     /// Returns a curve order
-    pub fn curve_order() -> &'static BigInt {
+    pub fn group_order() -> &'static BigInt {
         E::Scalar::group_order()
     }
 
@@ -903,24 +890,6 @@ impl<E: Curve> Scalar<E> {
     /// Constructs a scalar from [BigInt] or returns error if it's zero
     pub fn from_bigint(n: &BigInt) -> Result<Self, ZeroScalarError> {
         Self::from_raw(E::Scalar::from_bigint(n))
-    }
-
-    /// Adds two scalars, returns the result by modulo `q`, or `None` if resulting scalar is zero
-    pub fn add_checked(&self, scalar: &Scalar<E>) -> Result<Self, ZeroScalarError> {
-        let scalar = self.as_raw().add(scalar.as_raw());
-        Self::from_raw(scalar)
-    }
-
-    /// Subtracts two scalars, returns the result by modulo `q`, or `None` if resulting scalar is zero
-    pub fn sub_checked(&self, scalar: &Scalar<E>) -> Result<Self, ZeroScalarError> {
-        let scalar = self.as_raw().sub(scalar.as_raw());
-        Self::from_raw(scalar)
-    }
-
-    /// Multiplies two scalars, returns the result by modulo `q`, or `None` if resulting scalar is zero
-    pub fn mul_checked(&self, scalar: &Scalar<E>) -> Result<Self, ZeroScalarError> {
-        let scalar = self.as_raw().mul(scalar.as_raw());
-        Self::from_raw(scalar)
     }
 
     fn from_raw(raw_scalar: E::Scalar) -> Result<Self, ZeroScalarError> {
@@ -1135,11 +1104,24 @@ macro_rules! matrix {
     };
 }
 
+#[cfg(not(release))]
+fn addition_of_two_points<E: Curve>(result: E::Point) -> PointZ<E> {
+    // In non-release environment we check that every addition results into correct point (either
+    // zero or of the expected order)
+    PointZ::from_raw(result)
+        .expect("addition of two points must be either a zero or of the same order")
+}
+#[cfg(release)]
+fn addition_of_two_points<E: Curve>(result: E::Point) -> PointZ<E> {
+    // In release we skip checks
+    PointZ::from_raw_unchecked(result)
+}
+
 matrix! {
     trait = Add,
     trait_fn = add,
     output = PointZ<E>,
-    output_new = PointZ::from_raw,
+    output_new = addition_of_two_points,
     point_fn = add_point,
     point_assign_fn = add_point_assign,
     pairs = {
@@ -1169,11 +1151,24 @@ matrix! {
     }
 }
 
+#[cfg(not(release))]
+fn subtraction_of_two_point<E: Curve>(result: E::Point) -> PointZ<E> {
+    // In non-release environment we check that every subtraction results into correct point (either
+    // zero or of the expected order)
+    PointZ::from_raw(result)
+        .expect("subtraction of two points must be either a zero or of the same order")
+}
+#[cfg(release)]
+fn subtraction_of_two_point<E: Curve>(result: E::Point) -> PointZ<E> {
+    // In release we skip checks
+    PointZ::from_raw_unchecked(result)
+}
+
 matrix! {
     trait = Sub,
     trait_fn = sub,
     output = PointZ<E>,
-    output_new = PointZ::from_raw,
+    output_new = subtraction_of_two_point,
     point_fn = sub_point,
     point_assign_fn = sub_point_assign,
     pairs = {
@@ -1203,25 +1198,72 @@ matrix! {
     }
 }
 
+#[cfg(not(release))]
+fn multiplication_of_nonzero_point_at_nonzero_scalar<E: Curve>(result: E::Point) -> Point<E> {
+    Point::from_raw(result)
+        .expect("multiplication of point at non-zero scalar must always produce a non-zero point of the same order")
+}
+#[cfg(release)]
+fn multiplication_of_point_at_nonzero_scalar<E: Curve>(result: E::Point) -> Point<E> {
+    Point::from_raw_unchecked(result)
+}
+
+matrix! {
+    trait = Mul,
+    trait_fn = mul,
+    output = Point<E>,
+    output_new = multiplication_of_nonzero_point_at_nonzero_scalar,
+    point_fn = scalar_mul,
+    point_assign_fn = scalar_mul_assign,
+    pairs = {
+        (_o<> Scalar<E>, Point<E>),
+        (_r<> Scalar<E>, &Point<E>),
+        (_r<'p> Scalar<E>, PointRef<'p, E>),
+
+        (_o<> &Scalar<E>, Point<E>),
+        (_r<> &Scalar<E>, &Point<E>),
+        (_r<'p> &Scalar<E>, PointRef<'p, E>),
+
+        // --- and vice-versa ---
+
+        (o_<> Point<E>, Scalar<E>),
+        (o_<> Point<E>, &Scalar<E>),
+
+        (r_<> &Point<E>, Scalar<E>),
+        (r_<> &Point<E>, &Scalar<E>),
+
+        (r_<'p> PointRef<'p, E>, Scalar<E>),
+        (r_<'p> PointRef<'p, E>, &Scalar<E>),
+    }
+}
+
+#[cfg(not(release))]
+fn multiplication_of_point_at_scalar<E: Curve>(result: E::Point) -> PointZ<E> {
+    PointZ::from_raw(result)
+        .expect("multiplication of point at scalar must always produce either a point of the same order or a zero point")
+}
+#[cfg(release)]
+fn multiplication_of_point_at_scalar<E: Curve>(result: E::Point) -> PointZ<E> {
+    PointZ::from_raw_unchecked(result)
+}
+
 matrix! {
     trait = Mul,
     trait_fn = mul,
     output = PointZ<E>,
-    output_new = PointZ::from_raw,
+    output_new = multiplication_of_point_at_scalar,
     point_fn = scalar_mul,
     point_assign_fn = scalar_mul_assign,
     pairs = {
-        (_o<> Scalar<E>, Point<E>), (_o<> Scalar<E>, PointZ<E>),
-        (_r<> Scalar<E>, &Point<E>), (_r<> Scalar<E>, &PointZ<E>),
-        (_r<'p> Scalar<E>, PointRef<'p, E>),
+        (_o<> Scalar<E>, PointZ<E>),
+        (_r<> Scalar<E>, &PointZ<E>),
 
         (_o<> ScalarZ<E>, Point<E>), (_o<> ScalarZ<E>, PointZ<E>),
         (_r<> ScalarZ<E>, &Point<E>), (_r<> ScalarZ<E>, &PointZ<E>),
         (_r<'p> ScalarZ<E>, PointRef<'p, E>),
 
-        (_o<> &Scalar<E>, Point<E>), (_o<> &Scalar<E>, PointZ<E>),
-        (_r<> &Scalar<E>, &Point<E>), (_r<> &Scalar<E>, &PointZ<E>),
-        (_r<'p> &Scalar<E>, PointRef<'p, E>),
+        (_o<> &Scalar<E>, PointZ<E>),
+        (_r<> &Scalar<E>, &PointZ<E>),
 
         (_o<> &ScalarZ<E>, Point<E>), (_o<> &ScalarZ<E>, PointZ<E>),
         (_r<> &ScalarZ<E>, &Point<E>), (_r<> &ScalarZ<E>, &PointZ<E>),
@@ -1229,20 +1271,20 @@ matrix! {
 
         // --- and vice-versa ---
 
-        (o_<> Point<E>, Scalar<E>), (o_<> Point<E>, ScalarZ<E>),
-        (o_<> Point<E>, &Scalar<E>), (o_<> Point<E>, &ScalarZ<E>),
+        (o_<> Point<E>, ScalarZ<E>),
+        (o_<> Point<E>, &ScalarZ<E>),
 
         (o_<> PointZ<E>, Scalar<E>), (o_<> PointZ<E>, ScalarZ<E>),
         (o_<> PointZ<E>, &Scalar<E>), (o_<> PointZ<E>, &ScalarZ<E>),
 
-        (r_<> &Point<E>, Scalar<E>), (r_<> &Point<E>, ScalarZ<E>),
-        (r_<> &Point<E>, &Scalar<E>), (r_<> &Point<E>, &ScalarZ<E>),
+        (r_<> &Point<E>, ScalarZ<E>),
+        (r_<> &Point<E>, &ScalarZ<E>),
 
         (r_<> &PointZ<E>, Scalar<E>), (r_<> &PointZ<E>, ScalarZ<E>),
         (r_<> &PointZ<E>, &Scalar<E>), (r_<> &PointZ<E>, &ScalarZ<E>),
 
-        (r_<'p> PointRef<'p, E>, Scalar<E>), (r_<'p> PointRef<'p, E>, ScalarZ<E>),
-        (r_<'p> PointRef<'p, E>, &Scalar<E>), (r_<'p> PointRef<'p, E>, &ScalarZ<E>),
+        (r_<'p> PointRef<'p, E>, ScalarZ<E>),
+        (r_<'p> PointRef<'p, E>, &ScalarZ<E>),
     }
 }
 
@@ -1292,14 +1334,34 @@ matrix! {
     point_fn = mul,
     point_assign_fn = mul_assign,
     pairs = {
-        (o_<> Scalar<E>, Scalar<E>), (o_<> Scalar<E>, ScalarZ<E>),
-        (o_<> Scalar<E>, &Scalar<E>), (o_<> Scalar<E>, &ScalarZ<E>),
+        (o_<> Scalar<E>, ScalarZ<E>),
+        (o_<> Scalar<E>, &ScalarZ<E>),
         (o_<> ScalarZ<E>, Scalar<E>), (o_<> ScalarZ<E>, ScalarZ<E>),
         (o_<> ScalarZ<E>, &Scalar<E>), (o_<> ScalarZ<E>, &ScalarZ<E>),
-        (_o<> &Scalar<E>, Scalar<E>), (_o<> &Scalar<E>, ScalarZ<E>),
-        (r_<> &Scalar<E>, &Scalar<E>), (r_<> &Scalar<E>, &ScalarZ<E>),
+        (_o<> &Scalar<E>, ScalarZ<E>),
+        (r_<> &Scalar<E>, &ScalarZ<E>),
         (_o<> &ScalarZ<E>, Scalar<E>), (_o<> &ScalarZ<E>, ScalarZ<E>),
         (r_<> &ScalarZ<E>, &Scalar<E>), (r_<> &ScalarZ<E>, &ScalarZ<E>),
+    }
+}
+
+fn multiplication_of_two_nonzero_scalars<E: Curve>(result: E::Scalar) -> Scalar<E> {
+    Scalar::from_raw(result)
+        .expect("multiplication of two nonzero scalar by prime modulo must be nonzero")
+}
+
+matrix! {
+    trait = Mul,
+    trait_fn = mul,
+    output = Scalar<E>,
+    output_new = multiplication_of_two_nonzero_scalars,
+    point_fn = mul,
+    point_assign_fn = mul_assign,
+    pairs = {
+        (o_<> Scalar<E>, Scalar<E>),
+        (o_<> Scalar<E>, &Scalar<E>),
+        (_o<> &Scalar<E>, Scalar<E>),
+        (r_<> &Scalar<E>, &Scalar<E>),
     }
 }
 
@@ -1307,7 +1369,7 @@ impl<E: Curve> ops::Mul<&Scalar<E>> for Generator<E> {
     type Output = Point<E>;
     fn mul(self, rhs: &Scalar<E>) -> Self::Output {
         Point::from_raw(E::Point::generator_mul(rhs.as_raw()))
-            .expect("generator multiplied by non-zero scalar is always non-zero point")
+            .expect("generator multiplied by non-zero scalar is always a point of group order")
     }
 }
 
@@ -1336,6 +1398,7 @@ impl<E: Curve> ops::Mul<&ScalarZ<E>> for Generator<E> {
     type Output = PointZ<E>;
     fn mul(self, rhs: &ScalarZ<E>) -> Self::Output {
         PointZ::from_raw(E::Point::generator_mul(rhs.as_raw()))
+            .expect("sG must be either a point of group order or a zero point")
     }
 }
 
@@ -1428,7 +1491,7 @@ impl<E: Curve> ops::Neg for PointZ<E> {
     type Output = PointZ<E>;
 
     fn neg(self) -> Self::Output {
-        PointZ::from_raw(self.as_raw().neg_point())
+        PointZ::from_raw(self.as_raw().neg_point()).expect("negated point must have the same order")
     }
 }
 
@@ -1436,7 +1499,7 @@ impl<E: Curve> ops::Neg for &PointZ<E> {
     type Output = PointZ<E>;
 
     fn neg(self) -> Self::Output {
-        PointZ::from_raw(self.as_raw().neg_point())
+        PointZ::from_raw(self.as_raw().neg_point()).expect("negated point must have the same order")
     }
 }
 
@@ -1466,8 +1529,13 @@ impl<E: Curve> TryFrom<PointFormat<E>> for PointZ<E> {
         }
         match parsed.point {
             None => Ok(PointZ::zero()),
-            Some(coords) => PointZ::from_coords(&coords.x, &coords.y)
-                .map_err(|_: NotOnCurve| ConvertParsedPointError::NotOnCurve),
+            Some(coords) => match PointZ::from_coords(&coords.x, &coords.y) {
+                Ok(p) => Ok(p),
+                Err(PointZFromCoordsError::NotOnCurve) => Err(ConvertParsedPointError::NotOnCurve),
+                Err(PointZFromCoordsError::InvalidPoint(MismatchedPointOrder(()))) => Err(
+                    ConvertParsedPointError::InvalidPoint(InvalidPoint::MismatchedPointOrder),
+                ),
+            },
         }
     }
 }
@@ -1492,13 +1560,17 @@ impl<E: Curve> TryFrom<PointFormat<E>> for Point<E> {
             });
         }
         match parsed.point {
-            None => Err(ConvertParsedPointError::ZeroPoint),
+            None => Err(ConvertParsedPointError::InvalidPoint(
+                InvalidPoint::ZeroPoint,
+            )),
             Some(coords) => match Point::from_coords(&coords.x, &coords.y) {
                 Ok(p) => Ok(p),
                 Err(PointFromCoordsError::PointNotOnCurve) => {
                     Err(ConvertParsedPointError::NotOnCurve)
                 }
-                Err(PointFromCoordsError::ZeroPoint) => Err(ConvertParsedPointError::ZeroPoint),
+                Err(PointFromCoordsError::InvalidPoint(reason)) => {
+                    Err(ConvertParsedPointError::InvalidPoint(reason))
+                }
             },
         }
     }
@@ -1516,8 +1588,8 @@ impl<E: Curve> From<Point<E>> for PointFormat<E> {
 
 #[derive(Debug, Error)]
 enum ConvertParsedPointError {
-    #[error("point must not be zero")]
-    ZeroPoint,
+    #[error("invalid point ({0})")]
+    InvalidPoint(InvalidPoint),
     #[error("expected point of curve {expected}, but got point of curve {got}")]
     MismatchedCurve {
         got: Cow<'static, str>,
@@ -1725,36 +1797,37 @@ mod test {
     fn test_point_multiplication_defined() {
         fn _curve<E: Curve>() {
             assert_operator_defined_for! {
-                assert_fn = assert_point_multiplication_defined,
-                lhs = {Point<E>, PointZ<E>, &Point<E>, &PointZ<E>, PointRef<E>},
-                rhs = {Scalar<E>, ScalarZ<E>, &Scalar<E>, &ScalarZ<E>},
-            }
-            assert_operator_defined_for! {
-                assert_fn = assert_point_multiplication_defined,
-                lhs = {Scalar<E>, ScalarZ<E>, &Scalar<E>, &ScalarZ<E>},
-                rhs = {Point<E>, PointZ<E>, &Point<E>, &PointZ<E>, PointRef<E>},
-            }
-
-            // Checking generator's arithmetic
-            assert_operator_defined_for! {
-                assert_fn = assert_point_multiplication_defined,
-                lhs = {Generator<E>},
-                rhs = {ScalarZ<E>, &ScalarZ<E>},
-            }
-            assert_operator_defined_for! {
                 assert_fn = assert_point_nonzero_multiplication_defined,
-                lhs = {Generator<E>},
+                lhs = {Point<E>, &Point<E>, PointRef<E>},
                 rhs = {Scalar<E>, &Scalar<E>},
             }
             assert_operator_defined_for! {
                 assert_fn = assert_point_multiplication_defined,
-                lhs = {ScalarZ<E>, &ScalarZ<E>},
-                rhs = {Generator<E>},
+                lhs = {Point<E>, &Point<E>, PointRef<E>},
+                rhs = {ScalarZ<E>, &ScalarZ<E>},
             }
+            assert_operator_defined_for! {
+                assert_fn = assert_point_multiplication_defined,
+                lhs = {PointZ<E>, &PointZ<E>},
+                rhs = {Scalar<E>, &Scalar<E>, ScalarZ<E>, &ScalarZ<E>},
+            }
+
+            // and vice-versa
+
             assert_operator_defined_for! {
                 assert_fn = assert_point_nonzero_multiplication_defined,
                 lhs = {Scalar<E>, &Scalar<E>},
-                rhs = {Generator<E>},
+                rhs = {Point<E>, &Point<E>, PointRef<E>},
+            }
+            assert_operator_defined_for! {
+                assert_fn = assert_point_multiplication_defined,
+                lhs = {ScalarZ<E>, &ScalarZ<E>},
+                rhs = {Point<E>, &Point<E>, PointRef<E>},
+            }
+            assert_operator_defined_for! {
+                assert_fn = assert_point_multiplication_defined,
+                lhs = {Scalar<E>, &Scalar<E>, ScalarZ<E>, &ScalarZ<E>},
+                rhs = {PointZ<E>, &PointZ<E>},
             }
         }
     }
@@ -1814,13 +1887,34 @@ mod test {
         // no-op
     }
 
+    /// Function asserts that S1 can be multiplied by S2 (ie. S1 * S2) and result is Scalar.
+    /// If any condition doesn't meet, function won't compile.
+    #[allow(dead_code)]
+    fn assert_nonzero_scalars_multiplication_defined<E, S1, S2>()
+    where
+        S1: ops::Mul<S2, Output = Scalar<E>>,
+        E: Curve,
+    {
+        // no-op
+    }
+
     #[test]
     fn test_scalars_multiplication_defined() {
         fn _curve<E: Curve>() {
             assert_operator_defined_for! {
                 assert_fn = assert_scalars_multiplication_defined,
-                lhs = {Scalar<E>, ScalarZ<E>, &Scalar<E>, &ScalarZ<E>},
+                lhs = {ScalarZ<E>, &ScalarZ<E>},
                 rhs = {Scalar<E>, ScalarZ<E>, &Scalar<E>, &ScalarZ<E>},
+            }
+            assert_operator_defined_for! {
+                assert_fn = assert_scalars_multiplication_defined,
+                lhs = {Scalar<E>, ScalarZ<E>, &Scalar<E>, &ScalarZ<E>},
+                rhs = {ScalarZ<E>, &ScalarZ<E>},
+            }
+            assert_operator_defined_for! {
+                assert_fn = assert_nonzero_scalars_multiplication_defined,
+                lhs = {Scalar<E>, &Scalar<E>},
+                rhs = {Scalar<E>, &Scalar<E>},
             }
         }
     }
