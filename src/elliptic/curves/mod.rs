@@ -8,4 +8,17 @@ mod traits;
 mod wrappers;
 
 pub use self::secp256_k1::Secp256k1;
-pub use self::{traits::*, wrappers::*};
+pub use self::{
+    traits::{Curve, ECPoint, ECScalar},
+    wrappers::{Generator, Point, PointRef, PointZ, Scalar, ScalarZ},
+};
+
+pub mod error {
+    pub use super::{
+        traits::{DeserializationError, NotOnCurve},
+        wrappers::error::*,
+    };
+}
+
+#[doc(no_inline)]
+pub use self::error::*;
