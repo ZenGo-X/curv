@@ -60,7 +60,7 @@ pub struct LdeiProof<E: Curve> {
 }
 
 impl<E: Curve> LdeiProof<E> {
-    /// Constructs [LdeiStatement] and proves it correctness
+    /// Proves correctness of [LdeiStatement]
     ///
     /// ## Protocol
     ///
