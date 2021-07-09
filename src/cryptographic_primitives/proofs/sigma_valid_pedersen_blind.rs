@@ -6,14 +6,15 @@
 */
 
 use serde::{Deserialize, Serialize};
-use zeroize::Zeroize;
 
 use super::ProofError;
+use crate::arithmetic::Converter;
 use crate::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
 use crate::cryptographic_primitives::commitments::traits::Commitment;
 use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use crate::cryptographic_primitives::hashing::traits::Hash;
-use crate::elliptic::curves::traits::*;
+use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
+use crate::BigInt;
 
 /// protocol for proving that Pedersen commitment c was constructed correctly which is the same as
 /// proof of knowledge of (r) such that c = mG + rH.
@@ -24,42 +25,39 @@ use crate::elliptic::curves::traits::*;
 /// prover sends pi = {e, m,A,c, z}
 /// verifier checks that emG + zH  = A + ec
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct PedersenBlindingProof<P: ECPoint> {
-    e: P::Scalar,
-    pub m: P::Scalar,
-    a: P,
-    pub com: P,
-    z: P::Scalar,
+pub struct PedersenBlindingProof<E: Curve> {
+    e: ScalarZ<E>,
+    pub m: Scalar<E>,
+    a: Point<E>,
+    pub com: PointZ<E>,
+    z: ScalarZ<E>,
 }
 
-impl<P> PedersenBlindingProof<P>
-where
-    P: ECPoint + Clone,
-    P::Scalar: Zeroize + Clone,
-{
+impl<E: Curve> PedersenBlindingProof<E> {
     #[allow(clippy::many_single_char_names)]
     //TODO: add self verification to prover proof
-    pub fn prove(m: &P::Scalar, r: &P::Scalar) -> PedersenBlindingProof<P> {
-        let h: P = ECPoint::base_point2();
-        let mut s: P::Scalar = ECScalar::new_random();
-        let a = h.scalar_mul(&s.get_element());
-        let com: P = PedersenCommitment::create_commitment_with_user_defined_randomness(
-            &m.to_big_int(),
-            &r.to_big_int(),
+    pub fn prove(m: &Scalar<E>, r: &Scalar<E>) -> PedersenBlindingProof<E> {
+        let h = Point::<E>::base_point2();
+        let s = Scalar::<E>::random();
+        let a = h * &s;
+        let com: PointZ<E> = PedersenCommitment::create_commitment_with_user_defined_randomness(
+            &m.to_bigint(),
+            &r.to_bigint(),
         );
-        let g: P = ECPoint::generator();
+        let g = Point::<E>::generator();
         let challenge = HSha256::create_hash(&[
-            &g.bytes_compressed_to_big_int(),
-            &h.bytes_compressed_to_big_int(),
-            &com.bytes_compressed_to_big_int(),
-            &a.bytes_compressed_to_big_int(),
-            &m.to_big_int(),
+            &BigInt::from_bytes(&g.as_point().to_bytes(true)),
+            &BigInt::from_bytes(&h.to_bytes(true)),
+            &com.to_bytes(true)
+                .map(|b| BigInt::from_bytes(&b))
+                .unwrap_or_else(|| BigInt::from_bytes(b"infinity point")),
+            &BigInt::from_bytes(&a.to_bytes(true)),
+            &m.to_bigint(),
         ]);
-        let e: P::Scalar = ECScalar::from(&challenge);
+        let e = ScalarZ::from(&challenge);
 
-        let er = e.mul(&r.get_element());
-        let z = s.add(&er.get_element());
-        s.zeroize();
+        let er = &e * r;
+        let z = &s + &er;
         PedersenBlindingProof {
             e,
             m: m.clone(),
@@ -69,26 +67,29 @@ where
         }
     }
 
-    pub fn verify(proof: &PedersenBlindingProof<P>) -> Result<(), ProofError> {
-        let g: P = ECPoint::generator();
-        let h: P = ECPoint::base_point2();
+    pub fn verify(proof: &PedersenBlindingProof<E>) -> Result<(), ProofError> {
+        let g = Point::<E>::generator();
+        let h = Point::<E>::base_point2();
         let challenge = HSha256::create_hash(&[
-            &g.bytes_compressed_to_big_int(),
-            &h.bytes_compressed_to_big_int(),
-            &proof.com.bytes_compressed_to_big_int(),
-            &proof.a.bytes_compressed_to_big_int(),
-            &proof.m.to_big_int(),
+            &BigInt::from_bytes(&g.as_point().to_bytes(true)),
+            &BigInt::from_bytes(&h.to_bytes(true)),
+            &proof
+                .com
+                .to_bytes(true)
+                .map(|b| BigInt::from_bytes(&b))
+                .unwrap_or_else(|| BigInt::from_bytes(b"infinity point")),
+            &BigInt::from_bytes(&proof.a.to_bytes(true)),
+            &proof.m.to_bigint(),
         ]);
 
-        let e: P::Scalar = ECScalar::from(&challenge);
+        let e = ScalarZ::from(&challenge);
 
-        let zh = h.scalar_mul(&proof.z.get_element());
-        let mg = g.scalar_mul(&proof.m.get_element());
-        let emg = mg.scalar_mul(&e.get_element());
-        let lhs = zh.add_point(&emg.get_element());
-        let com_clone = proof.com.clone();
-        let ecom = com_clone.scalar_mul(&e.get_element());
-        let rhs = ecom.add_point(&proof.a.get_element());
+        let zh = h * &proof.z;
+        let mg = g * &proof.m;
+        let emg = mg * &e;
+        let lhs = zh + emg;
+        let ecom = &proof.com * &e;
+        let rhs = ecom + &proof.a;
 
         if lhs == rhs {
             Ok(())
@@ -103,14 +104,10 @@ mod tests {
     use super::*;
 
     crate::test_for_all_curves!(test_pedersen_blind_proof);
-    fn test_pedersen_blind_proof<P>()
-    where
-        P: ECPoint + Clone,
-        P::Scalar: Zeroize + Clone,
-    {
-        let m: P::Scalar = ECScalar::new_random();
-        let r: P::Scalar = ECScalar::new_random();
-        let pedersen_proof = PedersenBlindingProof::<P>::prove(&m, &r);
+    fn test_pedersen_blind_proof<E: Curve>() {
+        let m = Scalar::random();
+        let r = Scalar::random();
+        let pedersen_proof = PedersenBlindingProof::<E>::prove(&m, &r);
         let _verified =
             PedersenBlindingProof::verify(&pedersen_proof).expect("error pedersen blind");
     }
