@@ -26,6 +26,7 @@ pub struct ShamirSecretSharing {
 /// implementation details: The code is using FE and GE. Each party is given an index from 1,..,n and a secret share of type FE.
 /// The index of the party is also the point on the polynomial where we treat this number as u32 but converting it to FE internally.
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct VerifiableSS<E: Curve> {
     pub parameters: ShamirSecretSharing,
     pub commitments: Vec<PointZ<E>>,

@@ -25,6 +25,7 @@ use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
 ///
 /// verifier checks that z1*G + z2*H  = A1 + A2 + ec
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct PedersenProof<E: Curve> {
     e: ScalarZ<E>,
     a1: Point<E>,

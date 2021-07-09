@@ -26,6 +26,7 @@ use crate::BigInt;
 /// In Advances in Cryptology - CRYPTO ’86, Santa Barbara, California, USA, 1986, Proceedings,
 /// pages 186–194, 1986.
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct DLogProof<E: Curve> {
     pub pk: Point<E>,
     pub pk_t_rand_commitment: Point<E>,

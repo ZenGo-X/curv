@@ -20,6 +20,7 @@ use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
 /// The relation R outputs 1 if D = xH+rY , E = rG (for the case of G=H this is ElGamal)
 ///
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct HomoELGamalProof<E: Curve> {
     pub T: PointZ<E>,
     pub A3: Point<E>,
@@ -28,12 +29,14 @@ pub struct HomoELGamalProof<E: Curve> {
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct HomoElGamalWitness<E: Curve> {
     pub r: ScalarZ<E>,
     pub x: ScalarZ<E>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct HomoElGamalStatement<E: Curve> {
     pub G: Point<E>,
     pub H: Point<E>,

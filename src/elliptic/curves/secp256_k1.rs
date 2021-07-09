@@ -25,6 +25,7 @@ use secp256k1::constants::{
     self, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
 use secp256k1::{PublicKey, SecretKey};
+use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, Zeroizing};
 
 use crate::arithmetic::*;
@@ -124,7 +125,7 @@ impl Zeroize for PK {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Secp256k1 {}
 
 impl Curve for Secp256k1 {

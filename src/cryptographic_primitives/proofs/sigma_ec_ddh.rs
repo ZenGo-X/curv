@@ -25,6 +25,7 @@ use crate::elliptic::curves::{Curve, Point, Scalar, ScalarZ};
 ///
 /// verifier checks that zG1 = A1 + eH1, zG2 = A2 + eH2
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct ECDDHProof<E: Curve> {
     pub a1: Point<E>,
     pub a2: Point<E>,

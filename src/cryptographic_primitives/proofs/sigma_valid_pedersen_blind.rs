@@ -25,6 +25,7 @@ use crate::BigInt;
 /// prover sends pi = {e, m,A,c, z}
 /// verifier checks that emG + zH  = A + ec
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct PedersenBlindingProof<E: Curve> {
     e: ScalarZ<E>,
     pub m: Scalar<E>,
