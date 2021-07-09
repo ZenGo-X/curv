@@ -19,7 +19,7 @@ use crate::BigInt;
 /// sigma protocol for Proof of knowledge of the discrete log of an Elliptic-curve point:
 /// C.P. Schnorr. Efficient Identification and Signatures for Smart Cards. In
 /// CRYPTO 1989, Springer (LNCS 435), pages 239–252, 1990.
-/// https://pdfs.semanticscholar.org/8d69/c06d48b618a090dd19185aea7a13def894a5.pdf.
+/// <https://pdfs.semanticscholar.org/8d69/c06d48b618a090dd19185aea7a13def894a5.pdf>.
 ///
 /// The protocol is using Fiat-Shamir Transform: Amos Fiat and Adi Shamir.
 /// How to prove yourself: Practical solutions to identification and signature problems.

@@ -96,6 +96,15 @@ impl<E: Curve> Scalar<E> {
         Self::from_raw(E::Scalar::from_bigint(n))
     }
 
+    /// Constructs a `Scalar<E>` from low-level [ECScalar] implementor
+    ///
+    /// Returns error if scalar is zero
+    ///
+    /// Typically, you don't need to use this constructor. See [random](Self::random),
+    /// [from_bigint](Self::from_bigint) constructors, and `From<T>`, `TryFrom<T>` traits implemented
+    /// for `Scalar<E>`.
+    ///
+    /// [ECScalar]: crate::elliptic::curves::ECScalar
     pub fn from_raw(raw_scalar: E::Scalar) -> Result<Self, ZeroScalarError> {
         if raw_scalar.is_zero() {
             Err(ZeroScalarError(()))
@@ -104,14 +113,34 @@ impl<E: Curve> Scalar<E> {
         }
     }
 
+    /// Constructs a `Scalar<E>` from low-level [ECScalar] implementor
+    ///
+    /// # Safety
+    ///
+    /// This function will not perform any checks against the scalar. You must guarantee that scalar
+    /// is not zero. To perform this check, you may use [ECScalar::is_zero][is_zero] method.
+    ///
+    /// [is_zero]: crate::elliptic::curves::ECScalar::is_zero
     pub unsafe fn from_raw_unchecked(raw_scalar: E::Scalar) -> Self {
         Self { raw_scalar }
     }
 
+    /// Returns a reference to low-level scalar implementation
+    ///
+    /// Typically, you don't need to work with `ECScalar` trait directly. `Scalar<E>` wraps `ECScalar`
+    /// and provides convenient utilities around it: it implements arithmetic operators, (de)serialization
+    /// traits, etc. If you believe that some functionality is missing, please
+    /// [open an issue](https://github.com/ZenGo-X/curv).
     pub fn as_raw(&self) -> &E::Scalar {
         &self.raw_scalar
     }
 
+    /// Converts a scalar into inner low-level scalar implementation
+    ///
+    /// Typically, you don't need to work with `ECScalar` trait directly. `Scalar<E>` wraps `ECScalar`
+    /// and provides convenient utilities around it: it implements arithmetic operators, (de)serialization
+    /// traits, etc. If you believe that some functionality is missing, please
+    /// [open an issue](https://github.com/ZenGo-X/curv).
     pub fn into_raw(self) -> E::Scalar {
         self.raw_scalar
     }

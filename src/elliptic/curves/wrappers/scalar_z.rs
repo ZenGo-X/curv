@@ -87,14 +87,33 @@ impl<E: Curve> ScalarZ<E> {
         self.as_raw().invert().map(Self::from_raw)
     }
 
+    /// Constructs a `ScalarZ<E>` from low-level [ECScalar] implementor
+    ///
+    /// Typically, you don't need to use this constructor. See [random](Self::random),
+    /// [from_bigint](Self::from_bigint) constructors, and `From<T>`, `TryFrom<T>` traits implemented
+    /// for `ScalarZ<E>`.
+    ///
+    /// [ECScalar]: crate::elliptic::curves::ECScalar
     pub fn from_raw(raw_scalar: E::Scalar) -> Self {
         Self { raw_scalar }
     }
 
+    /// Returns a reference to low-level scalar implementation
+    ///
+    /// Typically, you don't need to work with `ECScalar` trait directly. `ScalarZ<E>` wraps `ECScalar`
+    /// and provides convenient utilities around it: it implements arithmetic operators, (de)serialization
+    /// traits, etc. If you believe that some functionality is missing, please
+    /// [open an issue](https://github.com/ZenGo-X/curv).
     pub fn as_raw(&self) -> &E::Scalar {
         &self.raw_scalar
     }
 
+    /// Converts a scalar into inner low-level scalar implementation
+    ///
+    /// Typically, you don't need to work with `ECScalar` trait directly. `ScalarZ<E>` wraps `ECScalar`
+    /// and provides convenient utilities around it: it implements arithmetic operators, (de)serialization
+    /// traits, etc. If you believe that some functionality is missing, please
+    /// [open an issue](https://github.com/ZenGo-X/curv).
     pub fn into_raw(self) -> E::Scalar {
         self.raw_scalar
     }

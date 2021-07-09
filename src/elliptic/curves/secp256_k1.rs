@@ -554,7 +554,7 @@ impl ECPoint for Secp256k1Point {
             }
         };
 
-        if let Err(_) = ge.mul_assign(&CONTEXT, &fe[..]) {
+        if ge.mul_assign(&CONTEXT, &fe[..]).is_err() {
             // Multiplication resulted into zero
             self.ge = None
         }

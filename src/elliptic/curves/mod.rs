@@ -9,7 +9,7 @@ mod wrappers;
 
 pub use self::secp256_k1::Secp256k1;
 pub use self::{
-    traits::{Curve, ECPoint, ECScalar},
+    traits::{Curve, ECPoint, ECScalar, PointCoords},
     wrappers::{Generator, Point, PointRef, PointZ, Scalar, ScalarZ},
 };
 

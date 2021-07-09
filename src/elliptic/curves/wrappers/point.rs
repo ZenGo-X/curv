@@ -130,6 +130,16 @@ impl<E: Curve> Point<E> {
         PointRef::from(self)
     }
 
+    /// Constructs a `Point<E>` from low-level [ECPoint] implementor
+    ///
+    /// Returns error if point is zero, or its order isn't equal to [group order].
+    ///
+    /// Typically, you don't need to use this constructor. See [generator](Self::generator),
+    /// [base_point2](Self::base_point2), [from_coords](Self::from_coords), [from_bytes](Self::from_bytes)
+    /// constructors, and `From<T>` and `TryFrom<T>` traits implemented for `Point<E>`.
+    ///
+    /// [ECPoint]: crate::elliptic::curves::ECPoint
+    /// [group order]: crate::elliptic::curves::ECScalar::group_order
     pub fn from_raw(raw_point: E::Point) -> Result<Self, InvalidPoint> {
         if raw_point.is_zero() {
             Err(InvalidPoint::ZeroPoint)
@@ -140,14 +150,40 @@ impl<E: Curve> Point<E> {
         }
     }
 
+    /// Constructs a `Point<E>` from low-level [ECPoint] implementor
+    ///
+    /// # Safety
+    ///
+    /// This function will not perform any checks against the point. You must guarantee that point
+    /// order is equal to curve [group order]. To perform this check, you may use
+    /// [ECPoint::check_point_order_equals_group_order][check_point_order_equals_group_order]
+    /// method.
+    ///
+    /// Note that it implies that point must not be zero (zero point has `order=1`).
+    ///
+    /// [ECPoint]: crate::elliptic::curves::ECPoint
+    /// [group order]: crate::elliptic::curves::ECScalar::group_order
+    /// [check_point_order_equals_group_order]: crate::elliptic::curves::ECPoint::check_point_order_equals_group_order
     pub unsafe fn from_raw_unchecked(point: E::Point) -> Self {
         Point { raw_point: point }
     }
 
+    /// Returns a reference to low-level point implementation
+    ///
+    /// Typically, you don't need to work with `ECPoint` trait directly. `Point<E>` wraps `ECPoint`
+    /// and provides convenient utilities around it: it implements arithmetic operators, (de)serialization
+    /// traits, various getters (like [`.coords()`](Self::coords)). If you believe that some functionality
+    /// is missing, please [open an issue](https://github.com/ZenGo-X/curv).
     pub fn as_raw(&self) -> &E::Point {
         &self.raw_point
     }
 
+    /// Converts a point into inner low-level point implementation
+    ///
+    /// Typically, you don't need to work with `ECPoint` trait directly. `Point<E>` wraps `ECPoint`
+    /// and provides convenient utilities around it, it implements arithmetic operators, (de)serialization
+    /// traits, various getters (like [`.coords()`](Self::coords)). If you believe that some functionality
+    /// is missing, please [open an issue](https://github.com/ZenGo-X/curv).
     pub fn into_raw(self) -> E::Point {
         self.raw_point
     }

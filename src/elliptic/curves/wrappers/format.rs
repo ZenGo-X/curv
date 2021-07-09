@@ -97,6 +97,16 @@ impl<E: Curve> From<Point<E>> for PointFormat<E> {
     }
 }
 
+impl<'p, E: Curve> From<PointRef<'p, E>> for PointFormat<E> {
+    fn from(point: PointRef<'p, E>) -> Self {
+        Self {
+            curve: E::CURVE_NAME.into(),
+            point: Some(point.coords()),
+            _ph: PhantomData,
+        }
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum ConvertParsedPointError {
     #[error("invalid point ({0})")]

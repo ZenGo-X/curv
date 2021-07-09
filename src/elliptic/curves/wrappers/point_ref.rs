@@ -1,23 +1,23 @@
 use std::fmt;
 
+use serde::Serialize;
+
 use crate::elliptic::curves::traits::*;
 use crate::BigInt;
 
-use super::{error::InvalidPoint, Generator, Point, PointZ};
+use super::{error::InvalidPoint, format::PointFormat, Generator, Point, PointZ};
 
 /// Reference on elliptic point of [group order](super::Scalar::group_order)
 ///
 /// Holds internally a reference on [`Point<E>`](Point), refer to its documentation to learn
 /// more about Point/PointRef guarantees, security notes, and arithmetics.
+#[derive(Serialize)]
+#[serde(into = "PointFormat<E>", bound = "")]
 pub struct PointRef<'p, E: Curve> {
     raw_point: &'p E::Point,
 }
 
 impl<E: Curve> PointRef<'static, E> {
-    pub fn generator() -> Self {
-        Self::from_raw(E::Point::generator()).expect("generator must be non-zero")
-    }
-
     pub fn base_point2() -> Self {
         Self::from_raw(E::Point::base_point2()).expect("base_point2 must be non-zero")
     }
@@ -55,18 +55,28 @@ where
     }
 
     /// Serializes point into (un)compressed form
-    pub fn to_bytes(&self, compressed: bool) -> Vec<u8> {
+    pub fn to_bytes(self, compressed: bool) -> Vec<u8> {
         self.as_raw()
             .serialize(compressed)
             .expect("non-zero point must always be serializable")
     }
 
     /// Clones the referenced point
-    pub fn to_point(&self) -> Point<E> {
+    pub fn to_point(self) -> Point<E> {
         // Safety: `self` is guaranteed to have order = group_order
         unsafe { Point::from_raw_unchecked(self.as_raw().clone()) }
     }
 
+    /// Constructs a `PointRef<E>` from reference to low-level [ECPoint] implementor
+    ///
+    /// Returns error if point is zero, or its order isn't equal to [group order].
+    ///
+    /// Typically, you don't need to use this constructor. See [generator](Point::generator),
+    /// [base_point2](Point::base_point2) constructors, and `From<T>` and `TryFrom<T>` traits
+    /// implemented for `Point<E>` and `PointRef<E>`.
+    ///
+    /// [ECPoint]: crate::elliptic::curves::ECPoint
+    /// [group order]: crate::elliptic::curves::ECScalar::group_order
     pub fn from_raw(raw_point: &'p E::Point) -> Result<Self, InvalidPoint> {
         if raw_point.is_zero() {
             Err(InvalidPoint::ZeroPoint)
@@ -77,10 +87,31 @@ where
         }
     }
 
+    /// Constructs a `PointRef<E>` from reference to low-level [ECPoint] implementor
+    ///
+    /// # Safety
+    ///
+    /// This function will not perform any checks against the point. You must guarantee that point
+    /// order is equal to curve [group order]. To perform this check, you may use
+    /// [ECPoint::check_point_order_equals_group_order][check_point_order_equals_group_order]
+    /// method.
+    ///
+    /// Note that it implies that point must not be zero (zero point has `order=1`).
+    ///
+    /// [ECPoint]: crate::elliptic::curves::ECPoint
+    /// [group order]: crate::elliptic::curves::ECScalar::group_order
+    /// [check_point_order_equals_group_order]: crate::elliptic::curves::ECPoint::check_point_order_equals_group_order
     pub unsafe fn from_raw_unchecked(raw_point: &'p E::Point) -> Self {
         PointRef { raw_point }
     }
 
+    /// Returns a reference to low-level point implementation
+    ///
+    /// Typically, you don't need to work with `ECPoint` trait directly. `PointRef<E>` wraps a
+    /// reference to `ECPoint` implementation and provides convenient utilities around it: it
+    /// implements arithmetic operators, serialization trait, various getters (like
+    /// [`.coords()`](Self::coords)). If you believe that some functionality is missing, please
+    /// [open an issue](https://github.com/ZenGo-X/curv).
     pub fn as_raw(self) -> &'p E::Point {
         self.raw_point
     }
