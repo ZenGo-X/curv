@@ -1,6 +1,4 @@
-use std::fmt::Debug;
-
-use curv::elliptic::curves::traits::ECPoint;
+use curv::elliptic::curves::*;
 
 /// secret_sharing_3_out_of_5
 /// Feldman VSS, based on  Paul Feldman. 1987. A practical scheme for non-interactive verifiable secret sharing.
@@ -13,17 +11,12 @@ use curv::elliptic::curves::traits::ECPoint;
 /// CURVE_NAME is any of the supported curves: i.e.:
 /// cargo run --example verifiable_secret_sharing -- ed25519
 
-pub fn secret_sharing_3_out_of_5<P>()
-where
-    P: ECPoint + Clone,
-    P::Scalar: PartialEq + Clone + Debug,
-{
+pub fn secret_sharing_3_out_of_5<E: Curve>() {
     use curv::cryptographic_primitives::secret_sharing::feldman_vss::VerifiableSS;
-    use curv::elliptic::curves::traits::ECScalar;
 
-    let secret: P::Scalar = ECScalar::new_random();
+    let secret = ScalarZ::random();
 
-    let (vss_scheme, secret_shares) = VerifiableSS::<P>::share(3, 5, &secret);
+    let (vss_scheme, secret_shares) = VerifiableSS::<E>::share(3, 5, &secret);
 
     let shares_vec = vec![
         secret_shares[0].clone(),
@@ -42,18 +35,18 @@ where
     assert!(valid3.is_ok());
     assert!(valid1.is_ok());
 
-    let g: P = ECPoint::generator();
-    let share1_public = g * secret_shares[0].clone();
+    let g = Point::generator();
+    let share1_public = g * &secret_shares[0];
     let valid1_public = vss_scheme.validate_share_public(&share1_public, 1);
     assert!(valid1_public.is_ok());
 
     // test map (t,n) - (t',t')
     let s = &vec![0, 1, 2, 3, 4];
-    let l0 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 0, &s);
-    let l1 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 1, &s);
-    let l2 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 2, &s);
-    let l3 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 3, &s);
-    let l4 = VerifiableSS::<P>::map_share_to_new_params(&vss_scheme.parameters, 4, &s);
+    let l0 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 0, &s);
+    let l1 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 1, &s);
+    let l2 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 2, &s);
+    let l3 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 3, &s);
+    let l4 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 4, &s);
 
     let w = l0 * secret_shares[0].clone()
         + l1 * secret_shares[1].clone()
@@ -66,15 +59,15 @@ where
 fn main() {
     let curve_name = std::env::args().nth(1);
     match curve_name.as_deref() {
-        Some("secp256k1") => secret_sharing_3_out_of_5::<curv::elliptic::curves::secp256_k1::GE>(),
-        Some("ristretto") => {
-            secret_sharing_3_out_of_5::<curv::elliptic::curves::curve_ristretto::GE>()
-        }
-        Some("ed25519") => secret_sharing_3_out_of_5::<curv::elliptic::curves::ed25519::GE>(),
-        Some("bls12_381") => {
-            secret_sharing_3_out_of_5::<curv::elliptic::curves::bls12_381::g1::GE>()
-        }
-        Some("p256") => secret_sharing_3_out_of_5::<curv::elliptic::curves::p256::GE>(),
+        Some("secp256k1") => secret_sharing_3_out_of_5::<Secp256k1>(),
+        // Some("ristretto") => {
+        //     secret_sharing_3_out_of_5::<curv::elliptic::curves::curve_ristretto::GE>()
+        // }
+        // Some("ed25519") => secret_sharing_3_out_of_5::<curv::elliptic::curves::ed25519::GE>(),
+        // Some("bls12_381") => {
+        //     secret_sharing_3_out_of_5::<curv::elliptic::curves::bls12_381::g1::GE>()
+        // }
+        // Some("p256") => secret_sharing_3_out_of_5::<curv::elliptic::curves::p256::GE>(),
         Some(unknown_curve) => eprintln!("Unknown curve: {}", unknown_curve),
         None => eprintln!("Missing curve name"),
     }
