@@ -10,6 +10,8 @@ use crate::arithmetic::traits::*;
 use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
 use crate::BigInt;
 
+/// Wrapper over [blake2b_simd](blake2b_simd::State) exposing facilities to hash bigints, elliptic points,
+/// and scalars
 pub struct Blake {
     state: State,
 }

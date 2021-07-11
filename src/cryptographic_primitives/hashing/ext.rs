@@ -5,6 +5,27 @@ use hmac::{Hmac, Mac};
 use crate::arithmetic::*;
 use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
 
+/// [Digest] extension allowing to hash elliptic points, scalars, and bigints
+///
+/// Can be used with any hashing algorithm that implements `Digest` traits (e.g. [Sha256](sha2::Sha256),
+/// [Sha512](sha2::Sha512), etc.)
+///
+/// ## Example
+///
+/// ```rust
+/// use sha2::Sha256;
+/// use curv::arithmetic::*;
+/// use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
+/// use curv::elliptic::curves::{Secp256k1, Point};
+///
+/// let hash = Sha256::new()
+///     .chain_point(&Point::<Secp256k1>::generator().to_point())
+///     .chain_point(&Point::<Secp256k1>::base_point2().to_point())
+///     .chain_bigint(&BigInt::from(10))
+///     .result_bigint();
+///
+/// assert_eq!(hash, BigInt::from_hex("73764f937fbe25092466b417fa66ad9c62607865e1f8151df253aa3a2fd7599b").unwrap());
+/// ```
 pub trait DigestExt {
     fn input_bigint(&mut self, n: &BigInt);
     fn input_point<E: Curve>(&mut self, point: &Point<E>);
@@ -96,6 +117,7 @@ where
     }
 }
 
+/// [Hmac] extension allowing to use bigints to instantiate hmac, update, and finalize it.
 pub trait HmacExt: Sized {
     fn new_bigint(key: &BigInt) -> Self;
 
