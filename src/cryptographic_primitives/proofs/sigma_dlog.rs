@@ -6,14 +6,12 @@
 */
 
 use serde::{Deserialize, Serialize};
+use sha2::Sha256;
 
-use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
-use crate::cryptographic_primitives::hashing::traits::Hash;
+use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
 use crate::elliptic::curves::{Curve, Point, Scalar, ScalarZ};
 
 use super::ProofError;
-use crate::arithmetic::Converter;
-use crate::BigInt;
 
 /// This is implementation of Schnorr's identification protocol for elliptic curve groups or a
 /// sigma protocol for Proof of knowledge of the discrete log of an Elliptic-curve point:
@@ -42,14 +40,13 @@ impl<E: Curve> DLogProof<E> {
 
         let pk = Point::generator() * sk;
 
-        let challenge = HSha256::create_hash(&[
-            &BigInt::from_bytes(&pk_t_rand_commitment.to_bytes(true)),
-            &BigInt::from_bytes(&generator.as_point().to_bytes(true)),
-            &BigInt::from_bytes(&pk.to_bytes(true)),
-        ]);
+        let challenge = Sha256::new()
+            .chain_point(&pk_t_rand_commitment)
+            .chain_point(&generator.to_point())
+            .chain_point(&pk)
+            .result_scalar();
 
-        let challenge_fe: ScalarZ<E> = ScalarZ::from(&challenge);
-        let challenge_mul_sk = challenge_fe * sk;
+        let challenge_mul_sk = challenge * sk;
         let challenge_response = &sk_t_rand_commitment - &challenge_mul_sk;
         DLogProof {
             pk,
@@ -61,14 +58,13 @@ impl<E: Curve> DLogProof<E> {
     pub fn verify(proof: &DLogProof<E>) -> Result<(), ProofError> {
         let generator = Point::<E>::generator();
 
-        let challenge = HSha256::create_hash(&[
-            &BigInt::from_bytes(&proof.pk_t_rand_commitment.to_bytes(true)),
-            &BigInt::from_bytes(&generator.as_point().to_bytes(true)),
-            &BigInt::from_bytes(&proof.pk.to_bytes(true)),
-        ]);
+        let challenge = Sha256::new()
+            .chain_point(&proof.pk_t_rand_commitment)
+            .chain_point(&generator.to_point())
+            .chain_point(&proof.pk)
+            .result_scalar();
 
-        let sk_challenge = ScalarZ::<E>::from(&challenge);
-        let pk_challenge = &proof.pk * &sk_challenge;
+        let pk_challenge = &proof.pk * &challenge;
 
         let pk_verifier = generator * &proof.challenge_response + pk_challenge;
 

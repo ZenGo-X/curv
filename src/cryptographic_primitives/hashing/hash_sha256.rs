@@ -5,6 +5,8 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
+#![allow(deprecated)]
+
 use super::traits::Hash;
 use crate::arithmetic::traits::*;
 use crate::elliptic::curves::{Curve, Point, PointZ, ScalarZ};
@@ -14,6 +16,7 @@ use sha2::Sha256;
 
 use crate::BigInt;
 
+#[deprecated(since = "0.8.0", note = "use DigestExt instead")]
 pub struct HSha256;
 
 impl Hash for HSha256 {

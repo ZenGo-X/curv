@@ -1,6 +1,8 @@
+use digest::Digest;
+
 use thiserror::Error;
 
-use crate::cryptographic_primitives::hashing::traits::Hash;
+use crate::cryptographic_primitives::hashing::DigestExt;
 use crate::cryptographic_primitives::proofs::ProofError;
 use crate::cryptographic_primitives::secret_sharing::Polynomial;
 use crate::elliptic::curves::{Curve, Point, PointZ, ScalarZ};
@@ -73,7 +75,7 @@ impl<E: Curve> LdeiProof<E> {
         statement: &LdeiStatement<E>,
     ) -> Result<LdeiProof<E>, InvalidLdeiStatement>
     where
-        H: Hash,
+        H: Digest,
     {
         if statement.alpha.len() != statement.g.len() {
             return Err(InvalidLdeiStatement::AlphaLengthDoesntMatchG);
@@ -103,13 +105,17 @@ impl<E: Curve> LdeiProof<E> {
             .map(|(g, a)| g * u.evaluate(a))
             .collect();
 
-        let g: Vec<PointZ<E>> = statement
-            .g
-            .iter()
-            .map(|g| PointZ::from(g.clone()))
-            .collect();
-        let hash_input: Vec<&PointZ<E>> = g.iter().chain(&statement.x).chain(&a).collect();
-        let e = H::create_hash_from_ge_z::<E>(hash_input.as_slice());
+        let mut h = H::new();
+        for gi in &statement.g {
+            h.input_point(gi)
+        }
+        for xi in &statement.x {
+            h.input_pointz(xi)
+        }
+        for ai in &a {
+            h.input_pointz(ai)
+        }
+        let e = ScalarZ::from(h.result_scalar());
 
         let z = &u - &(&witness.w * &e);
 
@@ -125,15 +131,20 @@ impl<E: Curve> LdeiProof<E> {
     /// true, otherwise rejects.
     pub fn verify<H>(&self, statement: &LdeiStatement<E>) -> Result<(), ProofError>
     where
-        H: Hash,
+        H: Digest,
     {
-        let g: Vec<PointZ<E>> = statement
-            .g
-            .iter()
-            .map(|g| PointZ::from(g.clone()))
-            .collect();
-        let hash_input: Vec<&PointZ<E>> = g.iter().chain(&statement.x).chain(&self.a).collect();
-        let e = H::create_hash_from_ge_z::<E>(hash_input.as_slice());
+        let mut h = H::new();
+        for gi in &statement.g {
+            h.input_point(gi)
+        }
+        for xi in &statement.x {
+            h.input_pointz(xi)
+        }
+        for ai in &self.a {
+            h.input_pointz(ai)
+        }
+        let e = ScalarZ::from(h.result_scalar());
+
         if e != self.e {
             return Err(ProofError);
         }
@@ -185,7 +196,8 @@ fn ensure_list_is_pairwise_distinct<S: PartialEq>(list: &[S]) -> bool {
 mod tests {
     use std::iter;
 
-    use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
+    use sha2::Sha256;
+
     use crate::elliptic::curves::{Curve, Scalar};
     use crate::test_for_all_curves;
 
@@ -205,9 +217,9 @@ mod tests {
 
         let statement = LdeiStatement::new(&witness, alpha, g, d).unwrap();
 
-        let proof = LdeiProof::prove::<HSha256>(&witness, &statement).expect("failed to prove");
+        let proof = LdeiProof::prove::<Sha256>(&witness, &statement).expect("failed to prove");
         proof
-            .verify::<HSha256>(&statement)
+            .verify::<Sha256>(&statement)
             .expect("failed to validate proof");
     }
 }

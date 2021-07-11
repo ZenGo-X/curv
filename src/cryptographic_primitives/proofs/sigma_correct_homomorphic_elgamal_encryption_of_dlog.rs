@@ -7,10 +7,10 @@
 */
 
 use serde::{Deserialize, Serialize};
+use sha2::Sha256;
 
 use super::ProofError;
-use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
-use crate::cryptographic_primitives::hashing::traits::Hash;
+use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
 use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
 
 /// This is a proof of knowledge that a pair of group elements {D, E}
@@ -56,30 +56,30 @@ impl<E: Curve> HomoELGamalDlogProof<E> {
         let A1 = &delta.G * &s1;
         let A2 = &delta.Y * &s2;
         let A3 = &delta.G * &s2;
-        let e = HSha256::create_hash_from_ge_z(&[
-            &PointZ::from(A1.clone()),
-            &PointZ::from(A2.clone()),
-            &PointZ::from(A3.clone()),
-            &PointZ::from(delta.G.clone()),
-            &PointZ::from(delta.Y.clone()),
-            &delta.D,
-            &PointZ::from(delta.E.clone()),
-        ]);
+        let e = Sha256::new()
+            .chain_point(&A1)
+            .chain_point(&A2)
+            .chain_point(&A3)
+            .chain_point(&delta.G)
+            .chain_point(&delta.Y)
+            .chain_pointz(&delta.D)
+            .chain_point(&delta.E)
+            .result_scalar();
         let z1 = &s1 + &e * &w.x;
         let z2 = &s2 + e * &w.r;
         HomoELGamalDlogProof { A1, A2, A3, z1, z2 }
     }
 
     pub fn verify(&self, delta: &HomoElGamalDlogStatement<E>) -> Result<(), ProofError> {
-        let e = HSha256::create_hash_from_ge_z(&[
-            &PointZ::from(self.A1.clone()),
-            &PointZ::from(self.A2.clone()),
-            &PointZ::from(self.A3.clone()),
-            &PointZ::from(delta.G.clone()),
-            &PointZ::from(delta.Y.clone()),
-            &delta.D,
-            &PointZ::from(delta.E.clone()),
-        ]);
+        let e = Sha256::new()
+            .chain_point(&self.A1)
+            .chain_point(&self.A2)
+            .chain_point(&self.A3)
+            .chain_point(&delta.G)
+            .chain_point(&delta.Y)
+            .chain_pointz(&delta.D)
+            .chain_point(&delta.E)
+            .result_scalar();
         let z1G = &delta.G * &self.z1;
         let z2Y = &delta.Y * &self.z2;
         let z2G = &delta.G * &self.z2;

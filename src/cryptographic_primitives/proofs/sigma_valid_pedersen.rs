@@ -6,14 +6,14 @@
 */
 
 use serde::{Deserialize, Serialize};
+use sha2::Sha256;
 
-use super::ProofError;
-use crate::arithmetic::*;
 use crate::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
 use crate::cryptographic_primitives::commitments::traits::Commitment;
-use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
-use crate::cryptographic_primitives::hashing::traits::Hash;
+use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
 use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
+
+use super::ProofError;
 
 /// protocol for proving that Pedersen commitment c was constructed correctly which is the same as
 /// proof of knowledge of (m,r) such that c = mG + rH.
@@ -27,7 +27,7 @@ use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct PedersenProof<E: Curve> {
-    e: ScalarZ<E>,
+    e: Scalar<E>,
     a1: Point<E>,
     a2: Point<E>,
     pub com: PointZ<E>,
@@ -48,17 +48,14 @@ impl<E: Curve> PedersenProof<E> {
             &m.to_bigint(),
             &r.to_bigint(),
         );
-        let challenge = HSha256::create_hash(&[
-            &BigInt::from_bytes(&g.as_point().to_bytes(true)),
-            &BigInt::from_bytes(&h.to_bytes(true)),
-            &com.to_bytes(true)
-                .map(|b| BigInt::from_bytes(&b))
-                .unwrap_or_else(|| BigInt::from_bytes(b"infinity point")),
-            &BigInt::from_bytes(&a1.to_bytes(true)),
-            &BigInt::from_bytes(&a2.to_bytes(true)),
-        ]);
 
-        let e = ScalarZ::from(&challenge);
+        let e = Sha256::new()
+            .chain_point(&g.to_point())
+            .chain_point(&h.to_point())
+            .chain_pointz(&com)
+            .chain_point(&a1)
+            .chain_point(&a2)
+            .result_scalar();
 
         let em = &e * m;
         let z1 = &s1 + em;
@@ -78,18 +75,13 @@ impl<E: Curve> PedersenProof<E> {
     pub fn verify(proof: &PedersenProof<E>) -> Result<(), ProofError> {
         let g = Point::<E>::generator();
         let h = Point::<E>::base_point2();
-        let challenge = HSha256::create_hash(&[
-            &BigInt::from_bytes(&g.as_point().to_bytes(true)),
-            &BigInt::from_bytes(&h.to_bytes(true)),
-            &proof
-                .com
-                .to_bytes(true)
-                .map(|b| BigInt::from_bytes(&b))
-                .unwrap_or_else(|| BigInt::from_bytes(b"infinity point")),
-            &BigInt::from_bytes(&proof.a1.to_bytes(true)),
-            &BigInt::from_bytes(&proof.a2.to_bytes(true)),
-        ]);
-        let e = ScalarZ::from(challenge);
+        let e = Sha256::new()
+            .chain_point(&g.to_point())
+            .chain_point(&h.to_point())
+            .chain_pointz(&proof.com)
+            .chain_point(&proof.a1)
+            .chain_point(&proof.a2)
+            .result_scalar();
 
         let z1g = g * &proof.z1;
         let z2h = h * &proof.z2;

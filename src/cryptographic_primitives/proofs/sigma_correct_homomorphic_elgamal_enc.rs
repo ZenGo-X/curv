@@ -8,10 +8,13 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::ProofError;
-use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
-use crate::cryptographic_primitives::hashing::traits::Hash;
+use digest::Digest;
+use sha2::Sha256;
+
+use crate::cryptographic_primitives::hashing::DigestExt;
 use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
+
+use super::ProofError;
 
 /// This is a proof of knowledge that a pair of group elements {D, E}
 /// form a valid homomorphic ElGamal encryption (”in the exponent”) using public key Y .
@@ -56,15 +59,15 @@ impl<E: Curve> HomoELGamalProof<E> {
         let A2 = &delta.Y * &s2;
         let A3 = &delta.G * &s2;
         let T = A1 + A2;
-        let e = HSha256::create_hash_from_ge_z(&[
-            &T,
-            &PointZ::from(A3.clone()),
-            &PointZ::from(delta.G.clone()),
-            &PointZ::from(delta.H.clone()),
-            &PointZ::from(delta.Y.clone()),
-            &delta.D,
-            &delta.E,
-        ]);
+        let e = Sha256::new()
+            .chain_pointz(&T)
+            .chain_point(&A3)
+            .chain_point(&delta.G)
+            .chain_point(&delta.H)
+            .chain_point(&delta.Y)
+            .chain_pointz(&delta.D)
+            .chain_pointz(&delta.E)
+            .result_scalar();
         // dealing with zero field element
         let z1 = if !w.x.is_zero() {
             &s1 + &w.x * &e
@@ -75,15 +78,15 @@ impl<E: Curve> HomoELGamalProof<E> {
         HomoELGamalProof { T, A3, z1, z2 }
     }
     pub fn verify(&self, delta: &HomoElGamalStatement<E>) -> Result<(), ProofError> {
-        let e = HSha256::create_hash_from_ge_z(&[
-            &self.T,
-            &PointZ::from(self.A3.clone()),
-            &PointZ::from(delta.G.clone()),
-            &PointZ::from(delta.H.clone()),
-            &PointZ::from(delta.Y.clone()),
-            &delta.D,
-            &delta.E,
-        ]);
+        let e = Sha256::new()
+            .chain_pointz(&self.T)
+            .chain_point(&self.A3)
+            .chain_point(&delta.G)
+            .chain_point(&delta.H)
+            .chain_point(&delta.Y)
+            .chain_pointz(&delta.D)
+            .chain_pointz(&delta.E)
+            .result_scalar();
         let z1H_plus_z2Y = &delta.H * &self.z1 + &delta.Y * &self.z2;
         let T_plus_eD = &self.T + &delta.D * &e;
         let z2G = &delta.G * &self.z2;

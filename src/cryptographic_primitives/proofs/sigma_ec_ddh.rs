@@ -6,11 +6,12 @@
 */
 
 use serde::{Deserialize, Serialize};
+use sha2::Sha256;
+
+use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
+use crate::elliptic::curves::{Curve, Point, Scalar, ScalarZ};
 
 use super::ProofError;
-use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
-use crate::cryptographic_primitives::hashing::traits::Hash;
-use crate::elliptic::curves::{Curve, Point, Scalar, ScalarZ};
 
 /// This protocol is the elliptic curve form of the protocol from :
 ///  D. Chaum, T. P. Pedersen. Transferred cash grows in size. In Advances in Cryptology, EUROCRYPT , volume 658 of Lecture Notes in Computer Science, pages 390 - 407, 1993.
@@ -50,16 +51,27 @@ impl<E: Curve> ECDDHProof<E> {
         let s = Scalar::random();
         let a1 = &delta.g1 * &s;
         let a2 = &delta.g2 * &s;
-        let e =
-            HSha256::create_hash_from_ge(&[&delta.g1, &delta.h1, &delta.g2, &delta.h2, &a1, &a2]);
+        let e = Sha256::new()
+            .chain_point(&delta.g1)
+            .chain_point(&delta.h1)
+            .chain_point(&delta.g2)
+            .chain_point(&delta.h2)
+            .chain_point(&a1)
+            .chain_point(&a2)
+            .result_scalar();
         let z = &s + e * &w.x;
         ECDDHProof { a1, a2, z }
     }
 
     pub fn verify(&self, delta: &ECDDHStatement<E>) -> Result<(), ProofError> {
-        let e = HSha256::create_hash_from_ge(&[
-            &delta.g1, &delta.h1, &delta.g2, &delta.h2, &self.a1, &self.a2,
-        ]);
+        let e = Sha256::new()
+            .chain_point(&delta.g1)
+            .chain_point(&delta.h1)
+            .chain_point(&delta.g2)
+            .chain_point(&delta.h2)
+            .chain_point(&self.a1)
+            .chain_point(&self.a2)
+            .result_scalar();
         let z_g1 = &delta.g1 * &self.z;
         let z_g2 = &delta.g2 * &self.z;
         let a1_plus_e_h1 = &self.a1 + &delta.h1 * &e;
