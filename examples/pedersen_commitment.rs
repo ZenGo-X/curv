@@ -1,7 +1,7 @@
 use curv::arithmetic::*;
 use curv::elliptic::curves::*;
 
-/// Pedesen Commitment:
+/// Pedersen Commitment:
 /// compute c = mG + rH
 /// where m is the commited value, G is the group generator,
 /// H is a random point and r is a blinding value.

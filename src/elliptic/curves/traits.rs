@@ -48,34 +48,34 @@ pub trait ECScalar: Clone + PartialEq + fmt::Debug + 'static {
     /// Checks if the scalar equals to zero
     fn is_zero(&self) -> bool;
 
-    /// Constructs a scalar `n % curve_order`
+    /// Constructs a scalar `n % group_order`
     fn from_bigint(n: &BigInt) -> Self;
     /// Converts a scalar to BigInt
     fn to_bigint(&self) -> BigInt;
 
-    /// Calculates `(self + other) mod curve_order`
+    /// Calculates `(self + other) mod group_order`
     fn add(&self, other: &Self) -> Self;
-    /// Calculates `(self * other) mod curve_order`
+    /// Calculates `(self * other) mod group_order`
     fn mul(&self, other: &Self) -> Self;
-    /// Calculates `(self - other) mod curve_order`
+    /// Calculates `(self - other) mod group_order`
     fn sub(&self, other: &Self) -> Self;
-    /// Calculates `-self mod curve_order`
+    /// Calculates `-self mod group_order`
     fn neg(&self) -> Self;
-    /// Calculates `self^-1 (mod curve_order)`, returns None if self equals to zero
+    /// Calculates `self^-1 (mod group_order)`, returns None if self equals to zero
     fn invert(&self) -> Option<Self>;
-    /// Calculates `(self + other) mod curve_order`, and assigns result to `self`
+    /// Calculates `(self + other) mod group_order`, and assigns result to `self`
     fn add_assign(&mut self, other: &Self) {
         *self = self.add(other)
     }
-    /// Calculates `(self * other) mod curve_order`, and assigns result to `self`
+    /// Calculates `(self * other) mod group_order`, and assigns result to `self`
     fn mul_assign(&mut self, other: &Self) {
         *self = self.mul(other)
     }
-    /// Calculates `(self - other) mod curve_order`, and assigns result to `self`
+    /// Calculates `(self - other) mod group_order`, and assigns result to `self`
     fn sub_assign(&mut self, other: &Self) {
         *self = self.sub(other)
     }
-    /// Calculates `-self mod curve_order`, and assigns result to `self`
+    /// Calculates `-self mod group_order`, and assigns result to `self`
     fn neg_assign(&mut self) {
         *self = self.neg()
     }
