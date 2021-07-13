@@ -1,45 +1,36 @@
-use std::fmt;
+use digest::Digest;
 
-use derivative::Derivative;
 use thiserror::Error;
 
-use crate::cryptographic_primitives::hashing::traits::Hash;
+use crate::cryptographic_primitives::hashing::DigestExt;
 use crate::cryptographic_primitives::proofs::ProofError;
 use crate::cryptographic_primitives::secret_sharing::Polynomial;
-use crate::elliptic::curves::traits::ECPoint;
+use crate::elliptic::curves::{Curve, Point, PointZ, ScalarZ};
 
 /// The prover private polynomial
-#[derive(Derivative)]
-#[derivative(Clone(bound = "P::Scalar: Clone"))]
-#[derivative(Debug(bound = "P::Scalar: fmt::Debug"))]
-pub struct LdeiWitness<P: ECPoint> {
-    pub w: Polynomial<P>,
+#[derive(Clone, Debug)]
+pub struct LdeiWitness<E: Curve> {
+    pub w: Polynomial<E>,
 }
 
 /// Claims that there's polynomial `w(x)` of degree `deg(w) <= degree`, and
 /// `forall i. x[i] = g[i] * alpha[i]` (and the prover knows `w(x)`)
-#[derive(Derivative)]
-#[derivative(Clone(bound = "P: Clone, P::Scalar: Clone"))]
-#[derivative(Debug(bound = "P: fmt::Debug, P::Scalar: fmt::Debug"))]
-pub struct LdeiStatement<P: ECPoint> {
-    pub alpha: Vec<P::Scalar>,
-    pub g: Vec<P>,
-    pub x: Vec<P>,
+#[derive(Clone, Debug)]
+pub struct LdeiStatement<E: Curve> {
+    pub alpha: Vec<ScalarZ<E>>,
+    pub g: Vec<Point<E>>,
+    pub x: Vec<PointZ<E>>,
     pub d: u16,
 }
 
-impl<P> LdeiStatement<P>
-where
-    P: ECPoint + Clone,
-    P::Scalar: Clone + PartialEq,
-{
+impl<E: Curve> LdeiStatement<E> {
     /// Takes [witness](LdeiWitness) (ie. secret polynomial `w(x)`), list of scalars `alpha`,
     /// list of generators `g`, number `d`. Produces LdeiStatement consisting of `alpha`, `g`, `d`,
     /// and list `x` such as `x_i = g_i * w(alpha_i)`
     pub fn new(
-        witness: &LdeiWitness<P>,
-        alpha: Vec<P::Scalar>,
-        g: Vec<P>,
+        witness: &LdeiWitness<E>,
+        alpha: Vec<ScalarZ<E>>,
+        g: Vec<Point<E>>,
         d: u16,
     ) -> Result<Self, InvalidLdeiStatement> {
         if g.len() != alpha.len() {
@@ -54,7 +45,7 @@ where
         Ok(Self {
             x: g.iter()
                 .zip(&alpha)
-                .map(|(g, a)| g.clone() * witness.w.evaluate(a))
+                .map(|(g, a)| g * witness.w.evaluate(a))
                 .collect(),
             alpha,
             g,
@@ -63,21 +54,15 @@ where
     }
 }
 
-#[derive(Derivative)]
-#[derivative(Clone(bound = "P: Clone, P::Scalar: Clone"))]
-#[derivative(Debug(bound = "P: fmt::Debug, P::Scalar: fmt::Debug"))]
-pub struct LdeiProof<P: ECPoint> {
-    pub a: Vec<P>,
-    pub e: P::Scalar,
-    pub z: Polynomial<P>,
+#[derive(Clone, Debug)]
+pub struct LdeiProof<E: Curve> {
+    pub a: Vec<PointZ<E>>,
+    pub e: ScalarZ<E>,
+    pub z: Polynomial<E>,
 }
 
-impl<P> LdeiProof<P>
-where
-    P: ECPoint + Clone + PartialEq,
-    P::Scalar: Clone + PartialEq,
-{
-    /// Constructs [LdeiStatement] and proves it correctness
+impl<E: Curve> LdeiProof<E> {
+    /// Proves correctness of [LdeiStatement]
     ///
     /// ## Protocol
     ///
@@ -86,11 +71,11 @@ where
     /// `z(X) = u(X) − e · w(X)`. The proof is `(a_1,...,a_m,e,z)`.
     #[allow(clippy::many_single_char_names)]
     pub fn prove<H>(
-        witness: &LdeiWitness<P>,
-        statement: &LdeiStatement<P>,
-    ) -> Result<LdeiProof<P>, InvalidLdeiStatement>
+        witness: &LdeiWitness<E>,
+        statement: &LdeiStatement<E>,
+    ) -> Result<LdeiProof<E>, InvalidLdeiStatement>
     where
-        H: Hash,
+        H: Digest,
     {
         if statement.alpha.len() != statement.g.len() {
             return Err(InvalidLdeiStatement::AlphaLengthDoesntMatchG);
@@ -102,26 +87,35 @@ where
             return Err(InvalidLdeiStatement::AlphaNotPairwiseDistinct);
         }
 
-        let x_expected: Vec<P> = statement
+        let x_expected: Vec<PointZ<E>> = statement
             .g
             .iter()
             .zip(&statement.alpha)
-            .map(|(g, a)| g.clone() * witness.w.evaluate(a))
+            .map(|(g, a)| g * witness.w.evaluate(a))
             .collect();
         if statement.x != x_expected {
             return Err(InvalidLdeiStatement::ListOfXDoesntMatchExpectedValue);
         }
 
-        let u = Polynomial::<P>::sample(statement.d);
-        let a: Vec<P> = statement
+        let u = Polynomial::<E>::sample(statement.d);
+        let a: Vec<PointZ<E>> = statement
             .g
             .iter()
             .zip(&statement.alpha)
-            .map(|(g, a)| g.clone() * u.evaluate(a))
+            .map(|(g, a)| g * u.evaluate(a))
             .collect();
 
-        let hash_input: Vec<&P> = statement.g.iter().chain(&statement.x).chain(&a).collect();
-        let e = H::create_hash_from_ge::<P>(hash_input.as_slice());
+        let mut h = H::new();
+        for gi in &statement.g {
+            h.input_point(gi)
+        }
+        for xi in &statement.x {
+            h.input_pointz(xi)
+        }
+        for ai in &a {
+            h.input_pointz(ai)
+        }
+        let e = ScalarZ::from(h.result_scalar());
 
         let z = &u - &(&witness.w * &e);
 
@@ -135,17 +129,22 @@ where
     /// The verifier checks that `e = H(g1,...,gm,x1,...,xm,a1,...,am)`, that
     /// `deg(z) ≤ d`, and that `a_i = g_i^z(αlpha_i) * x_i^e` for all i, and accepts if all of this is
     /// true, otherwise rejects.
-    pub fn verify<H>(&self, statement: &LdeiStatement<P>) -> Result<(), ProofError>
+    pub fn verify<H>(&self, statement: &LdeiStatement<E>) -> Result<(), ProofError>
     where
-        H: Hash,
+        H: Digest,
     {
-        let hash_input: Vec<&P> = statement
-            .g
-            .iter()
-            .chain(&statement.x)
-            .chain(&self.a)
-            .collect();
-        let e = H::create_hash_from_ge::<P>(hash_input.as_slice());
+        let mut h = H::new();
+        for gi in &statement.g {
+            h.input_point(gi)
+        }
+        for xi in &statement.x {
+            h.input_pointz(xi)
+        }
+        for ai in &self.a {
+            h.input_pointz(ai)
+        }
+        let e = ScalarZ::from(h.result_scalar());
+
         if e != self.e {
             return Err(ProofError);
         }
@@ -158,7 +157,7 @@ where
             .iter()
             .zip(&statement.alpha)
             .zip(&statement.x)
-            .map(|((g, a), x)| g.clone() * self.z.evaluate(&a) + x.clone() * e.clone())
+            .map(|((g, a), x)| g * self.z.evaluate(&a) + x * &e)
             .collect();
 
         if self.a == expected_a {
@@ -197,34 +196,30 @@ fn ensure_list_is_pairwise_distinct<S: PartialEq>(list: &[S]) -> bool {
 mod tests {
     use std::iter;
 
-    use crate::arithmetic::BigInt;
-    use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
-    use crate::elliptic::curves::traits::ECScalar;
+    use sha2::Sha256;
+
+    use crate::elliptic::curves::{Curve, Scalar};
     use crate::test_for_all_curves;
 
     use super::*;
 
     test_for_all_curves!(correctly_proofs);
-    fn correctly_proofs<P>()
-    where
-        P: ECPoint + Clone + PartialEq,
-        P::Scalar: ECScalar + Clone + PartialEq,
-    {
+    fn correctly_proofs<E: Curve>() {
         let d = 5;
-        let poly = Polynomial::<P>::sample_exact(5);
+        let poly = Polynomial::<E>::sample_exact(5);
         let witness = LdeiWitness { w: poly };
 
-        let alpha: Vec<P::Scalar> = (1..=10).map(|i| ECScalar::from(&BigInt::from(i))).collect();
-        let g: Vec<P> = iter::repeat_with(ECScalar::new_random)
-            .map(|x| P::generator() * x)
+        let alpha: Vec<ScalarZ<E>> = (1..=10).map(|i| ScalarZ::from(i)).collect();
+        let g: Vec<Point<E>> = iter::repeat_with(Scalar::random)
+            .map(|x| Point::generator() * x)
             .take(10)
             .collect();
 
         let statement = LdeiStatement::new(&witness, alpha, g, d).unwrap();
 
-        let proof = LdeiProof::prove::<HSha256>(&witness, &statement).expect("failed to prove");
+        let proof = LdeiProof::prove::<Sha256>(&witness, &statement).expect("failed to prove");
         proof
-            .verify::<HSha256>(&statement)
+            .verify::<Sha256>(&statement)
             .expect("failed to validate proof");
     }
 }

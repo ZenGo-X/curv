@@ -12,37 +12,36 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::elliptic::curves::traits::*;
+use crate::elliptic::curves::{Curve, Point, Scalar};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct EcKeyPair<P: ECPoint> {
-    pub public_share: P,
-    secret_share: P::Scalar,
+#[serde(bound = "")]
+pub struct EcKeyPair<E: Curve> {
+    pub public_share: Point<E>,
+    secret_share: Scalar<E>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Party1FirstMessage<P: ECPoint> {
-    pub public_share: P,
+#[serde(bound = "")]
+pub struct Party1FirstMessage<E: Curve> {
+    pub public_share: Point<E>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Party2FirstMessage<P: ECPoint> {
-    pub public_share: P,
+#[serde(bound = "")]
+pub struct Party2FirstMessage<E: Curve> {
+    pub public_share: Point<E>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Party2SecondMessage {}
 
-impl<P> Party1FirstMessage<P>
-where
-    P: ECPoint + Clone,
-    P::Scalar: Clone,
-{
-    pub fn first() -> (Party1FirstMessage<P>, EcKeyPair<P>) {
-        let base: P = ECPoint::generator();
+impl<E: Curve> Party1FirstMessage<E> {
+    pub fn first() -> (Party1FirstMessage<E>, EcKeyPair<E>) {
+        let base = Point::<E>::generator();
 
-        let secret_share: P::Scalar = ECScalar::new_random();
+        let secret_share = Scalar::random();
 
-        let public_share = base * secret_share.clone();
+        let public_share = base * &secret_share;
 
         let ec_key_pair = EcKeyPair {
             public_share: public_share.clone(),
@@ -52,10 +51,9 @@ where
     }
 
     pub fn first_with_fixed_secret_share(
-        secret_share: P::Scalar,
-    ) -> (Party1FirstMessage<P>, EcKeyPair<P>) {
-        let base: P = ECPoint::generator();
-        let public_share = base * secret_share.clone();
+        secret_share: Scalar<E>,
+    ) -> (Party1FirstMessage<E>, EcKeyPair<E>) {
+        let public_share = Point::generator() * secret_share.clone();
 
         let ec_key_pair = EcKeyPair {
             public_share: public_share.clone(),
@@ -65,15 +63,11 @@ where
     }
 }
 
-impl<P> Party2FirstMessage<P>
-where
-    P: ECPoint + Clone,
-    P::Scalar: Clone,
-{
-    pub fn first() -> (Party2FirstMessage<P>, EcKeyPair<P>) {
-        let base: P = ECPoint::generator();
-        let secret_share: P::Scalar = ECScalar::new_random();
-        let public_share = base * secret_share.clone();
+impl<E: Curve> Party2FirstMessage<E> {
+    pub fn first() -> (Party2FirstMessage<E>, EcKeyPair<E>) {
+        let base = Point::<E>::generator();
+        let secret_share = Scalar::random();
+        let public_share = base * &secret_share;
         let ec_key_pair = EcKeyPair {
             public_share: public_share.clone(),
             secret_share,
@@ -82,10 +76,9 @@ where
     }
 
     pub fn first_with_fixed_secret_share(
-        secret_share: P::Scalar,
-    ) -> (Party2FirstMessage<P>, EcKeyPair<P>) {
-        let base: P = ECPoint::generator();
-        let public_share = base * secret_share.clone();
+        secret_share: Scalar<E>,
+    ) -> (Party2FirstMessage<E>, EcKeyPair<E>) {
+        let public_share = Point::generator() * &secret_share;
         let ec_key_pair = EcKeyPair {
             public_share: public_share.clone(),
             secret_share,
@@ -94,32 +87,25 @@ where
     }
 }
 
-pub fn compute_pubkey<P>(local_share: &EcKeyPair<P>, other_share_public_share: &P) -> P
-where
-    P: ECPoint + Clone,
-    P::Scalar: Clone,
-{
-    other_share_public_share.clone() * local_share.secret_share.clone()
+pub fn compute_pubkey<E: Curve>(
+    local_share: &EcKeyPair<E>,
+    other_share_public_share: &Point<E>,
+) -> Point<E> {
+    other_share_public_share * &local_share.secret_share
 }
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::Debug;
-
-    use crate::arithmetic::traits::*;
     use crate::cryptographic_primitives::twoparty::dh_key_exchange::*;
-    use crate::elliptic::curves::traits::ECScalar;
+    use crate::elliptic::curves::Curve;
     use crate::test_for_all_curves;
     use crate::BigInt;
+    use std::convert::TryFrom;
 
     test_for_all_curves!(test_dh_key_exchange_random_shares);
-    fn test_dh_key_exchange_random_shares<P>()
-    where
-        P: ECPoint + Clone + Debug,
-        P::Scalar: Clone,
-    {
-        let (kg_party_one_first_message, kg_ec_key_pair_party1) = Party1FirstMessage::<P>::first();
-        let (kg_party_two_first_message, kg_ec_key_pair_party2) = Party2FirstMessage::<P>::first();
+    fn test_dh_key_exchange_random_shares<E: Curve>() {
+        let (kg_party_one_first_message, kg_ec_key_pair_party1) = Party1FirstMessage::<E>::first();
+        let (kg_party_two_first_message, kg_ec_key_pair_party2) = Party2FirstMessage::<E>::first();
 
         assert_eq!(
             compute_pubkey(
@@ -134,15 +120,11 @@ mod tests {
     }
 
     test_for_all_curves!(test_dh_key_exchange_fixed_shares);
-    fn test_dh_key_exchange_fixed_shares<P>()
-    where
-        P: ECPoint + Clone + Debug,
-        P::Scalar: Clone,
-    {
-        let secret_party_1: P::Scalar = ECScalar::from(&BigInt::one());
+    fn test_dh_key_exchange_fixed_shares<E: Curve>() {
+        let secret_party_1 = Scalar::try_from(&BigInt::from(1)).unwrap();
         let (kg_party_one_first_message, kg_ec_key_pair_party1) =
-            Party1FirstMessage::<P>::first_with_fixed_secret_share(secret_party_1);
-        let secret_party_2: P::Scalar = ECScalar::from(&BigInt::from(2));
+            Party1FirstMessage::<E>::first_with_fixed_secret_share(secret_party_1);
+        let secret_party_2 = Scalar::try_from(&BigInt::from(2)).unwrap();
 
         let (kg_party_two_first_message, kg_ec_key_pair_party2) =
             Party2FirstMessage::first_with_fixed_secret_share(secret_party_2.clone());
@@ -157,13 +139,12 @@ mod tests {
                 &kg_party_two_first_message.public_share
             )
         );
-        let g: P = ECPoint::generator();
         assert_eq!(
             compute_pubkey(
                 &kg_ec_key_pair_party2,
                 &kg_party_one_first_message.public_share
             ),
-            g * secret_party_2
+            Point::generator() * secret_party_2
         );
     }
 }
