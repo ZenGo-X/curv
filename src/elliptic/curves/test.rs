@@ -1,4 +1,8 @@
+#![allow(non_snake_case)]
+
 use std::iter;
+
+use rand::{rngs::StdRng, FromEntropy, Rng};
 
 use crate::arithmetic::*;
 use crate::test_for_all_curves;
@@ -73,17 +77,12 @@ fn serialize_deserialize<E: Curve>() {
         .expect("point has coordinates => must be serializable");
     let deserialized = <E::Point as ECPoint>::deserialize(&bytes).unwrap();
     assert_eq!(point, deserialized);
-    assert!(
-        bytes.starts_with(&[2]) || bytes.starts_with(&[3]),
-        "compressed form must start either with 2 or 3"
-    );
 
     let bytes = point
         .serialize(false)
         .expect("point has coordinates => must be serializable");
     let deserialized = E::Point::deserialize(&bytes).unwrap();
     assert_eq!(point, deserialized);
-    assert!(bytes.starts_with(&[4]), "compressed form must start with 4");
 }
 
 test_for_all_curves!(generator_mul_curve_order_is_zero);
@@ -96,26 +95,117 @@ fn generator_mul_curve_order_is_zero<E: Curve>() {
 
 test_for_all_curves!(scalar_behaves_the_same_as_bigint);
 fn scalar_behaves_the_same_as_bigint<E: Curve>() {
+    let mut rng = StdRng::from_entropy();
     let q = E::Scalar::group_order();
 
     let mut n = BigInt::zero();
     let mut s: E::Scalar = ECScalar::zero();
 
     for _ in 0..100 {
-        let k = BigInt::sample_below(&(q * 2));
+        let operation = rng.gen_range(0, 4);
+        if operation == 0 {
+            let n_inv = BigInt::mod_inv(&n, q);
+            let s_inv = s.invert().map(|s| s.to_bigint());
 
-        let n_was = n.clone();
-        n += &k;
-        s.add_assign(&E::Scalar::from_bigint(&k));
+            assert_eq!(
+                s_inv,
+                n_inv,
+                "{}^-1 = {} (got {})",
+                n,
+                n_inv
+                    .as_ref()
+                    .map(|i| i.to_string())
+                    .unwrap_or("None".to_string()),
+                s_inv
+                    .as_ref()
+                    .map(|i| i.to_string())
+                    .unwrap_or("None".to_string()),
+            );
+        } else {
+            let n_was = n.clone();
+            let k = BigInt::sample_below(&(q * 2));
+            let op;
 
-        assert_eq!(
-            s.to_bigint(),
-            n.modulus(q),
-            "{} + {} = {} (got {})",
-            n_was,
-            k,
-            n,
-            s.to_bigint()
-        );
+            match operation {
+                1 => {
+                    op = "+";
+                    n = BigInt::mod_add(&n, &k, q);
+                    s.add_assign(&E::Scalar::from_bigint(&k));
+                }
+                2 => {
+                    op = "*";
+                    n = BigInt::mod_mul(&n, &k, q);
+                    s.mul_assign(&E::Scalar::from_bigint(&k));
+                }
+                3 => {
+                    op = "-";
+                    n = BigInt::mod_sub(&n, &k, q);
+                    s.sub_assign(&E::Scalar::from_bigint(&k));
+                }
+                _ => unreachable!(),
+            }
+
+            assert_eq!(
+                s.to_bigint(),
+                n.modulus(q),
+                "{} {} {} = {} (got {})",
+                n_was,
+                op,
+                k,
+                n,
+                s.to_bigint()
+            );
+        }
     }
+}
+
+test_for_all_curves!(from_coords_produces_the_same_point);
+fn from_coords_produces_the_same_point<E: Curve>() {
+    let s: E::Scalar = ECScalar::random();
+    println!("s={}", s.to_bigint());
+
+    let p: E::Point = <E::Point as ECPoint>::generator().scalar_mul(&s);
+    if let Some(coords) = p.coords() {
+        let p2: E::Point = ECPoint::from_coords(&coords.x, &coords.y).unwrap();
+        assert_eq!(p, p2);
+    }
+}
+
+test_for_all_curves!(test_point_addition);
+fn test_point_addition<E: Curve>() {
+    let a: E::Scalar = ECScalar::random();
+    let b: E::Scalar = ECScalar::random();
+
+    let aG: E::Point = ECPoint::generator_mul(&a);
+    let bG: E::Point = ECPoint::generator_mul(&b);
+    let a_plus_b = a.add(&b);
+    let a_plus_b_G: E::Point = ECPoint::generator_mul(&a_plus_b);
+
+    assert_eq!(aG.add_point(&bG), a_plus_b_G);
+}
+
+test_for_all_curves!(test_point_subtraction);
+fn test_point_subtraction<E: Curve>() {
+    let a: E::Scalar = ECScalar::random();
+    let b: E::Scalar = ECScalar::random();
+
+    let aG: E::Point = ECPoint::generator_mul(&a);
+    let bG: E::Point = ECPoint::generator_mul(&b);
+    let a_minus_b = a.sub(&b);
+    let a_minus_b_G: E::Point = ECPoint::generator_mul(&a_minus_b);
+
+    assert_eq!(aG.sub_point(&bG), a_minus_b_G);
+}
+
+test_for_all_curves!(test_multiplication_point_at_scalar);
+fn test_multiplication_point_at_scalar<E: Curve>() {
+    let a: E::Scalar = ECScalar::random();
+    let b: E::Scalar = ECScalar::random();
+
+    let aG: E::Point = ECPoint::generator_mul(&a);
+    let abG: E::Point = aG.scalar_mul(&b);
+    let a_mul_b = a.mul(&b);
+    let a_mul_b_G: E::Point = ECPoint::generator_mul(&a_mul_b);
+
+    assert_eq!(abG, a_mul_b_G);
 }
