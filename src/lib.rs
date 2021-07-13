@@ -44,15 +44,15 @@ macro_rules! test_for_all_curves {
             fn [<$fn _p256>]() {
                 $fn::<crate::elliptic::curves::Secp256r1>()
             }
+            #[test]
+            $($attrs)*
+            fn [<$fn _ed25519>]() {
+                $fn::<crate::elliptic::curves::Ed25519>()
+            }
             // #[test]
             // $($attrs)*
             // fn [<$fn _ristretto>]() {
             //     $fn::<crate::elliptic::curves::curve_ristretto::GE>()
-            // }
-            // #[test]
-            // $($attrs)*
-            // fn [<$fn _ed25519>]() {
-            //     $fn::<crate::elliptic::curves::ed25519::GE>()
             // }
             // #[test]
             // $($attrs)*
