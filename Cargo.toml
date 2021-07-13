@@ -44,8 +44,8 @@ version = "0.20"
 features = ["serde", "rand-std"]
 
 [dependencies.p256]
-version = "0.5"
-features = ["ecdsa"]
+version = "0.9"
+features = ["ecdsa", "ecdsa-core", "zeroize"]
 
 [dev-dependencies]
 bincode = "1.1"

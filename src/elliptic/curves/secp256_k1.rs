@@ -413,6 +413,11 @@ impl ECPoint for Secp256k1Point {
         })
     }
 
+    fn check_point_order_equals_group_order(&self) -> bool {
+        // This curve has cofactor=1 => any nonzero point has order GROUP_ORDER
+        !self.is_zero()
+    }
+
     fn scalar_mul(&self, scalar: &Self::Scalar) -> Secp256k1Point {
         let mut new_point = match &self.ge {
             Some(ge) => *ge,
@@ -588,97 +593,6 @@ impl Zeroize for Secp256k1Point {
 
 #[cfg(test)]
 mod test {
-    use std::iter;
-
-    use crate::elliptic::curves::traits::*;
-    use crate::BigInt;
-
-    use super::{FE, GE};
-
-    #[test]
-    fn valid_zero_point() {
-        let zero = GE::zero();
-        assert!(zero.is_zero());
-        assert_eq!(zero, GE::zero());
-    }
-
-    #[test]
-    fn zero_point_arithmetic() {
-        let zero_point = GE::zero();
-        let point = GE::generator().scalar_mul(&FE::random());
-
-        assert_eq!(zero_point.add_point(&point), point, "O + P = P");
-        assert_eq!(point.add_point(&zero_point), point, "P + O = P");
-
-        let point_neg = point.neg_point();
-        assert!(point.add_point(&point_neg).is_zero(), "P + (-P) = O");
-        assert!(point.sub_point(&point).is_zero(), "P - P = O");
-
-        let zero_scalar = FE::zero();
-        assert!(point.scalar_mul(&zero_scalar).is_zero(), "P * 0 = O");
-        let scalar = FE::random();
-        assert!(zero_point.scalar_mul(&scalar).is_zero(), "O * s = O")
-    }
-
-    #[test]
-    fn scalar_modulo_curve_order() {
-        let n = FE::group_order();
-        let s = FE::from_bigint(n);
-        assert!(s.is_zero());
-
-        let s = FE::from_bigint(&(n + 1));
-        assert_eq!(s, FE::from_bigint(&BigInt::from(1)));
-    }
-
-    #[test]
-    fn zero_scalar_arithmetic() {
-        let s = FE::random();
-        let z = FE::zero();
-        assert!(s.mul(&z).is_zero());
-        assert!(z.mul(&s).is_zero());
-        assert_eq!(s.add(&z), s);
-        assert_eq!(z.add(&s), s);
-    }
-
-    #[test]
-    fn point_addition_multiplication() {
-        let point = GE::generator().scalar_mul(&FE::random());
-        assert!(!point.is_zero(), "G * s != O");
-
-        let addition = iter::successors(Some(point), |p| Some(p.add_point(&point)))
-            .take(10)
-            .collect::<Vec<_>>();
-        let multiplication = (1..=10)
-            .map(|i| FE::from_bigint(&BigInt::from(i)))
-            .map(|s| point.scalar_mul(&s))
-            .collect::<Vec<_>>();
-        assert_eq!(addition, multiplication);
-    }
-
-    #[test]
-    fn serialize_deserialize() {
-        let point = GE::generator().scalar_mul(&FE::random());
-        let bytes = point
-            .serialize(true)
-            .expect("point has coordinates => must be serializable");
-        let deserialized = GE::deserialize(&bytes).unwrap();
-        assert_eq!(point, deserialized);
-
-        let bytes = point
-            .serialize(false)
-            .expect("point has coordinates => must be serializable");
-        let deserialized = GE::deserialize(&bytes).unwrap();
-        assert_eq!(point, deserialized);
-    }
-
-    #[test]
-    fn generator_mul_curve_order_is_zero() {
-        let g = GE::generator();
-        let n = FE::group_order() - 1;
-        let s = FE::from_bigint(&n);
-        assert!(g.scalar_mul(&s).add_point(&g).is_zero());
-    }
-
     // #[test]
     // fn test_base_point2() {
     //     /* Show that base_point2() is returning a point of unknown discrete logarithm.

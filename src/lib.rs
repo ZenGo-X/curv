@@ -39,6 +39,11 @@ macro_rules! test_for_all_curves {
             fn [<$fn _secp256k1>]() {
                 $fn::<crate::elliptic::curves::Secp256k1>()
             }
+            #[test]
+            $($attrs)*
+            fn [<$fn _p256>]() {
+                $fn::<crate::elliptic::curves::Secp256r1>()
+            }
             // #[test]
             // $($attrs)*
             // fn [<$fn _ristretto>]() {
@@ -53,11 +58,6 @@ macro_rules! test_for_all_curves {
             // $($attrs)*
             // fn [<$fn _bls12_381>]() {
             //     $fn::<crate::elliptic::curves::bls12_381::g1::GE>()
-            // }
-            // #[test]
-            // $($attrs)*
-            // fn [<$fn _p256>]() {
-            //     $fn::<crate::elliptic::curves::p256::GE>()
             // }
         }
     };
