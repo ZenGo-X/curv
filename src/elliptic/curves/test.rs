@@ -2,7 +2,7 @@
 
 use std::iter;
 
-use rand::{rngs::StdRng, FromEntropy, Rng};
+use rand::{rngs::OsRng, Rng};
 
 use crate::arithmetic::*;
 use crate::test_for_all_curves;
@@ -95,7 +95,7 @@ fn generator_mul_curve_order_is_zero<E: Curve>() {
 
 test_for_all_curves!(scalar_behaves_the_same_as_bigint);
 fn scalar_behaves_the_same_as_bigint<E: Curve>() {
-    let mut rng = StdRng::from_entropy();
+    let mut rng = OsRng;
     let q = E::Scalar::group_order();
 
     let mut n = BigInt::zero();
@@ -208,4 +208,23 @@ fn test_multiplication_point_at_scalar<E: Curve>() {
     let a_mul_b_G: E::Point = ECPoint::generator_mul(&a_mul_b);
 
     assert_eq!(abG, a_mul_b_G);
+}
+
+test_for_all_curves!(scalar_invert);
+fn scalar_invert<E: Curve>() {
+    let n: E::Scalar = ECScalar::random();
+    if n.is_zero() {
+        // Scalar is zero => restart the test
+        scalar_invert::<E>()
+    }
+
+    let n_inv = n.invert().unwrap();
+    assert_eq!(n.mul(&n_inv), ECScalar::from_bigint(&BigInt::one()))
+}
+
+test_for_all_curves!(zero_scalar_invert);
+fn zero_scalar_invert<E: Curve>() {
+    let n: E::Scalar = ECScalar::zero();
+    let n_inv = n.invert();
+    assert!(n_inv.is_none())
 }

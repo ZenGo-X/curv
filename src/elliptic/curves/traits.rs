@@ -46,7 +46,9 @@ pub trait ECScalar: Clone + PartialEq + fmt::Debug + 'static {
     /// Constructs a zero scalar
     fn zero() -> Self;
     /// Checks if the scalar equals to zero
-    fn is_zero(&self) -> bool;
+    fn is_zero(&self) -> bool {
+        self == &Self::zero()
+    }
 
     /// Constructs a scalar `n % group_order`
     fn from_bigint(n: &BigInt) -> Self;

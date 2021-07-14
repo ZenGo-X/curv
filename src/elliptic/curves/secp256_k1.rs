@@ -20,7 +20,6 @@ use std::ops;
 use std::ptr;
 use std::sync::atomic;
 
-use rand::thread_rng;
 use secp256k1::constants::{
     self, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
@@ -156,7 +155,7 @@ impl ECScalar for Secp256k1Scalar {
     type Underlying = Option<SK>;
 
     fn random() -> Secp256k1Scalar {
-        let sk = SK(SecretKey::new(&mut thread_rng()));
+        let sk = SK(SecretKey::new(&mut rand_legacy::thread_rng()));
         Secp256k1Scalar {
             purpose: "random",
             fe: Zeroizing::new(Some(sk)),
