@@ -42,8 +42,6 @@ lazy_static::lazy_static! {
             ge: RistrettoPoint::deserialize(&hash).unwrap().ge,
         }
     };
-
-    static ref NOT_REAL_COORD: BigInt = BigInt::from_bytes(b"not a real coordinate");
 }
 
 pub const SECRET_KEY_SIZE: usize = 32;
@@ -231,8 +229,7 @@ impl ECPoint for RistrettoPoint {
     }
 
     fn from_coords(x: &BigInt, y: &BigInt) -> Result<RistrettoPoint, NotOnCurve> {
-        if x != &*NOT_REAL_COORD {
-            // TODO: can the point be recovered using xrecover from ed25519?
+        if x != &BigInt::from_bytes(&Sha256::digest(&y.to_bytes())) {
             return Err(NotOnCurve);
         }
 
@@ -257,8 +254,11 @@ impl ECPoint for RistrettoPoint {
     }
 
     fn x_coord(&self) -> Option<BigInt> {
-        // TODO: can the point be recovered using xrecover from ed25519?
-        Some(NOT_REAL_COORD.clone())
+        // Underlying library intentionally hides x coordinate. We return x=hash(y) as was proposed
+        // here: https://github.com/dalek-cryptography/curve25519-dalek/issues/235
+        let y = self.y_coord()?.to_bytes();
+        let x = Sha256::digest(&y);
+        Some(BigInt::from_bytes(&x))
     }
 
     fn y_coord(&self) -> Option<BigInt> {
@@ -268,9 +268,11 @@ impl ECPoint for RistrettoPoint {
     }
 
     fn coords(&self) -> Option<PointCoords> {
+        let y = self.y_coord()?;
+        let x = Sha256::digest(&y.to_bytes());
         Some(PointCoords {
-            x: NOT_REAL_COORD.clone(),
-            y: self.y_coord()?,
+            x: BigInt::from_bytes(&x),
+            y,
         })
     }
 
