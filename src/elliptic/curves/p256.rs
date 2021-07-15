@@ -363,28 +363,34 @@ impl PartialEq for Secp256r1Point {
 
 #[cfg(test)]
 mod tests {
-    // #[test]
-    // fn test_base_point2() {
-    //     /* Show that base_point2() is returning a point of unknown discrete logarithm.
-    //     It is done by using SHA256 repeatedly as a pseudo-random function, with the generator
-    //     as the initial input, until receiving a valid Secp256r1 point. */
-    //
-    //     let base_point2 = Secp256r1Point::base_point2();
-    //
-    //     let g = Secp256r1Point::generator();
-    //     let mut hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
-    //     hash = HSha256::create_hash(&[&hash]);
-    //
-    //     assert_eq!(hash, base_point2.x_coor().unwrap(),);
-    //
-    //     // check that base_point2 is indeed on the curve (from_coor() will fail otherwise)
-    //     assert_eq!(
-    //         Secp256r1Point::from_coor(
-    //             &base_point2.x_coor().unwrap(),
-    //             &base_point2.y_coor().unwrap()
-    //         )
-    //         .get_element(),
-    //         base_point2.get_element()
-    //     );
-    // }
+    use sha2::{Digest, Sha256};
+
+    use crate::arithmetic::*;
+
+    use super::{ECPoint, GE};
+
+    #[test]
+    fn test_base_point2() {
+        /* Show that base_point2() is returning a point of unknown discrete logarithm.
+        It is done by using SHA256 repeatedly as a pseudo-random function, with the generator
+        as the initial input, until receiving a valid Secp256r1 point. */
+
+        let base_point2 = GE::base_point2();
+
+        let g = GE::generator();
+        let hash = Sha256::digest(&g.serialize(true).unwrap());
+        let hash = Sha256::digest(&hash);
+
+        assert_eq!(BigInt::from_bytes(&hash), base_point2.x_coord().unwrap());
+
+        // check that base_point2 is indeed on the curve (from_coords() will fail otherwise)
+        assert_eq!(
+            &GE::from_coords(
+                &base_point2.x_coord().unwrap(),
+                &base_point2.y_coord().unwrap()
+            )
+            .unwrap(),
+            base_point2
+        );
+    }
 }

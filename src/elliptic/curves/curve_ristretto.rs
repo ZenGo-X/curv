@@ -34,9 +34,7 @@ lazy_static::lazy_static! {
 
     static ref BASE_POINT2: RistrettoPoint = {
         let g = RistrettoPoint::generator();
-        let hash = Sha256::new()
-            .chain(g.serialize(true).unwrap())
-            .result();
+        let hash = Sha256::digest(&g.serialize(true).unwrap());
         RistrettoPoint {
             purpose: "base_point2",
             ge: RistrettoPoint::deserialize(&hash).unwrap().ge,
