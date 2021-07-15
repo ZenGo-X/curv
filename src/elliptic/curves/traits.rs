@@ -126,7 +126,9 @@ pub trait ECPoint: Zeroize + Clone + PartialEq + fmt::Debug + 'static {
     fn zero() -> Self;
 
     /// Returns `true` if point is a neutral element
-    fn is_zero(&self) -> bool;
+    fn is_zero(&self) -> bool {
+        self == &Self::zero()
+    }
 
     /// Curve generator
     ///
