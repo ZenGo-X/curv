@@ -54,6 +54,11 @@ macro_rules! test_for_all_curves {
             fn [<$fn _ristretto>]() {
                 $fn::<crate::elliptic::curves::Ristretto>()
             }
+            #[test]
+            $($attrs)*
+            fn [<$fn _bls12_381>]() {
+                $fn::<crate::elliptic::curves::Bls12_381_1>()
+            }
             // #[test]
             // $($attrs)*
             // fn [<$fn _bls12_381>]() {

@@ -5,127 +5,25 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-pub const SECRET_KEY_SIZE: usize = 32;
-pub const COMPRESSED_SIZE: usize = 48;
-
 use std::fmt;
-use std::fmt::Debug;
-use std::ops::{Add, Mul, Neg};
-use std::str;
+use std::io::Cursor;
 
 use ff_zeroize::{Field, PrimeField, PrimeFieldRepr, ScalarEngine};
 use pairing_plus::bls12_381::{Fr, G1Compressed, G1Uncompressed, G1};
 use pairing_plus::hash_to_curve::HashToCurve;
 use pairing_plus::hash_to_field::ExpandMsgXmd;
-use pairing_plus::serdes::SerDes;
-use pairing_plus::EncodedPoint;
 use pairing_plus::{CurveAffine, CurveProjective, Engine};
+use pairing_plus::{EncodedPoint, SubgroupCheck};
+use rand::rngs::OsRng;
 use sha2::Sha256;
-
-use serde::de::{self, Error, MapAccess, SeqAccess, Visitor};
-use serde::ser::SerializeStruct;
-use serde::ser::{Serialize, Serializer};
-use serde::{Deserialize, Deserializer};
-
-pub type SK = <pairing_plus::bls12_381::Bls12 as ScalarEngine>::Fr;
-pub type PK = <pairing_plus::bls12_381::Bls12 as Engine>::G1Affine;
+use zeroize::{Zeroize, Zeroizing};
 
 use crate::arithmetic::traits::*;
+use crate::elliptic::curves::traits::*;
 use crate::BigInt;
-use crate::ErrorKey::{self};
 
-use std::ptr;
-use std::sync::atomic;
-use zeroize::Zeroize;
-
-use crate::elliptic::curves::traits::ECPoint;
-use crate::elliptic::curves::traits::ECScalar;
-#[cfg(feature = "merkle")]
-use crypto::digest::Digest;
-#[cfg(feature = "merkle")]
-use crypto::sha3::Sha3;
-#[cfg(feature = "merkle")]
-use merkle::Hashable;
-use std::io::Cursor;
-
-#[derive(Clone, Copy)]
-pub struct FieldScalar {
-    purpose: &'static str,
-    fe: SK,
-}
-#[derive(Clone, Copy)]
-pub struct G1Point {
-    purpose: &'static str,
-    ge: PK,
-}
-pub type GE = G1Point;
-pub type FE = FieldScalar;
-
-impl Zeroize for FieldScalar {
-    fn zeroize(&mut self) {
-        unsafe { ptr::write_volatile(self, FE::zero()) };
-        atomic::fence(atomic::Ordering::SeqCst);
-        atomic::compiler_fence(atomic::Ordering::SeqCst);
-    }
-}
-
-impl ECScalar for FieldScalar {
-    type SecretKey = SK;
-
-    fn new_random() -> FieldScalar {
-        let rnd_bn = BigInt::sample_below(&FE::q());
-        ECScalar::from(&rnd_bn)
-    }
-
-    fn zero() -> FieldScalar {
-        FieldScalar {
-            purpose: "zero",
-            fe: SK::default(),
-        }
-    }
-
-    fn get_element(&self) -> SK {
-        self.fe
-    }
-    fn set_element(&mut self, element: SK) {
-        self.fe = element
-    }
-
-    fn from(n: &BigInt) -> FieldScalar {
-        let n_mod = BigInt::modulus(n, &FE::q());
-        let mut v = BigInt::to_bytes(&n_mod);
-        let mut bytes_array: [u8; SECRET_KEY_SIZE];
-        if v.len() < SECRET_KEY_SIZE {
-            let mut template = vec![0; SECRET_KEY_SIZE - v.len()];
-            template.extend_from_slice(&v);
-            v = template;
-        }
-        bytes_array = [0; SECRET_KEY_SIZE];
-        let bytes = &v[..SECRET_KEY_SIZE];
-        bytes_array.copy_from_slice(&bytes);
-
-        // bytes_array.reverse();
-
-        let mut repr = SK::default().into_repr();
-        repr.read_be(Cursor::new(&bytes_array[..])).unwrap();
-        FieldScalar {
-            purpose: "from_big_int",
-            fe: Fr::from_repr(repr).unwrap(),
-        }
-    }
-
-    fn to_big_int(&self) -> BigInt {
-        let tmp = self.fe.into_repr();
-        let scalar_u64 = tmp.as_ref();
-
-        let to_bn = scalar_u64.iter().rev().fold(BigInt::zero(), |acc, x| {
-            let element_bn = BigInt::from(*x);
-            element_bn + (acc << 64)
-        });
-        to_bn
-    }
-
-    fn q() -> BigInt {
+lazy_static::lazy_static! {
+    static ref GROUP_ORDER: BigInt = {
         let q_u64: [u64; 4] = [
             0xffffffff00000001,
             0x53bda402fffe5bfe,
@@ -137,161 +35,14 @@ impl ECScalar for FieldScalar {
             element_bn + (acc << 64)
         });
         to_bn
-    }
+    };
 
-    fn add(&self, other: &SK) -> FieldScalar {
-        let mut add_fe = FieldScalar {
-            purpose: "other add",
-            fe: *other,
-        };
-        add_fe.fe.add_assign(&self.fe);
-        FieldScalar {
-            purpose: "add",
-            fe: add_fe.fe,
-        }
-    }
+    static ref GENERATOR: G1Point = G1Point {
+        purpose: "generator",
+        ge: PK::one(),
+    };
 
-    fn mul(&self, other: &SK) -> FieldScalar {
-        let mut mul_fe = FieldScalar {
-            purpose: "other mul",
-            fe: *other,
-        };
-        mul_fe.fe.mul_assign(&self.fe);
-        FieldScalar {
-            purpose: "mul",
-            fe: mul_fe.fe,
-        }
-    }
-
-    fn sub(&self, other: &SK) -> FieldScalar {
-        let mut other_neg = *other;
-        other_neg.negate();
-        let sub_fe = FieldScalar {
-            purpose: "other sub",
-            fe: other_neg,
-        };
-        self.add(&sub_fe.get_element())
-    }
-
-    fn invert(&self) -> FieldScalar {
-        let sc = self.fe;
-        let inv_sc = sc.inverse().unwrap(); //TODO
-
-        FieldScalar {
-            purpose: "inverse",
-            fe: inv_sc,
-        }
-    }
-}
-
-impl Debug for FieldScalar {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Point {{ purpose: {:?}, bytes: {:?} }}",
-            self.purpose, self.fe,
-        )
-    }
-}
-
-impl PartialEq for FieldScalar {
-    fn eq(&self, other: &FieldScalar) -> bool {
-        self.get_element() == other.get_element()
-    }
-}
-
-impl Mul<FieldScalar> for FieldScalar {
-    type Output = FieldScalar;
-    fn mul(self, other: FieldScalar) -> FieldScalar {
-        (&self).mul(&other.get_element())
-    }
-}
-
-impl<'o> Mul<&'o FieldScalar> for FieldScalar {
-    type Output = FieldScalar;
-    fn mul(self, other: &'o FieldScalar) -> FieldScalar {
-        (&self).mul(&other.get_element())
-    }
-}
-
-impl Add<FieldScalar> for FieldScalar {
-    type Output = FieldScalar;
-    fn add(self, other: FieldScalar) -> FieldScalar {
-        (&self).add(&other.get_element())
-    }
-}
-
-impl<'o> Add<&'o FieldScalar> for FieldScalar {
-    type Output = FieldScalar;
-    fn add(self, other: &'o FieldScalar) -> FieldScalar {
-        (&self).add(&other.get_element())
-    }
-}
-
-impl Serialize for FieldScalar {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(&self.to_big_int().to_hex())
-    }
-}
-
-impl<'de> Deserialize<'de> for FieldScalar {
-    fn deserialize<D>(deserializer: D) -> Result<FieldScalar, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(BLS12_381ScalarVisitor)
-    }
-}
-
-struct BLS12_381ScalarVisitor;
-
-impl<'de> Visitor<'de> for BLS12_381ScalarVisitor {
-    type Value = FieldScalar;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("bls12_381")
-    }
-
-    fn visit_str<E: de::Error>(self, s: &str) -> Result<FieldScalar, E> {
-        let v = BigInt::from_hex(s).map_err(E::custom)?;
-        Ok(ECScalar::from(&v))
-    }
-}
-
-impl Debug for G1Point {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Point {{ purpose: {:?}, bytes: {:?} }}",
-            self.purpose,
-            self.bytes_compressed_to_big_int().to_hex()
-        )
-    }
-}
-
-impl PartialEq for G1Point {
-    fn eq(&self, other: &G1Point) -> bool {
-        self.get_element() == other.get_element()
-    }
-}
-
-impl Zeroize for G1Point {
-    fn zeroize(&mut self) {
-        unsafe { ptr::write_volatile(self, GE::generator()) };
-        atomic::fence(atomic::Ordering::SeqCst);
-        atomic::compiler_fence(atomic::Ordering::SeqCst);
-    }
-}
-
-impl ECPoint for G1Point {
-    type SecretKey = SK;
-    type PublicKey = PK;
-    type Scalar = FieldScalar;
-
-    fn base_point2() -> G1Point {
+    static ref BASE_POINT2: G1Point = {
         const BASE_POINT2: [u8; 96] = [
             10, 18, 122, 36, 178, 251, 236, 31, 139, 88, 242, 163, 21, 198, 168, 208, 122, 195,
             135, 122, 7, 153, 197, 255, 160, 0, 89, 138, 39, 245, 105, 108, 99, 113, 78, 70, 130,
@@ -303,233 +54,343 @@ impl ECPoint for G1Point {
         let mut point = G1Uncompressed::empty();
         point.as_mut().copy_from_slice(&BASE_POINT2);
         G1Point {
-            purpose: "base_ge2",
+            purpose: "base_point2",
             ge: point.into_affine().expect("invalid base_point"),
         }
-    }
+    };
+}
 
-    fn generator() -> G1Point {
-        G1Point {
-            purpose: "base_fe",
-            ge: PK::one(),
+pub const SECRET_KEY_SIZE: usize = 32;
+pub const COMPRESSED_SIZE: usize = 48;
+
+pub type SK = <pairing_plus::bls12_381::Bls12 as ScalarEngine>::Fr;
+pub type PK = <pairing_plus::bls12_381::Bls12 as Engine>::G1Affine;
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Bls12_381_1 {}
+
+#[derive(Clone)]
+pub struct FieldScalar {
+    purpose: &'static str,
+    fe: Zeroizing<SK>,
+}
+#[derive(Clone, Copy)]
+pub struct G1Point {
+    purpose: &'static str,
+    ge: PK,
+}
+pub type GE1 = G1Point;
+pub type FE1 = FieldScalar;
+
+impl Curve for Bls12_381_1 {
+    type Point = GE1;
+    type Scalar = FE1;
+
+    const CURVE_NAME: &'static str = "bls12_381_1";
+}
+
+impl ECScalar for FieldScalar {
+    type Underlying = SK;
+
+    fn random() -> FieldScalar {
+        FieldScalar {
+            purpose: "random",
+            fe: Zeroizing::new(Field::random(&mut OsRng)),
         }
     }
 
-    fn get_element(&self) -> PK {
-        self.ge
-    }
-
-    fn x_coor(&self) -> Option<BigInt> {
-        let tmp = G1Uncompressed::from_affine(self.ge);
-        let bytes = tmp.as_ref();
-        let x_coor = &bytes[0..COMPRESSED_SIZE];
-        let bn = BigInt::from_bytes(x_coor);
-        Some(bn)
-    }
-
-    fn y_coor(&self) -> Option<BigInt> {
-        let tmp = G1Uncompressed::from_affine(self.ge);
-        let bytes = tmp.as_ref();
-        let y_coor = &bytes[COMPRESSED_SIZE..COMPRESSED_SIZE * 2];
-        let bn = BigInt::from_bytes(y_coor);
-        Some(bn)
-    }
-
-    fn bytes_compressed_to_big_int(&self) -> BigInt {
-        let tmp = G1Compressed::from_affine(self.ge);
-        let bytes = tmp.as_ref();
-        BigInt::from_bytes(bytes)
-    }
-
-    fn from_bytes(bytes: &[u8]) -> Result<G1Point, ErrorKey> {
-        let mut bytes_array_comp = [0u8; COMPRESSED_SIZE];
-        match bytes.len() {
-            0..=COMPRESSED_SIZE => {
-                (&mut bytes_array_comp[COMPRESSED_SIZE - bytes.len()..]).copy_from_slice(bytes);
-            }
-            _ => {
-                bytes_array_comp.copy_from_slice(&bytes[..COMPRESSED_SIZE]);
-            }
-        }
-
-        let g1_comp = G1::deserialize(&mut bytes_array_comp[..].as_ref(), true).unwrap();
-        let pk = G1Point {
-            purpose: "from_bytes",
-            ge: g1_comp.into_affine(), //TODO: handle error
-        };
-
-        Ok(pk)
-    }
-
-    // in this case the opposite of from_bytes: takes compressed pk to COMPRESSED_SIZE bytes.
-    fn pk_to_key_slice(&self) -> Vec<u8> {
-        let mut compressed_vec = vec![];
-        PK::serialize(&self.ge, &mut compressed_vec, true)
-            .expect("serializing into vec should always succeed");
-        compressed_vec
-    }
-
-    fn scalar_mul(&self, fe: &SK) -> G1Point {
-        let mut ge_proj: G1 = self.ge.into();
-        ge_proj.mul_assign(fe.into_repr());
-        G1Point {
-            purpose: "scalar_point_mul",
-            ge: ge_proj.into_affine(),
+    fn zero() -> FieldScalar {
+        FieldScalar {
+            purpose: "zero",
+            fe: Zeroizing::new(Field::zero()),
         }
     }
 
-    fn add_point(&self, other: &PK) -> G1Point {
-        let mut ge_proj: G1 = self.ge.into();
-        ge_proj.add_assign_mixed(other);
-        G1Point {
-            purpose: "combine",
-            ge: ge_proj.into_affine(),
+    fn from_bigint(n: &BigInt) -> FieldScalar {
+        let n_mod = BigInt::modulus(n, &FE1::group_order());
+        let n_mod = n_mod.to_bytes();
+        let mut bytes_array = [0u8; SECRET_KEY_SIZE];
+        if n_mod.len() < SECRET_KEY_SIZE {
+            bytes_array[SECRET_KEY_SIZE - n_mod.len()..].copy_from_slice(&n_mod)
+        } else {
+            bytes_array.copy_from_slice(&n_mod[..SECRET_KEY_SIZE])
+        }
+
+        let mut repr = SK::default().into_repr();
+        repr.read_be(Cursor::new(&bytes_array[..])).unwrap();
+        FieldScalar {
+            purpose: "from_bigint",
+            fe: Fr::from_repr(repr).unwrap().into(),
         }
     }
 
-    fn sub_point(&self, other: &PK) -> G1Point {
-        let mut ge_proj: G1 = self.ge.into();
-        ge_proj.sub_assign_mixed(other);
-        G1Point {
+    fn to_bigint(&self) -> BigInt {
+        let repr = self.fe.into_repr();
+        let mut bytes = vec![];
+        repr.write_be(&mut bytes).unwrap();
+        BigInt::from_bytes(&bytes)
+    }
+
+    fn add(&self, other: &Self) -> FieldScalar {
+        let mut result = self.fe.clone();
+        result.add_assign(&other.fe);
+        FieldScalar {
+            purpose: "add",
+            fe: result,
+        }
+    }
+
+    fn mul(&self, other: &Self) -> FieldScalar {
+        let mut result = self.fe.clone();
+        result.mul_assign(&other.fe);
+        FieldScalar {
+            purpose: "mul",
+            fe: result,
+        }
+    }
+
+    fn sub(&self, other: &Self) -> FieldScalar {
+        let mut result = self.fe.clone();
+        result.sub_assign(&other.fe);
+        FieldScalar {
             purpose: "sub",
-            ge: ge_proj.into_affine(),
+            fe: result,
         }
     }
 
-    fn from_coor(_x: &BigInt, _y: &BigInt) -> G1Point {
-        // TODO
-        unimplemented!();
+    fn neg(&self) -> FieldScalar {
+        let mut result = self.fe.clone();
+        result.negate();
+        FieldScalar {
+            purpose: "neg",
+            fe: result,
+        }
+    }
+
+    fn invert(&self) -> Option<FieldScalar> {
+        Some(FieldScalar {
+            purpose: "invert",
+            fe: Zeroizing::new(self.fe.inverse()?),
+        })
+    }
+
+    fn add_assign(&mut self, other: &Self) {
+        self.fe.add_assign(&other.fe);
+    }
+    fn mul_assign(&mut self, other: &Self) {
+        self.fe.mul_assign(&other.fe);
+    }
+    fn sub_assign(&mut self, other: &Self) {
+        self.fe.sub_assign(&other.fe);
+    }
+    fn neg_assign(&mut self) {
+        self.fe.negate();
+    }
+
+    fn group_order() -> &'static BigInt {
+        &GROUP_ORDER
+    }
+
+    fn underlying_ref(&self) -> &Self::Underlying {
+        &self.fe
+    }
+    fn underlying_mut(&mut self) -> &mut Self::Underlying {
+        &mut self.fe
+    }
+    fn from_underlying(fe: Self::Underlying) -> FieldScalar {
+        FieldScalar {
+            purpose: "from_underlying",
+            fe: fe.into(),
+        }
     }
 }
 
-impl From<pairing_plus::bls12_381::G1Affine> for G1Point {
-    fn from(point: PK) -> Self {
+impl fmt::Debug for FieldScalar {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Point {{ purpose: {:?}, bytes: {:?} }}",
+            self.purpose, self.fe,
+        )
+    }
+}
+
+impl PartialEq for FieldScalar {
+    fn eq(&self, other: &FieldScalar) -> bool {
+        self.fe == other.fe
+    }
+}
+
+impl ECPoint for G1Point {
+    type Scalar = FieldScalar;
+    type Underlying = PK;
+
+    fn zero() -> G1Point {
         G1Point {
-            purpose: "from_point",
-            ge: point,
+            purpose: "zero",
+            ge: PK::zero(),
         }
     }
-}
 
-impl Mul<FieldScalar> for G1Point {
-    type Output = G1Point;
-    fn mul(self, other: FieldScalar) -> G1Point {
-        self.scalar_mul(&other.get_element())
+    fn is_zero(&self) -> bool {
+        self.ge.is_zero()
     }
-}
 
-impl<'o> Mul<&'o FieldScalar> for G1Point {
-    type Output = G1Point;
-    fn mul(self, other: &'o FieldScalar) -> G1Point {
-        self.scalar_mul(&other.get_element())
+    fn generator() -> &'static G1Point {
+        &GENERATOR
     }
-}
 
-impl<'o> Mul<&'o FieldScalar> for &'o G1Point {
-    type Output = G1Point;
-    fn mul(self, other: &'o FieldScalar) -> G1Point {
-        self.scalar_mul(&other.get_element())
+    fn base_point2() -> &'static G1Point {
+        &BASE_POINT2
     }
-}
 
-impl Add<G1Point> for G1Point {
-    type Output = G1Point;
-    fn add(self, other: G1Point) -> G1Point {
-        self.add_point(&other.get_element())
+    fn from_coords(x: &BigInt, y: &BigInt) -> Result<G1Point, NotOnCurve> {
+        let x = x.to_bytes();
+        let y = y.to_bytes();
+
+        let mut uncompressed = [0u8; COMPRESSED_SIZE * 2];
+        if x.len() <= COMPRESSED_SIZE {
+            uncompressed[COMPRESSED_SIZE - x.len()..COMPRESSED_SIZE].copy_from_slice(&x)
+        } else {
+            return Err(NotOnCurve);
+        }
+
+        if y.len() <= COMPRESSED_SIZE {
+            uncompressed[2 * COMPRESSED_SIZE - y.len()..2 * COMPRESSED_SIZE].copy_from_slice(&y)
+        } else {
+            return Err(NotOnCurve);
+        }
+
+        let mut point = G1Uncompressed::empty();
+        point.as_mut().copy_from_slice(&uncompressed);
+
+        Ok(G1Point {
+            purpose: "from_coords",
+            ge: point.into_affine().map_err(|_| NotOnCurve)?,
+        })
     }
-}
 
-impl<'o> Add<&'o G1Point> for G1Point {
-    type Output = G1Point;
-    fn add(self, other: &'o G1Point) -> G1Point {
-        self.add_point(&other.get_element())
+    fn x_coord(&self) -> Option<BigInt> {
+        if self.is_zero() {
+            None
+        } else {
+            let uncompressed = G1Uncompressed::from_affine(self.ge);
+            let x_coord = &uncompressed.as_ref()[0..COMPRESSED_SIZE];
+            let bn = BigInt::from_bytes(x_coord);
+            Some(bn)
+        }
     }
-}
 
-impl<'o> Add<&'o G1Point> for &'o G1Point {
-    type Output = G1Point;
-    fn add(self, other: &'o G1Point) -> G1Point {
-        self.add_point(&other.get_element())
+    fn y_coord(&self) -> Option<BigInt> {
+        if self.is_zero() {
+            None
+        } else {
+            let uncompressed = G1Uncompressed::from_affine(self.ge);
+            let y_coord = &uncompressed.as_ref()[COMPRESSED_SIZE..COMPRESSED_SIZE * 2];
+            let bn = BigInt::from_bytes(y_coord);
+            Some(bn)
+        }
     }
-}
 
-impl Neg for G1Point {
-    type Output = Self;
-    fn neg(mut self) -> Self {
+    fn coords(&self) -> Option<PointCoords> {
+        if self.is_zero() {
+            None
+        } else {
+            let uncompressed = G1Uncompressed::from_affine(self.ge);
+            let x = &uncompressed.as_ref()[0..COMPRESSED_SIZE];
+            let y = &uncompressed.as_ref()[COMPRESSED_SIZE..COMPRESSED_SIZE * 2];
+            let x = BigInt::from_bytes(x);
+            let y = BigInt::from_bytes(y);
+            Some(PointCoords { x, y })
+        }
+    }
+
+    fn serialize(&self, compressed: bool) -> Option<Vec<u8>> {
+        if self.is_zero() {
+            None
+        } else if compressed {
+            Some(G1Compressed::from_affine(self.ge).as_ref().to_vec())
+        } else {
+            Some(G1Uncompressed::from_affine(self.ge).as_ref().to_vec())
+        }
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<G1Point, DeserializationError> {
+        if bytes.len() == COMPRESSED_SIZE {
+            let mut compressed = G1Compressed::empty();
+            compressed.as_mut().copy_from_slice(bytes);
+            Ok(G1Point {
+                purpose: "deserialize",
+                ge: compressed.into_affine().map_err(|_| DeserializationError)?,
+            })
+        } else if bytes.len() == 2 * COMPRESSED_SIZE {
+            let mut uncompressed = G1Uncompressed::empty();
+            uncompressed.as_mut().copy_from_slice(bytes);
+            Ok(G1Point {
+                purpose: "deserialize",
+                ge: uncompressed
+                    .into_affine()
+                    .map_err(|_| DeserializationError)?,
+            })
+        } else {
+            Err(DeserializationError)
+        }
+    }
+
+    fn check_point_order_equals_group_order(&self) -> bool {
+        !self.is_zero() && self.ge.in_subgroup()
+    }
+
+    fn scalar_mul(&self, scalar: &Self::Scalar) -> G1Point {
+        let result = self.ge.mul(scalar.fe.into_repr());
+        G1Point {
+            purpose: "scalar_mul",
+            ge: result.into_affine(),
+        }
+    }
+
+    fn add_point(&self, other: &Self) -> G1Point {
+        let mut result = G1::from(self.ge);
+        result.add_assign_mixed(&other.ge);
+        G1Point {
+            purpose: "add_point",
+            ge: result.into_affine(),
+        }
+    }
+
+    fn sub_point(&self, other: &Self) -> G1Point {
+        let mut result = G1::from(self.ge);
+        result.sub_assign_mixed(&other.ge);
+        G1Point {
+            purpose: "sub_point",
+            ge: result.into_affine(),
+        }
+    }
+
+    fn neg_point(&self) -> Self {
+        let mut result = self.ge;
+        result.negate();
+        G1Point {
+            purpose: "neg",
+            ge: result,
+        }
+    }
+
+    fn neg_point_assign(&mut self) {
         self.ge.negate();
-        self.purpose = "negated";
-        self
-    }
-}
-
-#[cfg(feature = "merkle")]
-impl Hashable for G1Point {
-    fn update_context(&self, context: &mut Sha3) {
-        let bytes: Vec<u8> = self.pk_to_key_slice();
-        context.input(&bytes[..]);
-    }
-}
-
-impl Serialize for G1Point {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let bytes = self.pk_to_key_slice();
-        let bytes_as_bn = BigInt::from_bytes(&bytes[..]);
-        let mut state = serializer.serialize_struct("Bls12381G1Point", 1)?;
-        state.serialize_field("bytes_str", &bytes_as_bn.to_hex())?;
-        state.end()
-    }
-}
-
-impl<'de> Deserialize<'de> for G1Point {
-    fn deserialize<D>(deserializer: D) -> Result<G1Point, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        const FIELDS: &[&str] = &["bytes_str"];
-        deserializer.deserialize_struct("Bls12381G1Point", FIELDS, Bls12381G1PointVisitor)
-    }
-}
-
-struct Bls12381G1PointVisitor;
-
-impl<'de> Visitor<'de> for Bls12381G1PointVisitor {
-    type Value = G1Point;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("Bls12381G1Point")
     }
 
-    fn visit_seq<V>(self, mut seq: V) -> Result<G1Point, V::Error>
-    where
-        V: SeqAccess<'de>,
-    {
-        let bytes_str = seq
-            .next_element()?
-            .ok_or_else(|| V::Error::invalid_length(0, &"a single element"))?;
-        let bytes_bn = BigInt::from_hex(bytes_str).map_err(V::Error::custom)?;
-        let bytes = BigInt::to_bytes(&bytes_bn);
-        G1Point::from_bytes(&bytes[..]).map_err(|_| V::Error::custom("failed to parse g1 point"))
+    fn underlying_ref(&self) -> &Self::Underlying {
+        &self.ge
     }
-
-    fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<G1Point, E::Error> {
-        let mut bytes_str: String = "".to_string();
-
-        while let Some(key) = map.next_key::<&'de str>()? {
-            let v = map.next_value::<&'de str>()?;
-            match key {
-                "bytes_str" => {
-                    bytes_str = String::from(v);
-                }
-                _ => return Err(E::Error::unknown_field(key, &["bytes_str"])),
-            }
+    fn underlying_mut(&mut self) -> &mut Self::Underlying {
+        &mut self.ge
+    }
+    fn from_underlying(ge: Self::Underlying) -> G1Point {
+        G1Point {
+            purpose: "from_underlying",
+            ge,
         }
-        let bytes_bn = BigInt::from_hex(&bytes_str).map_err(E::Error::custom)?;
-        let bytes = BigInt::to_bytes(&bytes_bn);
-
-        G1Point::from_bytes(&bytes[..]).map_err(|_| E::Error::custom("failed to parse g1 point"))
     }
 }
 
@@ -549,6 +410,31 @@ impl G1Point {
     }
 }
 
+impl fmt::Debug for G1Point {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Point {{ purpose: {:?}, uncompressed: {:?} }}",
+            self.purpose,
+            self.serialize(false)
+                .map(hex::encode)
+                .unwrap_or_else(|| "infinity".to_string())
+        )
+    }
+}
+
+impl PartialEq for G1Point {
+    fn eq(&self, other: &G1Point) -> bool {
+        self.ge == other.ge
+    }
+}
+
+impl Zeroize for G1Point {
+    fn zeroize(&mut self) {
+        self.ge.zeroize()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use pairing_plus::bls12_381::{G1Uncompressed, G1};
@@ -557,155 +443,7 @@ mod tests {
     use pairing_plus::{CurveProjective, SubgroupCheck};
     use sha2::Sha256;
 
-    use super::G1Point;
-    use crate::arithmetic::traits::*;
-    use crate::elliptic::curves::bls12_381::g1::{FE, GE};
-    use crate::elliptic::curves::traits::ECPoint;
-    use crate::elliptic::curves::traits::ECScalar;
-    use crate::BigInt;
-
-    #[test]
-    fn test_serdes_pk() {
-        let pk = GE::generator();
-        let s = serde_json::to_string(&pk).expect("Failed in serialization");
-        let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-        assert_eq!(des_pk, pk);
-
-        let pk = GE::base_point2();
-        let s = serde_json::to_string(&pk).expect("Failed in serialization");
-        let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-        assert_eq!(des_pk, pk);
-    }
-
-    #[test]
-    fn bincode_pk() {
-        let pk = GE::generator();
-        let bin = bincode::serialize(&pk).unwrap();
-        let decoded: G1Point = bincode::deserialize(bin.as_slice()).unwrap();
-        assert_eq!(decoded, pk);
-    }
-
-    #[test]
-    #[should_panic]
-    #[allow(clippy::op_ref)] // Enables type inference.
-    fn test_serdes_bad_pk() {
-        let pk = GE::generator();
-        let s = serde_json::to_string(&pk).expect("Failed in serialization");
-        // we make sure that the string encodes invalid point:
-        let s: String = s.replace("30", "20");
-        let des_pk: GE = serde_json::from_str(&s).expect("Failed in deserialization");
-        let eight = ECScalar::from(&BigInt::from(8));
-        assert_eq!(des_pk, pk * &eight);
-    }
-
-    #[test]
-    fn test_from_mpz() {
-        let rand_scalar: FE = ECScalar::new_random();
-        let rand_bn = rand_scalar.to_big_int();
-        let rand_scalar2: FE = ECScalar::from(&rand_bn);
-        assert_eq!(rand_scalar, rand_scalar2);
-    }
-
-    #[test]
-    fn test_minus_point() {
-        let a: FE = ECScalar::new_random();
-        let b: FE = ECScalar::new_random();
-        let a_minus_b_fe: FE = a.sub(&b.get_element());
-        let base: GE = ECPoint::generator();
-
-        let point_ab1 = base * a_minus_b_fe;
-        let point_a = base * a;
-        let point_b = base * b;
-        let point_ab2 = point_a.sub_point(&point_b.get_element());
-        println!(
-            "point ab1: {:?}",
-            point_ab1.bytes_compressed_to_big_int().to_hex()
-        );
-        println!(
-            "point ab2: {:?}",
-            point_ab2.bytes_compressed_to_big_int().to_hex()
-        );
-
-        assert_eq!(point_ab1, point_ab2);
-    }
-
-    #[test]
-    fn test_add_point() {
-        let a: FE = ECScalar::new_random();
-        let b: FE = ECScalar::new_random();
-        let a_plus_b_fe = a + b;
-        let base: GE = ECPoint::generator();
-        let point_ab1 = base * a_plus_b_fe;
-        let point_a = base * a;
-        let point_b = base * b;
-        let point_ab2 = point_a.add_point(&point_b.get_element());
-
-        assert_eq!(point_ab1, point_ab2);
-    }
-
-    #[test]
-    fn test_add_scalar() {
-        let a: FE = ECScalar::new_random();
-        let zero: FE = FE::zero();
-        let a_plus_zero: FE = a + zero;
-
-        assert_eq!(a_plus_zero, a);
-    }
-
-    #[test]
-    fn test_mul_scalar() {
-        let a = [
-            10, 10, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 10, 10, 10,
-        ];
-
-        let a_bn = BigInt::from_bytes(&a[..]);
-        let a_fe: FE = ECScalar::from(&a_bn);
-
-        let five = BigInt::from(5);
-        let five_fe: FE = ECScalar::from(&five);
-        println!("five_fe: {:?}", five_fe.clone());
-        let five_a_bn = BigInt::mod_mul(&a_bn, &five, &FE::q());
-        let five_a_fe = five_fe * a_fe;
-        let five_a_fe_2: FE = ECScalar::from(&five_a_bn);
-
-        assert_eq!(five_a_fe, five_a_fe_2);
-    }
-
-    #[test]
-    fn test_mul_point() {
-        let a: FE = ECScalar::new_random();
-        let b: FE = ECScalar::new_random();
-        let a_mul_b_fe = a * b;
-        let base: GE = ECPoint::generator();
-        let point_ab1 = base * a_mul_b_fe;
-        let point_a = base * a;
-        let point_ab2 = point_a.scalar_mul(&b.get_element());
-
-        assert_eq!(point_ab1, point_ab2);
-    }
-
-    #[test]
-    fn test_invert() {
-        let a: FE = ECScalar::new_random();
-
-        let a_bn = a.to_big_int();
-
-        let a_inv = a.invert();
-        let a_inv_bn_1 = BigInt::mod_inv(&a_bn, &FE::q()).unwrap();
-        let a_inv_bn_2 = a_inv.to_big_int();
-
-        assert_eq!(a_inv_bn_1, a_inv_bn_2);
-    }
-
-    #[test]
-    fn test_scalar_mul_multiply_by_1() {
-        let g: GE = ECPoint::generator();
-
-        let fe: FE = ECScalar::from(&BigInt::from(1));
-        let b_tag = g * fe;
-        assert_eq!(b_tag, g);
-    }
+    use super::{ECPoint, GE1};
 
     #[test]
     fn base_point2_nothing_up_my_sleeve() {
@@ -721,7 +459,7 @@ mod tests {
         println!("Uncompressed base_point2: {:?}", point_uncompressed);
 
         // Check that ECPoint::base_point2() returns generated point
-        let base_point2: GE = ECPoint::base_point2();
+        let base_point2: &GE1 = ECPoint::base_point2();
         assert_eq!(point, base_point2.ge);
     }
 }
