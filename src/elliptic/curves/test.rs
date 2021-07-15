@@ -9,6 +9,15 @@ use crate::test_for_all_curves;
 
 use super::traits::*;
 
+fn random_nonzero_scalar<S: ECScalar>() -> S {
+    loop {
+        let s = S::random();
+        if !s.is_zero() {
+            break s;
+        }
+    }
+}
+
 test_for_all_curves!(valid_zero_point);
 fn valid_zero_point<E: Curve>() {
     let zero = E::Scalar::zero();
@@ -19,7 +28,7 @@ fn valid_zero_point<E: Curve>() {
 test_for_all_curves!(zero_point_arithmetic);
 fn zero_point_arithmetic<E: Curve>() {
     let zero_point = E::Point::zero();
-    let point = E::Point::generator().scalar_mul(&E::Scalar::random());
+    let point = E::Point::generator().scalar_mul(&random_nonzero_scalar());
 
     assert_eq!(zero_point.add_point(&point), point, "O + P = P");
     assert_eq!(point.add_point(&zero_point), point, "P + O = P");
@@ -30,7 +39,7 @@ fn zero_point_arithmetic<E: Curve>() {
 
     let zero_scalar = E::Scalar::zero();
     assert!(point.scalar_mul(&zero_scalar).is_zero(), "P * 0 = O");
-    let scalar = E::Scalar::random();
+    let scalar = random_nonzero_scalar();
     assert!(zero_point.scalar_mul(&scalar).is_zero(), "O * s = O")
 }
 
@@ -46,7 +55,7 @@ fn scalar_modulo_curve_order<E: Curve>() {
 
 test_for_all_curves!(zero_scalar_arithmetic);
 fn zero_scalar_arithmetic<E: Curve>() {
-    let s = E::Scalar::random();
+    let s: E::Scalar = random_nonzero_scalar();
     let z = E::Scalar::zero();
     assert!(s.mul(&z).is_zero());
     assert!(z.mul(&s).is_zero());
@@ -56,7 +65,7 @@ fn zero_scalar_arithmetic<E: Curve>() {
 
 test_for_all_curves!(point_addition_multiplication);
 fn point_addition_multiplication<E: Curve>() {
-    let point = E::Point::generator().scalar_mul(&E::Scalar::random());
+    let point = E::Point::generator().scalar_mul(&random_nonzero_scalar());
     assert!(!point.is_zero(), "G * s != O");
 
     let addition = iter::successors(Some(point.clone()), |p| Some(p.add_point(&point)))
@@ -71,7 +80,7 @@ fn point_addition_multiplication<E: Curve>() {
 
 test_for_all_curves!(serialize_deserialize);
 fn serialize_deserialize<E: Curve>() {
-    let point = <E::Point as ECPoint>::generator().scalar_mul(&E::Scalar::random());
+    let point = <E::Point as ECPoint>::generator().scalar_mul(&random_nonzero_scalar());
     let bytes = point
         .serialize(true)
         .expect("point has coordinates => must be serializable");
@@ -124,23 +133,33 @@ fn scalar_behaves_the_same_as_bigint<E: Curve>() {
         } else {
             let n_was = n.clone();
             let k = BigInt::sample_below(&(q * 2));
+            let k_s: E::Scalar = ECScalar::from_bigint(&k);
             let op;
 
             match operation {
                 1 => {
                     op = "+";
                     n = BigInt::mod_add(&n, &k, q);
-                    s.add_assign(&E::Scalar::from_bigint(&k));
+
+                    let s_no_assign = s.add(&k_s);
+                    s.add_assign(&k_s);
+                    assert_eq!(s, s_no_assign);
                 }
                 2 => {
                     op = "*";
                     n = BigInt::mod_mul(&n, &k, q);
-                    s.mul_assign(&E::Scalar::from_bigint(&k));
+
+                    let s_no_assign = s.mul(&k_s);
+                    s.mul_assign(&k_s);
+                    assert_eq!(s, s_no_assign);
                 }
                 3 => {
                     op = "-";
                     n = BigInt::mod_sub(&n, &k, q);
-                    s.sub_assign(&E::Scalar::from_bigint(&k));
+
+                    let s_no_assign = s.sub(&k_s);
+                    s.sub_assign(&k_s);
+                    assert_eq!(s, s_no_assign);
                 }
                 _ => unreachable!(),
             }
@@ -161,20 +180,19 @@ fn scalar_behaves_the_same_as_bigint<E: Curve>() {
 
 test_for_all_curves!(from_coords_produces_the_same_point);
 fn from_coords_produces_the_same_point<E: Curve>() {
-    let s: E::Scalar = ECScalar::random();
+    let s: E::Scalar = random_nonzero_scalar();
     println!("s={}", s.to_bigint());
 
     let p: E::Point = <E::Point as ECPoint>::generator().scalar_mul(&s);
-    if let Some(coords) = p.coords() {
-        let p2: E::Point = ECPoint::from_coords(&coords.x, &coords.y).unwrap();
-        assert_eq!(p, p2);
-    }
+    let coords = p.coords().unwrap();
+    let p2: E::Point = ECPoint::from_coords(&coords.x, &coords.y).unwrap();
+    assert_eq!(p, p2);
 }
 
 test_for_all_curves!(test_point_addition);
 fn test_point_addition<E: Curve>() {
-    let a: E::Scalar = ECScalar::random();
-    let b: E::Scalar = ECScalar::random();
+    let a: E::Scalar = random_nonzero_scalar();
+    let b: E::Scalar = random_nonzero_scalar();
 
     let aG: E::Point = ECPoint::generator_mul(&a);
     let bG: E::Point = ECPoint::generator_mul(&b);
@@ -184,10 +202,28 @@ fn test_point_addition<E: Curve>() {
     assert_eq!(aG.add_point(&bG), a_plus_b_G);
 }
 
+test_for_all_curves!(test_point_assign_addition);
+fn test_point_assign_addition<E: Curve>() {
+    let a: E::Scalar = random_nonzero_scalar();
+    let b: E::Scalar = random_nonzero_scalar();
+
+    let aG: E::Point = ECPoint::generator_mul(&a);
+    let bG: E::Point = ECPoint::generator_mul(&b);
+
+    let a_plus_b_G_1 = aG.add_point(&bG);
+    let a_plus_b_G_2 = {
+        let mut aG = aG;
+        aG.add_point_assign(&bG);
+        aG
+    };
+
+    assert_eq!(a_plus_b_G_1, a_plus_b_G_2);
+}
+
 test_for_all_curves!(test_point_subtraction);
 fn test_point_subtraction<E: Curve>() {
-    let a: E::Scalar = ECScalar::random();
-    let b: E::Scalar = ECScalar::random();
+    let a: E::Scalar = random_nonzero_scalar();
+    let b: E::Scalar = random_nonzero_scalar();
 
     let aG: E::Point = ECPoint::generator_mul(&a);
     let bG: E::Point = ECPoint::generator_mul(&b);
@@ -197,10 +233,28 @@ fn test_point_subtraction<E: Curve>() {
     assert_eq!(aG.sub_point(&bG), a_minus_b_G);
 }
 
+test_for_all_curves!(test_point_assign_subtraction);
+fn test_point_assign_subtraction<E: Curve>() {
+    let a: E::Scalar = random_nonzero_scalar();
+    let b: E::Scalar = random_nonzero_scalar();
+
+    let aG: E::Point = ECPoint::generator_mul(&a);
+    let bG: E::Point = ECPoint::generator_mul(&b);
+
+    let a_minus_b_G_1: E::Point = aG.sub_point(&bG);
+    let a_minus_b_G_2 = {
+        let mut aG = aG;
+        aG.sub_point_assign(&bG);
+        aG
+    };
+
+    assert_eq!(a_minus_b_G_1, a_minus_b_G_2);
+}
+
 test_for_all_curves!(test_multiplication_point_at_scalar);
 fn test_multiplication_point_at_scalar<E: Curve>() {
-    let a: E::Scalar = ECScalar::random();
-    let b: E::Scalar = ECScalar::random();
+    let a: E::Scalar = random_nonzero_scalar();
+    let b: E::Scalar = random_nonzero_scalar();
 
     let aG: E::Point = ECPoint::generator_mul(&a);
     let abG: E::Point = aG.scalar_mul(&b);
@@ -210,13 +264,26 @@ fn test_multiplication_point_at_scalar<E: Curve>() {
     assert_eq!(abG, a_mul_b_G);
 }
 
+test_for_all_curves!(test_assign_multiplication_point_at_scalar);
+fn test_assign_multiplication_point_at_scalar<E: Curve>() {
+    let a: E::Scalar = random_nonzero_scalar();
+    let b: E::Scalar = random_nonzero_scalar();
+
+    let aG: E::Point = ECPoint::generator_mul(&a);
+
+    let abG_1: E::Point = aG.scalar_mul(&b);
+    let abG_2 = {
+        let mut aG = aG;
+        aG.scalar_mul_assign(&b);
+        aG
+    };
+
+    assert_eq!(abG_1, abG_2);
+}
+
 test_for_all_curves!(scalar_invert);
 fn scalar_invert<E: Curve>() {
-    let n: E::Scalar = ECScalar::random();
-    if n.is_zero() {
-        // Scalar is zero => restart the test
-        scalar_invert::<E>()
-    }
+    let n: E::Scalar = random_nonzero_scalar();
 
     let n_inv = n.invert().unwrap();
     assert_eq!(n.mul(&n_inv), ECScalar::from_bigint(&BigInt::one()))
@@ -227,4 +294,42 @@ fn zero_scalar_invert<E: Curve>() {
     let n: E::Scalar = ECScalar::zero();
     let n_inv = n.invert();
     assert!(n_inv.is_none())
+}
+
+test_for_all_curves!(point_negation);
+fn point_negation<E: Curve>() {
+    let p1 = <E::Point as ECPoint>::generator_mul(&random_nonzero_scalar());
+    let p2 = p1.neg_point();
+    assert_eq!(p1.add_point(&p2), ECPoint::zero());
+}
+
+test_for_all_curves!(point_assign_negation);
+fn point_assign_negation<E: Curve>() {
+    let p = <E::Point as ECPoint>::generator_mul(&random_nonzero_scalar());
+    let p_neg_1 = p.neg_point();
+    let p_neg_2 = {
+        let mut p = p;
+        p.neg_point_assign();
+        p
+    };
+    assert_eq!(p_neg_1, p_neg_2);
+}
+
+test_for_all_curves!(scalar_negation);
+fn scalar_negation<E: Curve>() {
+    let s1: E::Scalar = random_nonzero_scalar();
+    let s2 = s1.neg();
+    assert_eq!(s1.add(&s2), E::Scalar::zero());
+}
+
+test_for_all_curves!(scalar_assign_negation);
+fn scalar_assign_negation<E: Curve>() {
+    let s: E::Scalar = random_nonzero_scalar();
+    let s_neg_1 = s.neg();
+    let s_neg_2 = {
+        let mut s = s;
+        s.neg_assign();
+        s
+    };
+    assert_eq!(s_neg_1, s_neg_2);
 }

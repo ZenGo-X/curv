@@ -201,7 +201,7 @@ impl ECScalar for Ed25519Scalar {
     fn neg(&self) -> Self {
         Ed25519Scalar {
             purpose: "neg",
-            fe: Self::from_bigint(&BigInt::mod_add(
+            fe: Self::from_bigint(&BigInt::mod_sub(
                 &Self::zero().to_bigint(),
                 &self.to_bigint(),
                 Self::group_order(),
