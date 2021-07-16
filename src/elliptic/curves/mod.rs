@@ -10,7 +10,10 @@ mod traits;
 mod wrappers;
 
 pub use self::{
-    bls12_381::Bls12_381_1, curve_ristretto::Ristretto, ed25519::Ed25519, p256::Secp256r1,
+    bls12_381::{Bls12_381_1, Bls12_381_2},
+    curve_ristretto::Ristretto,
+    ed25519::Ed25519,
+    p256::Secp256r1,
     secp256_k1::Secp256k1,
 };
 pub use self::{

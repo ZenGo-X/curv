@@ -6,37 +6,23 @@
 */
 
 use std::fmt;
-use std::io::Cursor;
 
-use ff_zeroize::{Field, PrimeField, PrimeFieldRepr, ScalarEngine};
-use pairing_plus::bls12_381::{Fr, G1Compressed, G1Uncompressed, G1};
+use ff_zeroize::PrimeField;
+use pairing_plus::bls12_381::{G1Compressed, G1Uncompressed, G1};
 use pairing_plus::hash_to_curve::HashToCurve;
 use pairing_plus::hash_to_field::ExpandMsgXmd;
 use pairing_plus::{CurveAffine, CurveProjective, Engine};
 use pairing_plus::{EncodedPoint, SubgroupCheck};
-use rand::rngs::OsRng;
 use sha2::Sha256;
-use zeroize::{Zeroize, Zeroizing};
+use zeroize::Zeroize;
 
 use crate::arithmetic::traits::*;
 use crate::elliptic::curves::traits::*;
 use crate::BigInt;
 
-lazy_static::lazy_static! {
-    static ref GROUP_ORDER: BigInt = {
-        let q_u64: [u64; 4] = [
-            0xffffffff00000001,
-            0x53bda402fffe5bfe,
-            0x3339d80809a1d805,
-            0x73eda753299d7d48,
-        ];
-        let to_bn = q_u64.iter().rev().fold(BigInt::zero(), |acc, x| {
-            let element_bn = BigInt::from(*x);
-            element_bn + (acc << 64)
-        });
-        to_bn
-    };
+use super::scalar::FieldScalar;
 
+lazy_static::lazy_static! {
     static ref GENERATOR: G1Point = G1Point {
         purpose: "generator",
         ge: PK::one(),
@@ -63,162 +49,23 @@ lazy_static::lazy_static! {
 pub const SECRET_KEY_SIZE: usize = 32;
 pub const COMPRESSED_SIZE: usize = 48;
 
-pub type SK = <pairing_plus::bls12_381::Bls12 as ScalarEngine>::Fr;
 pub type PK = <pairing_plus::bls12_381::Bls12 as Engine>::G1Affine;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Bls12_381_1 {}
 
-#[derive(Clone)]
-pub struct FieldScalar {
-    purpose: &'static str,
-    fe: Zeroizing<SK>,
-}
 #[derive(Clone, Copy)]
 pub struct G1Point {
     purpose: &'static str,
     ge: PK,
 }
 pub type GE1 = G1Point;
-pub type FE1 = FieldScalar;
 
 impl Curve for Bls12_381_1 {
     type Point = GE1;
-    type Scalar = FE1;
+    type Scalar = FieldScalar;
 
     const CURVE_NAME: &'static str = "bls12_381_1";
-}
-
-impl ECScalar for FieldScalar {
-    type Underlying = SK;
-
-    fn random() -> FieldScalar {
-        FieldScalar {
-            purpose: "random",
-            fe: Zeroizing::new(Field::random(&mut OsRng)),
-        }
-    }
-
-    fn zero() -> FieldScalar {
-        FieldScalar {
-            purpose: "zero",
-            fe: Zeroizing::new(Field::zero()),
-        }
-    }
-
-    fn from_bigint(n: &BigInt) -> FieldScalar {
-        let n_mod = BigInt::modulus(n, &FE1::group_order());
-        let n_mod = n_mod.to_bytes();
-        let mut bytes_array = [0u8; SECRET_KEY_SIZE];
-        if n_mod.len() < SECRET_KEY_SIZE {
-            bytes_array[SECRET_KEY_SIZE - n_mod.len()..].copy_from_slice(&n_mod)
-        } else {
-            bytes_array.copy_from_slice(&n_mod[..SECRET_KEY_SIZE])
-        }
-
-        let mut repr = SK::default().into_repr();
-        repr.read_be(Cursor::new(&bytes_array[..])).unwrap();
-        FieldScalar {
-            purpose: "from_bigint",
-            fe: Fr::from_repr(repr).unwrap().into(),
-        }
-    }
-
-    fn to_bigint(&self) -> BigInt {
-        let repr = self.fe.into_repr();
-        let mut bytes = vec![];
-        repr.write_be(&mut bytes).unwrap();
-        BigInt::from_bytes(&bytes)
-    }
-
-    fn add(&self, other: &Self) -> FieldScalar {
-        let mut result = self.fe.clone();
-        result.add_assign(&other.fe);
-        FieldScalar {
-            purpose: "add",
-            fe: result,
-        }
-    }
-
-    fn mul(&self, other: &Self) -> FieldScalar {
-        let mut result = self.fe.clone();
-        result.mul_assign(&other.fe);
-        FieldScalar {
-            purpose: "mul",
-            fe: result,
-        }
-    }
-
-    fn sub(&self, other: &Self) -> FieldScalar {
-        let mut result = self.fe.clone();
-        result.sub_assign(&other.fe);
-        FieldScalar {
-            purpose: "sub",
-            fe: result,
-        }
-    }
-
-    fn neg(&self) -> FieldScalar {
-        let mut result = self.fe.clone();
-        result.negate();
-        FieldScalar {
-            purpose: "neg",
-            fe: result,
-        }
-    }
-
-    fn invert(&self) -> Option<FieldScalar> {
-        Some(FieldScalar {
-            purpose: "invert",
-            fe: Zeroizing::new(self.fe.inverse()?),
-        })
-    }
-
-    fn add_assign(&mut self, other: &Self) {
-        self.fe.add_assign(&other.fe);
-    }
-    fn mul_assign(&mut self, other: &Self) {
-        self.fe.mul_assign(&other.fe);
-    }
-    fn sub_assign(&mut self, other: &Self) {
-        self.fe.sub_assign(&other.fe);
-    }
-    fn neg_assign(&mut self) {
-        self.fe.negate();
-    }
-
-    fn group_order() -> &'static BigInt {
-        &GROUP_ORDER
-    }
-
-    fn underlying_ref(&self) -> &Self::Underlying {
-        &self.fe
-    }
-    fn underlying_mut(&mut self) -> &mut Self::Underlying {
-        &mut self.fe
-    }
-    fn from_underlying(fe: Self::Underlying) -> FieldScalar {
-        FieldScalar {
-            purpose: "from_underlying",
-            fe: fe.into(),
-        }
-    }
-}
-
-impl fmt::Debug for FieldScalar {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Point {{ purpose: {:?}, bytes: {:?} }}",
-            self.purpose, self.fe,
-        )
-    }
-}
-
-impl PartialEq for FieldScalar {
-    fn eq(&self, other: &FieldScalar) -> bool {
-        self.fe == other.fe
-    }
 }
 
 impl ECPoint for G1Point {
@@ -342,7 +189,7 @@ impl ECPoint for G1Point {
     }
 
     fn scalar_mul(&self, scalar: &Self::Scalar) -> G1Point {
-        let result = self.ge.mul(scalar.fe.into_repr());
+        let result = self.ge.mul(scalar.underlying_ref().into_repr());
         G1Point {
             purpose: "scalar_mul",
             ge: result.into_affine(),
@@ -418,7 +265,7 @@ impl fmt::Debug for G1Point {
             self.purpose,
             self.serialize(false)
                 .map(hex::encode)
-                .unwrap_or_else(|| "infinity".to_string())
+                .unwrap_or_else(|| "infinity".to_string()),
         )
     }
 }

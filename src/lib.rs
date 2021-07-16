@@ -56,14 +56,14 @@ macro_rules! test_for_all_curves {
             }
             #[test]
             $($attrs)*
-            fn [<$fn _bls12_381>]() {
+            fn [<$fn _bls12_381_1>]() {
                 $fn::<crate::elliptic::curves::Bls12_381_1>()
             }
-            // #[test]
-            // $($attrs)*
-            // fn [<$fn _bls12_381>]() {
-            //     $fn::<crate::elliptic::curves::bls12_381::g1::GE>()
-            // }
+            #[test]
+            $($attrs)*
+            fn [<$fn _bls12_381_2>]() {
+                $fn::<crate::elliptic::curves::Bls12_381_2>()
+            }
         }
     };
 }
