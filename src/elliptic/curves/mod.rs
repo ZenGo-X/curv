@@ -28,8 +28,8 @@
 //!
 //! Function below is a final step of the Diffie-Hellman key exchange protocol when both parties
 //! have exchanged their ephemeral public keys. Giving it here just for an example, the `curv` library
-//! includes implementation of this protocol (see [dh_key_exchange], or its more involved version:
-//! [dh_key_exchange_variant_with_pok_comm]).
+//! is equipped with an implementation of this protocol (see [dh_key_exchange], or its more involved
+//! version: [dh_key_exchange_variant_with_pok_comm]).
 //!
 //! [dh_key_exchange]: crate::cryptographic_primitives::twoparty::dh_key_exchange
 //! [dh_key_exchange_variant_with_pok_comm]: crate::cryptographic_primitives::twoparty::dh_key_exchange_variant_with_pok_comm
@@ -53,8 +53,8 @@
 //! [subgroup-attack]: http://safecurves.cr.yp.to/twist.html
 //! [Guarantees section]: Point#guarantees
 //!
-//! The function above performs DH only on secp256k1 curve, which is disappointing as the code will
-//! look the same for any curve. Luckily we can make it generic over choice of curve:
+//! The function above performs DH only on secp256k1 curve, which is disappointing — the code will
+//! look the same for any curve. Luckily, we can make it generic over choice of curve:
 //!
 //! ```rust
 //! use curv::elliptic::curves::{Curve, Point, Scalar};

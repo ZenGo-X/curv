@@ -223,6 +223,7 @@ pub trait ECPoint: Zeroize + Clone + PartialEq + fmt::Debug + 'static {
     fn from_underlying(u: Self::Underlying) -> Self;
 }
 
+/// Affine coordinates of a point
 #[derive(Serialize, Deserialize)]
 pub struct PointCoords {
     pub x: BigInt,
