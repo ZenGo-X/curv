@@ -1,5 +1,5 @@
 [package]
-name = "curv"
+name = "curv-kzen"
 version = "0.8.0-rc1"
 edition = "2018"
 authors = ["Omer Shlomovits"]
@@ -8,6 +8,7 @@ description = "Curv contains an extremly simple interface to onboard new ellipti
 repository = "https://github.com/ZenGo-X/curv"
 
 [lib]
+name = "curv"
 crate-type = ["lib"]
 
 [dependencies]
