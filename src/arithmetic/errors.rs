@@ -4,13 +4,14 @@ use std::{error, fmt};
 #[derive(Debug)]
 pub struct ParseBigIntError {
     pub(super) reason: ParseErrorReason,
-    pub(super) radix: u32,
+    pub(super) radix: u8,
 }
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum ParseErrorReason {
-    #[cfg(feature = "rust-gmp-kzen")]
-    Gmp(gmp::mpz::ParseMpzError),
+    #[cfg(feature = "rug")]
+    Gmp(rug::integer::ParseIntegerError),
     #[cfg(feature = "num-bigint")]
     NumBigint,
 }
@@ -18,7 +19,7 @@ pub enum ParseErrorReason {
 impl fmt::Display for ParseBigIntError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.reason {
-            #[cfg(feature = "rust-gmp-kzen")]
+            #[cfg(feature = "rug")]
             ParseErrorReason::Gmp(reason) => write!(f, "{}", reason),
             #[cfg(feature = "num-bigint")]
             ParseErrorReason::NumBigint => {
@@ -31,7 +32,7 @@ impl fmt::Display for ParseBigIntError {
 impl error::Error for ParseBigIntError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match &self.reason {
-            #[cfg(feature = "rust-gmp-kzen")]
+            #[cfg(feature = "rug")]
             ParseErrorReason::Gmp(reason) => Some(reason),
             #[cfg(feature = "num-bigint")]
             ParseErrorReason::NumBigint => None,
