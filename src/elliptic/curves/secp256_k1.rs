@@ -384,7 +384,7 @@ impl ECPoint for Secp256k1Point {
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Secp256k1Point, DeserializationError> {
-        if bytes == &[0] {
+        if bytes == [0] {
             Ok(Secp256k1Point {
                 purpose: "from_bytes",
                 ge: None,

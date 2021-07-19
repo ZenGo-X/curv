@@ -172,7 +172,7 @@ impl ECPoint for G2Point {
     }
 
     fn deserialize(bytes: &[u8]) -> Result<G2Point, DeserializationError> {
-        if bytes == &[0] {
+        if bytes == [0] {
             Ok(G2Point {
                 purpose: "deserialize",
                 ge: Self::zero().ge,
