@@ -4,7 +4,7 @@
 //!
 //! ## Usage
 //!
-//! Elliptic curve cryptography operates on points and scalars. We provide respective structures
+//! Elliptic curve cryptography involves points and scalars. We provide respective structures
 //! [Point\<E\>](Point), [Scalar\<E\>](Scalar), where generic `E` stands for choice of elliptic
 //! curve, e.g. [Secp256k1] (`Point<Secp256k1>`, `Scalar<Secp256k1>`).
 //!
@@ -46,8 +46,9 @@
 //!
 //! You may have noticed that this function lacks of subgroup check (whether counterparty
 //! point has order=group_order), and is vulnerable to [small subgroup attack][subgroup-attack].
-//! Actually, **it isn't**! Any `Point<E>` instance is guaranteed to have large prime order,
-//! so you can be sure that subgroup check was performed. See [guarantees section] to learn more.
+//! Actually, **it isn't**! Any `Point<E>` instance is guaranteed to have large prime order (unless
+//! it's zero point), so you can be sure that subgroup check was performed. See [guarantees section]
+//! to learn more.
 //!
 //! [subgroup-attack]: http://safecurves.cr.yp.to/twist.html
 //! [Guarantees section]: Point#guarantees
