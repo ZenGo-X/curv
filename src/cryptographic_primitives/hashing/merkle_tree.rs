@@ -12,7 +12,7 @@ use std::marker::PhantomData;
 use crypto::sha3::Sha3;
 use merkle::{MerkleTree, Proof};
 
-use crate::elliptic::curves::{Curve, PointZ};
+use crate::elliptic::curves::{Curve, Point};
 /*
 pub struct MT256<'a> {
     tree: MerkleTree<GE>,
@@ -26,7 +26,7 @@ pub struct MT256<E: Curve> {
 
 //impl <'a> MT256<'a>{
 impl<E: Curve> MT256<E> {
-    pub fn create_tree(vec: &[PointZ<E>]) -> MT256<E> {
+    pub fn create_tree(vec: &[Point<E>]) -> MT256<E> {
         let digest = Sha3::keccak256();
         let vec_bytes = (0..vec.len())
             .map(|i| {
@@ -46,7 +46,7 @@ impl<E: Curve> MT256<E> {
         }
     }
 
-    pub fn gen_proof_for_ge(&self, value: &PointZ<E>) -> Proof<[u8; 32]> {
+    pub fn gen_proof_for_ge(&self, value: &Point<E>) -> Proof<[u8; 32]> {
         let mut array = [0u8; 32];
         let pk_slice = value
             .to_bytes(false)
@@ -72,17 +72,17 @@ impl<E: Curve> MT256<E> {
 #[cfg(test)]
 mod tests {
     use super::MT256;
-    use crate::elliptic::curves::{Curve, Point, PointZ};
+    use crate::elliptic::curves::{Curve, Point};
 
     use crate::test_for_all_curves;
 
     test_for_all_curves!(test_mt_functionality_four_leaves);
 
     fn test_mt_functionality_four_leaves<E: Curve>() {
-        let ge1: PointZ<E> = Point::generator().to_point().into();
-        let ge2: PointZ<E> = ge1.clone();
-        let ge3: PointZ<E> = &ge1 + &ge2;
-        let ge4: PointZ<E> = &ge1 + &ge3;
+        let ge1: Point<E> = Point::generator().to_point().into();
+        let ge2: Point<E> = ge1.clone();
+        let ge3: Point<E> = &ge1 + &ge2;
+        let ge4: Point<E> = &ge1 + &ge3;
         let ge_vec = vec![ge1.clone(), ge2, ge3, ge4];
         let mt256 = MT256::create_tree(&ge_vec);
         let proof1 = mt256.gen_proof_for_ge(&ge1);
@@ -94,9 +94,9 @@ mod tests {
     test_for_all_curves!(test_mt_functionality_three_leaves);
 
     fn test_mt_functionality_three_leaves<E: Curve>() {
-        let ge1: PointZ<E> = Point::generator().to_point().into();
-        let ge2: PointZ<E> = ge1.clone();
-        let ge3: PointZ<E> = &ge1 + &ge2;
+        let ge1: Point<E> = Point::generator().to_point().into();
+        let ge2: Point<E> = ge1.clone();
+        let ge3: Point<E> = &ge1 + &ge2;
 
         let ge_vec = vec![ge1.clone(), ge2, ge3];
         let mt256 = MT256::create_tree(&ge_vec);

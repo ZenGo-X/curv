@@ -15,7 +15,7 @@ use crate::BigInt;
 /// Elliptic curve implementation
 ///
 /// Refers to according implementation of [ECPoint] and [ECScalar].
-pub trait Curve: PartialEq + Clone + fmt::Debug {
+pub trait Curve: PartialEq + Clone + fmt::Debug + 'static {
     type Point: ECPoint<Scalar = Self::Scalar>;
     type Scalar: ECScalar;
 
@@ -26,13 +26,10 @@ pub trait Curve: PartialEq + Clone + fmt::Debug {
 /// Scalar value modulus [group order](Self::group_order)
 ///
 /// ## Note
-/// This is a low-level trait, you should not use it directly. See wrappers [Point], [PointZ],
-/// [Scalar], [ScalarZ].
+/// This is a low-level trait, you should not use it directly. See wrappers [Point], [Scalar].
 ///
 /// [Point]: super::wrappers::Point
-/// [PointZ]: super::wrappers::PointZ
 /// [Scalar]: super::wrappers::Scalar
-/// [ScalarZ]: super::wrappers::ScalarZ
 ///
 /// Trait exposes various methods to manipulate scalars. Scalar can be zero. Scalar must zeroize its
 /// value on drop.
@@ -96,13 +93,10 @@ pub trait ECScalar: Clone + PartialEq + fmt::Debug + 'static {
 /// Point on elliptic curve
 ///
 /// ## Note
-/// This is a low-level trait, you should not use it directly. See [Point], [PointZ], [Scalar],
-/// [ScalarZ].
+/// This is a low-level trait, you should not use it directly. See [Point], [Scalar].
 ///
 /// [Point]: super::wrappers::Point
-/// [PointZ]: super::wrappers::PointZ
 /// [Scalar]: super::wrappers::Scalar
-/// [ScalarZ]: super::wrappers::ScalarZ
 ///
 /// Trait exposes various methods that make elliptic curve arithmetic. The point can
 /// be [zero](ECPoint::zero). Unlike [ECScalar], ECPoint isn't required to zeroize its value on drop,

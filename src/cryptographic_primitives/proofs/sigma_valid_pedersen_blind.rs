@@ -11,7 +11,7 @@ use sha2::Sha256;
 use crate::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
 use crate::cryptographic_primitives::commitments::traits::Commitment;
 use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
-use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
+use crate::elliptic::curves::{Curve, Point, Scalar};
 
 use super::ProofError;
 
@@ -29,8 +29,8 @@ pub struct PedersenBlindingProof<E: Curve> {
     e: Scalar<E>,
     pub m: Scalar<E>,
     a: Point<E>,
-    pub com: PointZ<E>,
-    z: ScalarZ<E>,
+    pub com: Point<E>,
+    z: Scalar<E>,
 }
 
 impl<E: Curve> PedersenBlindingProof<E> {
@@ -40,16 +40,13 @@ impl<E: Curve> PedersenBlindingProof<E> {
         let h = Point::<E>::base_point2();
         let s = Scalar::<E>::random();
         let a = h * &s;
-        let com: PointZ<E> = PedersenCommitment::create_commitment_with_user_defined_randomness(
+        let com: Point<E> = PedersenCommitment::create_commitment_with_user_defined_randomness(
             &m.to_bigint(),
             &r.to_bigint(),
         );
         let g = Point::<E>::generator();
         let e = Sha256::new()
-            .chain_point(&g.to_point())
-            .chain_point(&h.to_point())
-            .chain_pointz(&com)
-            .chain_point(&a)
+            .chain_points([&g.to_point(), &h.to_point(), &com, &a])
             .chain_scalar(&m)
             .result_scalar();
 
@@ -68,10 +65,7 @@ impl<E: Curve> PedersenBlindingProof<E> {
         let g = Point::<E>::generator();
         let h = Point::<E>::base_point2();
         let e = Sha256::new()
-            .chain_point(&g.to_point())
-            .chain_point(&h.to_point())
-            .chain_pointz(&proof.com)
-            .chain_point(&proof.a)
+            .chain_points([&g.to_point(), &h.to_point(), &proof.com, &proof.a])
             .chain_scalar(&proof.m)
             .result_scalar();
 

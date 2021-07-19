@@ -4,10 +4,9 @@
 //!
 //! ## Usage
 //!
-//! Elliptic curve cryptography operates on points and scalars. We provide according structures
-//! [Point\<E\>](Point), [Scalar\<E\>](Scalar) (and [PointZ\<E\>](PointZ), [ScalarZ\<E\>](ScalarZ)
-//! — for points and scalars that might be zero), where generic `E` stands for choice of elliptic
-//! curve, e.g. [Secp256k1] (`Point<Secp256k1>`, `Scalar<Secp256k1>`, etc.).
+//! Elliptic curve cryptography operates on points and scalars. We provide respective structures
+//! [Point\<E\>](Point), [Scalar\<E\>](Scalar), where generic `E` stands for choice of elliptic
+//! curve, e.g. [Secp256k1] (`Point<Secp256k1>`, `Scalar<Secp256k1>`).
 //!
 //! Various methods and traits are defined for points and scalars which basically empowers you to do
 //! anything you can do in elliptic curve cryptography.
@@ -68,7 +67,7 @@
 //! ```
 //!
 //! `Point<E>` (for generic `E: Curve`) implements many traits you might need (e.g. Serialize, PartialEq,
-//! Debug, etc.) without specifying additional bounds. The same apllies to other structures (PointZ, Scalar, ...).
+//! Debug, etc.) without specifying additional bounds. The same applies to other structures (PointRef, Scalar, ...).
 //!
 //! ## Implementing your own curve
 //!
@@ -97,7 +96,7 @@ pub use self::{
 };
 pub use self::{
     traits::{Curve, ECPoint, ECScalar, PointCoords},
-    wrappers::{Generator, Point, PointRef, PointZ, Scalar, ScalarZ},
+    wrappers::{Generator, Point, PointRef, Scalar},
 };
 
 pub mod error {

@@ -6,10 +6,16 @@ use crate::elliptic::curves::traits::*;
 
 #[derive(Debug, Error, Clone, PartialEq)]
 #[error("invalid point (point order ≠ group order)")]
-pub struct MismatchedPointOrder(pub(super) ());
+pub struct MismatchedPointOrder(());
+
+impl MismatchedPointOrder {
+    pub(super) fn new() -> Self {
+        MismatchedPointOrder(())
+    }
+}
 
 #[derive(Debug, Error)]
-pub enum PointZDeserializationError {
+pub enum PointFromBytesError {
     #[error("failed to deserialize the point")]
     DeserializationError,
     #[error("invalid point ({0})")]
@@ -17,7 +23,7 @@ pub enum PointZDeserializationError {
 }
 
 #[derive(Debug, Error)]
-pub enum PointZFromCoordsError {
+pub enum PointFromCoordsError {
     #[error("{}", NotOnCurve)]
     NotOnCurve,
     #[error("invalid point ({0})")]
@@ -26,7 +32,13 @@ pub enum PointZFromCoordsError {
 
 /// Indicates that conversion or computation failed due to occurred zero point
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct ZeroPointError(pub(super) ());
+pub struct ZeroPointError(());
+
+impl ZeroPointError {
+    pub(super) fn new() -> Self {
+        ZeroPointError(())
+    }
+}
 
 impl fmt::Display for ZeroPointError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -38,7 +50,13 @@ impl std::error::Error for ZeroPointError {}
 
 /// Indicates that conversion or computation failed due to occurred zero scalar
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct ZeroScalarError(pub(super) ());
+pub struct ZeroScalarError(());
+
+impl ZeroScalarError {
+    pub(super) fn new() -> Self {
+        ZeroScalarError(())
+    }
+}
 
 impl fmt::Display for ZeroScalarError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -54,22 +72,4 @@ pub enum InvalidPoint {
     ZeroPoint,
     #[error("{}", MismatchedPointOrder(()))]
     MismatchedPointOrder,
-}
-
-/// Constructing Point from its coordinates error
-#[derive(Debug, Error)]
-pub enum PointFromCoordsError {
-    #[error("invalid point ({0})")]
-    InvalidPoint(InvalidPoint),
-    #[error("{}", NotOnCurve)]
-    PointNotOnCurve,
-}
-
-/// Constructing Point from its (un)compressed representation error
-#[derive(Debug, Error)]
-pub enum PointFromBytesError {
-    #[error("invalid point ({0})")]
-    InvalidPoint(InvalidPoint),
-    #[error("{0}")]
-    Deserialize(#[source] DeserializationError),
 }

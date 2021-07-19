@@ -7,7 +7,7 @@
 use blake2b_simd::{Params, State};
 
 use crate::arithmetic::traits::*;
-use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
+use crate::elliptic::curves::{Curve, Point, Scalar};
 use crate::BigInt;
 
 /// Wrapper over [blake2b_simd](blake2b_simd::State) exposing facilities to hash bigints, elliptic points,
@@ -29,11 +29,6 @@ impl Blake {
     }
 
     pub fn chain_point<E: Curve>(&mut self, point: &Point<E>) -> &mut Self {
-        self.state.update(&point.to_bytes(false));
-        self
-    }
-
-    pub fn chain_pointz<E: Curve>(&mut self, point: &PointZ<E>) -> &mut Self {
         match point.to_bytes(false) {
             Some(bytes) => self.state.update(&bytes),
             None => self.state.update(b"point at infinity"),
@@ -47,8 +42,7 @@ impl Blake {
 
     pub fn result_scalar<E: Curve>(&self) -> Scalar<E> {
         let n = self.result_bigint();
-        let m = Scalar::<E>::group_order() - 1;
-        Scalar::from_bigint(&(n.modulus(&m) + 1)).expect("scalar is guaranteed to be nonzero")
+        Scalar::from_bigint(&n)
     }
 
     #[deprecated(
@@ -68,23 +62,7 @@ impl Blake {
         since = "0.8.0",
         note = "Blake API has been changed, this method is outdated"
     )]
-    pub fn create_hash_from_ge<E: Curve>(ge_vec: &[&Point<E>], persona: &[u8]) -> ScalarZ<E> {
-        let mut digest = Params::new().hash_length(64).personal(persona).to_state();
-        //  let mut digest = Blake2b::with_params(64, &[], &[], persona);
-
-        for value in ge_vec {
-            digest.update(&value.to_bytes(false));
-        }
-
-        let result = BigInt::from_bytes(digest.finalize().as_ref());
-        ScalarZ::from(&result)
-    }
-
-    #[deprecated(
-        since = "0.8.0",
-        note = "Blake API has been changed, this method is outdated"
-    )]
-    pub fn create_hash_from_ge_z<E: Curve>(ge_vec: &[&PointZ<E>], persona: &[u8]) -> ScalarZ<E> {
+    pub fn create_hash_from_ge<E: Curve>(ge_vec: &[&Point<E>], persona: &[u8]) -> Scalar<E> {
         let mut digest = Params::new().hash_length(64).personal(persona).to_state();
         //  let mut digest = Blake2b::with_params(64, &[], &[], persona);
 
@@ -96,7 +74,7 @@ impl Blake {
         }
 
         let result = BigInt::from_bytes(digest.finalize().as_ref());
-        ScalarZ::from(&result)
+        Scalar::from(&result)
     }
 }
 

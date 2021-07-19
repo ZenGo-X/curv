@@ -5,7 +5,7 @@ use thiserror::Error;
 use crate::cryptographic_primitives::hashing::DigestExt;
 use crate::cryptographic_primitives::proofs::ProofError;
 use crate::cryptographic_primitives::secret_sharing::Polynomial;
-use crate::elliptic::curves::{Curve, Point, PointZ, ScalarZ};
+use crate::elliptic::curves::{Curve, Point, Scalar};
 
 /// The prover private polynomial
 #[derive(Clone, Debug)]
@@ -17,9 +17,9 @@ pub struct LdeiWitness<E: Curve> {
 /// `forall i. x[i] = g[i] * alpha[i]` (and the prover knows `w(x)`)
 #[derive(Clone, Debug)]
 pub struct LdeiStatement<E: Curve> {
-    pub alpha: Vec<ScalarZ<E>>,
+    pub alpha: Vec<Scalar<E>>,
     pub g: Vec<Point<E>>,
-    pub x: Vec<PointZ<E>>,
+    pub x: Vec<Point<E>>,
     pub d: u16,
 }
 
@@ -29,7 +29,7 @@ impl<E: Curve> LdeiStatement<E> {
     /// and list `x` such as `x_i = g_i * w(alpha_i)`
     pub fn new(
         witness: &LdeiWitness<E>,
-        alpha: Vec<ScalarZ<E>>,
+        alpha: Vec<Scalar<E>>,
         g: Vec<Point<E>>,
         d: u16,
     ) -> Result<Self, InvalidLdeiStatement> {
@@ -56,8 +56,8 @@ impl<E: Curve> LdeiStatement<E> {
 
 #[derive(Clone, Debug)]
 pub struct LdeiProof<E: Curve> {
-    pub a: Vec<PointZ<E>>,
-    pub e: ScalarZ<E>,
+    pub a: Vec<Point<E>>,
+    pub e: Scalar<E>,
     pub z: Polynomial<E>,
 }
 
@@ -87,7 +87,7 @@ impl<E: Curve> LdeiProof<E> {
             return Err(InvalidLdeiStatement::AlphaNotPairwiseDistinct);
         }
 
-        let x_expected: Vec<PointZ<E>> = statement
+        let x_expected: Vec<Point<E>> = statement
             .g
             .iter()
             .zip(&statement.alpha)
@@ -97,25 +97,19 @@ impl<E: Curve> LdeiProof<E> {
             return Err(InvalidLdeiStatement::ListOfXDoesntMatchExpectedValue);
         }
 
-        let u = Polynomial::<E>::sample(statement.d);
-        let a: Vec<PointZ<E>> = statement
+        let u = Polynomial::<E>::sample_exact(statement.d);
+        let a: Vec<Point<E>> = statement
             .g
             .iter()
             .zip(&statement.alpha)
             .map(|(g, a)| g * u.evaluate(a))
             .collect();
 
-        let mut h = H::new();
-        for gi in &statement.g {
-            h.input_point(gi)
-        }
-        for xi in &statement.x {
-            h.input_pointz(xi)
-        }
-        for ai in &a {
-            h.input_pointz(ai)
-        }
-        let e = ScalarZ::from(h.result_scalar());
+        let e = H::new()
+            .chain_points(&statement.g)
+            .chain_points(&statement.x)
+            .chain_points(&a)
+            .result_scalar();
 
         let z = &u - &(&witness.w * &e);
 
@@ -133,17 +127,11 @@ impl<E: Curve> LdeiProof<E> {
     where
         H: Digest,
     {
-        let mut h = H::new();
-        for gi in &statement.g {
-            h.input_point(gi)
-        }
-        for xi in &statement.x {
-            h.input_pointz(xi)
-        }
-        for ai in &self.a {
-            h.input_pointz(ai)
-        }
-        let e = ScalarZ::from(h.result_scalar());
+        let e = H::new()
+            .chain_points(&statement.g)
+            .chain_points(&statement.x)
+            .chain_points(&self.a)
+            .result_scalar();
 
         if e != self.e {
             return Err(ProofError);
@@ -209,7 +197,7 @@ mod tests {
         let poly = Polynomial::<E>::sample_exact(5);
         let witness = LdeiWitness { w: poly };
 
-        let alpha: Vec<ScalarZ<E>> = (1..=10).map(|i| ScalarZ::from(i)).collect();
+        let alpha: Vec<Scalar<E>> = (1..=10).map(|i| Scalar::from(i)).collect();
         let g: Vec<Point<E>> = iter::repeat_with(Scalar::random)
             .map(|x| Point::generator() * x)
             .take(10)

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::cryptographic_primitives::proofs::sigma_valid_pedersen::PedersenProof;
 use crate::cryptographic_primitives::proofs::sigma_valid_pedersen_blind::PedersenBlindingProof;
-use crate::elliptic::curves::{Curve, PointZ, Scalar, ScalarZ};
+use crate::elliptic::curves::{Curve, Point, Scalar};
 
 /// based on How To Simulate It – A Tutorial on the Simulation
 /// Proof Technique. protocol 7.3: Multiple coin tossing. which provide simulatble constant round
@@ -53,7 +53,7 @@ impl<E: Curve> Party1SecondMessage<E> {
         party2seed: &Scalar<E>,
         party1seed: &Scalar<E>,
         party1blinding: &Scalar<E>,
-    ) -> (Party1SecondMessage<E>, ScalarZ<E>) {
+    ) -> (Party1SecondMessage<E>, Scalar<E>) {
         let proof = PedersenBlindingProof::<E>::prove(&party1seed, &party1blinding);
         let coin_flip_result = &party1seed.to_bigint() ^ &party2seed.to_bigint();
         (
@@ -61,7 +61,7 @@ impl<E: Curve> Party1SecondMessage<E> {
                 proof,
                 seed: party1seed.clone(),
             },
-            ScalarZ::from(&coin_flip_result),
+            Scalar::from(&coin_flip_result),
         )
     }
 }
@@ -70,12 +70,12 @@ impl<E: Curve> Party1SecondMessage<E> {
 pub fn finalize<E: Curve>(
     proof: &PedersenBlindingProof<E>,
     party2seed: &Scalar<E>,
-    party1comm: &PointZ<E>,
-) -> ScalarZ<E> {
+    party1comm: &Point<E>,
+) -> Scalar<E> {
     PedersenBlindingProof::<E>::verify(&proof).expect("{r,(m,c)} proof failed");
     assert_eq!(&proof.com, party1comm);
     let coin_flip_result = &proof.m.to_bigint() ^ &party2seed.to_bigint();
-    ScalarZ::from(&coin_flip_result)
+    Scalar::from(&coin_flip_result)
 }
 
 #[cfg(test)]

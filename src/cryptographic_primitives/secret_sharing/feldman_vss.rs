@@ -11,7 +11,7 @@ use std::convert::{TryFrom, TryInto};
 use serde::{Deserialize, Serialize};
 
 use crate::cryptographic_primitives::secret_sharing::Polynomial;
-use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
+use crate::elliptic::curves::{Curve, Point, Scalar};
 use crate::ErrorSS::{self, VerifyShareError};
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -29,7 +29,7 @@ pub struct ShamirSecretSharing {
 #[serde(bound = "")]
 pub struct VerifiableSS<E: Curve> {
     pub parameters: ShamirSecretSharing,
-    pub commitments: Vec<PointZ<E>>,
+    pub commitments: Vec<Point<E>>,
 }
 
 impl<E: Curve> VerifiableSS<E> {
@@ -39,12 +39,12 @@ impl<E: Curve> VerifiableSS<E> {
 
     // TODO: share should accept u16 rather than usize
     // generate VerifiableSS from a secret
-    pub fn share(t: usize, n: usize, secret: &ScalarZ<E>) -> (VerifiableSS<E>, Vec<ScalarZ<E>>) {
+    pub fn share(t: usize, n: usize, secret: &Scalar<E>) -> (VerifiableSS<E>, Vec<Scalar<E>>) {
         assert!(t < n);
         let t = u16::try_from(t).unwrap();
         let n = u16::try_from(n).unwrap();
 
-        let poly = Polynomial::<E>::sample_with_fixed_const_term(t, secret.clone());
+        let poly = Polynomial::<E>::sample_exact_with_fixed_const_term(t, secret.clone());
         let secret_shares = poly.evaluate_many_bigint(1..=n).collect();
 
         let g = Point::<E>::generator();
@@ -66,13 +66,13 @@ impl<E: Curve> VerifiableSS<E> {
     }
 
     // takes given VSS and generates a new VSS for the same secret and a secret shares vector to match the new commitments
-    pub fn reshare(&self) -> (VerifiableSS<E>, Vec<ScalarZ<E>>) {
+    pub fn reshare(&self) -> (VerifiableSS<E>, Vec<Scalar<E>>) {
         // TODO: ShamirSecretSharing::{threshold, share_count} should be u16 rather than usize
         let t = u16::try_from(self.parameters.threshold).unwrap();
         let n = u16::try_from(self.parameters.share_count).unwrap();
 
-        let one = ScalarZ::<E>::from(1);
-        let poly = Polynomial::<E>::sample_with_fixed_const_term(t, one.clone());
+        let one = Scalar::<E>::from(1);
+        let poly = Polynomial::<E>::sample_exact_with_fixed_const_term(t, one.clone());
         let secret_shares_biased: Vec<_> = poly.evaluate_many_bigint(1..=n).collect();
         let secret_shares: Vec<_> = (0..secret_shares_biased.len())
             .map(|i| &secret_shares_biased[i] - &one)
@@ -95,16 +95,16 @@ impl<E: Curve> VerifiableSS<E> {
     pub fn share_at_indices(
         t: usize,
         n: usize,
-        secret: &ScalarZ<E>,
+        secret: &Scalar<E>,
         index_vec: &[usize],
-    ) -> (VerifiableSS<E>, Vec<ScalarZ<E>>) {
+    ) -> (VerifiableSS<E>, Vec<Scalar<E>>) {
         assert_eq!(n, index_vec.len());
         // TODO: share_at_indices should accept u16 rather than usize (t, n, index_vec)
         let t = u16::try_from(t).unwrap();
         let n = u16::try_from(n).unwrap();
         let index_vec = index_vec.iter().map(|&i| u16::try_from(i).unwrap());
 
-        let poly = Polynomial::<E>::sample_with_fixed_const_term(t, secret.clone());
+        let poly = Polynomial::<E>::sample_exact_with_fixed_const_term(t, secret.clone());
         let secret_shares = poly.evaluate_many_bigint(index_vec).collect();
 
         let g = Point::<E>::generator();
@@ -112,7 +112,7 @@ impl<E: Curve> VerifiableSS<E> {
             .coefficients()
             .iter()
             .map(|coef| g * coef)
-            .collect::<Vec<PointZ<E>>>();
+            .collect::<Vec<Point<E>>>();
         (
             VerifiableSS {
                 parameters: ShamirSecretSharing {
@@ -127,8 +127,8 @@ impl<E: Curve> VerifiableSS<E> {
 
     // returns vector of coefficients
     #[deprecated(since = "0.7.1", note = "please use Polynomial::sample instead")]
-    pub fn sample_polynomial(t: usize, coef0: &ScalarZ<E>) -> Vec<ScalarZ<E>> {
-        Polynomial::<E>::sample_with_fixed_const_term(t.try_into().unwrap(), coef0.clone())
+    pub fn sample_polynomial(t: usize, coef0: &Scalar<E>) -> Vec<Scalar<E>> {
+        Polynomial::<E>::sample_exact_with_fixed_const_term(t.try_into().unwrap(), coef0.clone())
             .coefficients()
             .to_vec()
     }
@@ -137,27 +137,24 @@ impl<E: Curve> VerifiableSS<E> {
         since = "0.7.1",
         note = "please use Polynomial::evaluate_many_bigint instead"
     )]
-    pub fn evaluate_polynomial(
-        coefficients: &[ScalarZ<E>],
-        index_vec: &[usize],
-    ) -> Vec<ScalarZ<E>> {
+    pub fn evaluate_polynomial(coefficients: &[Scalar<E>], index_vec: &[usize]) -> Vec<Scalar<E>> {
         Polynomial::<E>::from_coefficients(coefficients.to_vec())
             .evaluate_many_bigint(index_vec.iter().map(|&i| u64::try_from(i).unwrap()))
             .collect()
     }
 
     #[deprecated(since = "0.7.1", note = "please use Polynomial::evaluate instead")]
-    pub fn mod_evaluate_polynomial(coefficients: &[ScalarZ<E>], point: ScalarZ<E>) -> ScalarZ<E> {
+    pub fn mod_evaluate_polynomial(coefficients: &[Scalar<E>], point: Scalar<E>) -> Scalar<E> {
         Polynomial::<E>::from_coefficients(coefficients.to_vec()).evaluate(&point)
     }
 
-    pub fn reconstruct(&self, indices: &[usize], shares: &[ScalarZ<E>]) -> ScalarZ<E> {
+    pub fn reconstruct(&self, indices: &[usize], shares: &[Scalar<E>]) -> Scalar<E> {
         assert_eq!(shares.len(), indices.len());
         assert!(shares.len() >= self.reconstruct_limit());
         // add one to indices to get points
         let points = indices
             .iter()
-            .map(|i| ScalarZ::from(*i as u32 + 1))
+            .map(|i| Scalar::from(*i as u32 + 1))
             .collect::<Vec<_>>();
         VerifiableSS::<E>::lagrange_interpolation_at_zero(&points, &shares)
     }
@@ -172,10 +169,7 @@ impl<E: Curve> VerifiableSS<E> {
     // This is obviously less general than `newton_interpolation_general` as we
     // only get a single value, but it is much faster.
 
-    pub fn lagrange_interpolation_at_zero(
-        points: &[ScalarZ<E>],
-        values: &[ScalarZ<E>],
-    ) -> ScalarZ<E> {
+    pub fn lagrange_interpolation_at_zero(points: &[Scalar<E>], values: &[Scalar<E>]) -> Scalar<E> {
         let vec_len = values.len();
 
         assert_eq!(points.len(), vec_len);
@@ -186,8 +180,8 @@ impl<E: Curve> VerifiableSS<E> {
                 .map(|i| {
                     let xi = &points[i];
                     let yi = &values[i];
-                    let num = ScalarZ::from(1);
-                    let denum = ScalarZ::from(1);
+                    let num = Scalar::from(1);
+                    let denum = Scalar::from(1);
                     let num = points.iter().zip(0..vec_len).fold(num, |acc, x| {
                         if i != x.1 {
                             acc * x.0
@@ -213,13 +207,13 @@ impl<E: Curve> VerifiableSS<E> {
         tail.fold(head.clone(), |acc, x| acc + x)
     }
 
-    pub fn validate_share(&self, secret_share: &ScalarZ<E>, index: usize) -> Result<(), ErrorSS> {
+    pub fn validate_share(&self, secret_share: &Scalar<E>, index: usize) -> Result<(), ErrorSS> {
         let g = Point::generator();
         let ss_point = g * secret_share;
         self.validate_share_public(&ss_point, index)
     }
 
-    pub fn validate_share_public(&self, ss_point: &PointZ<E>, index: usize) -> Result<(), ErrorSS> {
+    pub fn validate_share_public(&self, ss_point: &Point<E>, index: usize) -> Result<(), ErrorSS> {
         let comm_to_point = self.get_point_commitment(index);
         if *ss_point == comm_to_point {
             Ok(())
@@ -228,8 +222,8 @@ impl<E: Curve> VerifiableSS<E> {
         }
     }
 
-    pub fn get_point_commitment(&self, index: usize) -> PointZ<E> {
-        let index_fe = ScalarZ::from(index as u32);
+    pub fn get_point_commitment(&self, index: usize) -> Point<E> {
+        let index_fe = Scalar::from(index as u32);
         let mut comm_iterator = self.commitments.iter().rev();
         let head = comm_iterator.next().unwrap();
         let tail = comm_iterator;
@@ -242,7 +236,7 @@ impl<E: Curve> VerifiableSS<E> {
         params: &ShamirSecretSharing,
         index: usize,
         s: &[usize],
-    ) -> ScalarZ<E> {
+    ) -> Scalar<E> {
         let s_len = s.len();
         //     assert!(s_len > self.reconstruct_limit());
         // add one to indices to get points
@@ -251,8 +245,8 @@ impl<E: Curve> VerifiableSS<E> {
             .collect();
 
         let xi = &points[index];
-        let num = ScalarZ::from(1);
-        let denum = ScalarZ::from(1);
+        let num = Scalar::from(1);
+        let denum = Scalar::from(1);
         let num = (0..s_len).fold(num, |acc, i| {
             if s[i] != index {
                 acc * &points[s[i]]
@@ -281,7 +275,7 @@ mod tests {
     test_for_all_curves!(test_secret_sharing_3_out_of_5_at_indices);
 
     fn test_secret_sharing_3_out_of_5_at_indices<E: Curve>() {
-        let secret = ScalarZ::random();
+        let secret = Scalar::random();
         let parties = [1, 2, 4, 5, 6];
         let (vss_scheme, secret_shares) =
             VerifiableSS::<E>::share_at_indices(3, 5, &secret, &parties);
@@ -302,7 +296,7 @@ mod tests {
     test_for_all_curves!(test_secret_sharing_3_out_of_5);
 
     fn test_secret_sharing_3_out_of_5<E: Curve>() {
-        let secret = ScalarZ::random();
+        let secret = Scalar::random();
 
         let (vss_scheme, secret_shares) = VerifiableSS::<E>::share(3, 5, &secret);
 
@@ -347,7 +341,7 @@ mod tests {
     test_for_all_curves!(test_secret_sharing_3_out_of_7);
 
     fn test_secret_sharing_3_out_of_7<E: Curve>() {
-        let secret = ScalarZ::random();
+        let secret = Scalar::random();
 
         let (vss_scheme, secret_shares) = VerifiableSS::<E>::share(3, 7, &secret);
 
@@ -387,7 +381,7 @@ mod tests {
     test_for_all_curves!(test_secret_sharing_1_out_of_2);
 
     fn test_secret_sharing_1_out_of_2<E: Curve>() {
-        let secret = ScalarZ::random();
+        let secret = Scalar::random();
 
         let (vss_scheme, secret_shares) = VerifiableSS::<E>::share(1, 2, &secret);
 
@@ -414,7 +408,7 @@ mod tests {
     test_for_all_curves!(test_secret_sharing_1_out_of_3);
 
     fn test_secret_sharing_1_out_of_3<E: Curve>() {
-        let secret = ScalarZ::random();
+        let secret = Scalar::random();
 
         let (vss_scheme, secret_shares) = VerifiableSS::<E>::share(1, 3, &secret);
 
@@ -455,7 +449,7 @@ mod tests {
     test_for_all_curves!(test_secret_resharing);
 
     fn test_secret_resharing<E: Curve>() {
-        let secret = ScalarZ::random();
+        let secret = Scalar::random();
 
         let (vss_scheme, secret_shares) = VerifiableSS::<E>::share(1, 3, &secret);
         let (new_vss_scheme, zero_secret_shares) = vss_scheme.reshare();

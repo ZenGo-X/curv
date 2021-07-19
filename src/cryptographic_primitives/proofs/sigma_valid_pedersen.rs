@@ -11,7 +11,7 @@ use sha2::Sha256;
 use crate::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
 use crate::cryptographic_primitives::commitments::traits::Commitment;
 use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
-use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
+use crate::elliptic::curves::{Curve, Point, Scalar};
 
 use super::ProofError;
 
@@ -30,9 +30,9 @@ pub struct PedersenProof<E: Curve> {
     e: Scalar<E>,
     a1: Point<E>,
     a2: Point<E>,
-    pub com: PointZ<E>,
-    z1: ScalarZ<E>,
-    z2: ScalarZ<E>,
+    pub com: Point<E>,
+    z1: Scalar<E>,
+    z2: Scalar<E>,
 }
 
 impl<E: Curve> PedersenProof<E> {
@@ -44,17 +44,13 @@ impl<E: Curve> PedersenProof<E> {
         let s2 = Scalar::random();
         let a1 = g * &s1;
         let a2 = h * &s2;
-        let com: PointZ<E> = PedersenCommitment::create_commitment_with_user_defined_randomness(
+        let com: Point<E> = PedersenCommitment::create_commitment_with_user_defined_randomness(
             &m.to_bigint(),
             &r.to_bigint(),
         );
 
         let e = Sha256::new()
-            .chain_point(&g.to_point())
-            .chain_point(&h.to_point())
-            .chain_pointz(&com)
-            .chain_point(&a1)
-            .chain_point(&a2)
+            .chain_points([&g.to_point(), &h.to_point(), &com, &a1, &a2])
             .result_scalar();
 
         let em = &e * m;
@@ -75,12 +71,22 @@ impl<E: Curve> PedersenProof<E> {
     pub fn verify(proof: &PedersenProof<E>) -> Result<(), ProofError> {
         let g = Point::<E>::generator();
         let h = Point::<E>::base_point2();
+        // let e = Sha256::new()
+        //     .chain_point(&g.to_point())
+        //     .chain_point(&h.to_point())
+        //     .chain_pointz(&proof.com)
+        //     .chain_point(&proof.a1)
+        //     .chain_point(&proof.a2)
+        //     .result_scalar();
+
         let e = Sha256::new()
-            .chain_point(&g.to_point())
-            .chain_point(&h.to_point())
-            .chain_pointz(&proof.com)
-            .chain_point(&proof.a1)
-            .chain_point(&proof.a2)
+            .chain_points([
+                &g.to_point(),
+                &h.to_point(),
+                &proof.com,
+                &proof.a1,
+                &proof.a2,
+            ])
             .result_scalar();
 
         let z1g = g * &proof.z1;

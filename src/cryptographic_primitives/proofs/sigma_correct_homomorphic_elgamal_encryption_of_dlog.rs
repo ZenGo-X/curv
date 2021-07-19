@@ -11,7 +11,7 @@ use sha2::Sha256;
 
 use super::ProofError;
 use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
-use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
+use crate::elliptic::curves::{Curve, Point, Scalar};
 
 /// This is a proof of knowledge that a pair of group elements {D, E}
 /// form a valid homomorphic ElGamal encryption (”in the exponent”) using public key Y .
@@ -25,8 +25,8 @@ pub struct HomoELGamalDlogProof<E: Curve> {
     pub A1: Point<E>,
     pub A2: Point<E>,
     pub A3: Point<E>,
-    pub z1: ScalarZ<E>,
-    pub z2: ScalarZ<E>,
+    pub z1: Scalar<E>,
+    pub z2: Scalar<E>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -42,7 +42,7 @@ pub struct HomoElGamalDlogStatement<E: Curve> {
     pub G: Point<E>,
     pub Y: Point<E>,
     pub Q: Point<E>,
-    pub D: PointZ<E>,
+    pub D: Point<E>,
     pub E: Point<E>,
 }
 
@@ -57,13 +57,7 @@ impl<E: Curve> HomoELGamalDlogProof<E> {
         let A2 = &delta.Y * &s2;
         let A3 = &delta.G * &s2;
         let e = Sha256::new()
-            .chain_point(&A1)
-            .chain_point(&A2)
-            .chain_point(&A3)
-            .chain_point(&delta.G)
-            .chain_point(&delta.Y)
-            .chain_pointz(&delta.D)
-            .chain_point(&delta.E)
+            .chain_points([&A1, &A2, &A3, &delta.G, &delta.Y, &delta.D, &delta.E])
             .result_scalar();
         let z1 = &s1 + &e * &w.x;
         let z2 = &s2 + e * &w.r;
@@ -72,13 +66,9 @@ impl<E: Curve> HomoELGamalDlogProof<E> {
 
     pub fn verify(&self, delta: &HomoElGamalDlogStatement<E>) -> Result<(), ProofError> {
         let e = Sha256::new()
-            .chain_point(&self.A1)
-            .chain_point(&self.A2)
-            .chain_point(&self.A3)
-            .chain_point(&delta.G)
-            .chain_point(&delta.Y)
-            .chain_pointz(&delta.D)
-            .chain_point(&delta.E)
+            .chain_points([
+                &self.A1, &self.A2, &self.A3, &delta.G, &delta.Y, &delta.D, &delta.E,
+            ])
             .result_scalar();
         let z1G = &delta.G * &self.z1;
         let z2Y = &delta.Y * &self.z2;
@@ -134,8 +124,8 @@ mod tests {
         let G = Point::<E>::generator();
         let Y = G * Scalar::random();
         let D = G * &witness.x + &Y * &witness.r;
-        let E = (G * &witness.r + G).ensure_nonzero().unwrap();
-        let Q = (G * &witness.x + G).ensure_nonzero().unwrap();
+        let E = G * &witness.r + G;
+        let Q = G * &witness.x + G;
         let delta = HomoElGamalDlogStatement {
             G: G.to_point(),
             Y,

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
 use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
-use crate::elliptic::curves::{Curve, Point, Scalar, ScalarZ};
+use crate::elliptic::curves::{Curve, Point, Scalar};
 
 use super::ProofError;
 
@@ -28,7 +28,7 @@ use super::ProofError;
 pub struct DLogProof<E: Curve> {
     pub pk: Point<E>,
     pub pk_t_rand_commitment: Point<E>,
-    pub challenge_response: ScalarZ<E>,
+    pub challenge_response: Scalar<E>,
 }
 
 impl<E: Curve> DLogProof<E> {

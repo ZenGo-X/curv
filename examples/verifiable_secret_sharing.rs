@@ -14,7 +14,7 @@ use curv::elliptic::curves::*;
 pub fn secret_sharing_3_out_of_5<E: Curve>() {
     use curv::cryptographic_primitives::secret_sharing::feldman_vss::VerifiableSS;
 
-    let secret = ScalarZ::random();
+    let secret = Scalar::random();
 
     let (vss_scheme, secret_shares) = VerifiableSS::<E>::share(3, 5, &secret);
 

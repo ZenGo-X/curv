@@ -9,7 +9,7 @@
 
 use super::traits::Hash;
 use crate::arithmetic::traits::*;
-use crate::elliptic::curves::{Curve, Point, PointZ, ScalarZ};
+use crate::elliptic::curves::{Curve, Point, Scalar};
 
 use digest::Digest;
 use sha2::Sha256;
@@ -31,18 +31,7 @@ impl Hash for HSha256 {
         BigInt::from_bytes(&result_hex[..])
     }
 
-    fn create_hash_from_ge<E: Curve>(ge_vec: &[&Point<E>]) -> ScalarZ<E> {
-        let mut hasher = Sha256::new();
-        for value in ge_vec {
-            hasher.input(&value.to_bytes(false));
-        }
-
-        let result_hex = hasher.result();
-        let result = BigInt::from_bytes(&result_hex[..]);
-        ScalarZ::from(&result)
-    }
-
-    fn create_hash_from_ge_z<E: Curve>(ge_vec: &[&PointZ<E>]) -> ScalarZ<E> {
+    fn create_hash_from_ge<E: Curve>(ge_vec: &[&Point<E>]) -> Scalar<E> {
         let mut hasher = Sha256::new();
         for value in ge_vec {
             match value.to_bytes(false) {
@@ -53,7 +42,7 @@ impl Hash for HSha256 {
 
         let result_hex = hasher.result();
         let result = BigInt::from_bytes(&result_hex[..]);
-        ScalarZ::from(&result)
+        Scalar::from(&result)
     }
 
     fn create_hash_from_slice(byte_slice: &[u8]) -> BigInt {

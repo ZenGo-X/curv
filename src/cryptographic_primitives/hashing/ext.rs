@@ -3,7 +3,7 @@ use hmac::crypto_mac::MacError;
 use hmac::{Hmac, Mac};
 
 use crate::arithmetic::*;
-use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
+use crate::elliptic::curves::{Curve, Point, Scalar};
 
 /// [Digest] extension allowing to hash elliptic points, scalars, and bigints
 ///
@@ -29,9 +29,7 @@ use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
 pub trait DigestExt {
     fn input_bigint(&mut self, n: &BigInt);
     fn input_point<E: Curve>(&mut self, point: &Point<E>);
-    fn input_pointz<E: Curve>(&mut self, point: &PointZ<E>);
     fn input_scalar<E: Curve>(&mut self, scalar: &Scalar<E>);
-    fn input_scalarz<E: Curve>(&mut self, scalar: &ScalarZ<E>);
 
     fn chain_bigint(mut self, n: &BigInt) -> Self
     where
@@ -47,11 +45,13 @@ pub trait DigestExt {
         self.input_point(point);
         self
     }
-    fn chain_pointz<E: Curve>(mut self, point: &PointZ<E>) -> Self
+    fn chain_points<'p, E: Curve>(mut self, points: impl IntoIterator<Item = &'p Point<E>>) -> Self
     where
         Self: Sized,
     {
-        self.input_pointz(point);
+        for point in points {
+            self.input_point(point)
+        }
         self
     }
     fn chain_scalar<E: Curve>(mut self, scalar: &Scalar<E>) -> Self
@@ -61,11 +61,16 @@ pub trait DigestExt {
         self.input_scalar(scalar);
         self
     }
-    fn chain_scalarz<E: Curve>(mut self, scalar: &ScalarZ<E>) -> Self
+    fn chain_scalars<'s, E: Curve>(
+        mut self,
+        scalars: impl IntoIterator<Item = &'s Scalar<E>>,
+    ) -> Self
     where
         Self: Sized,
     {
-        self.input_scalarz(scalar);
+        for scalar in scalars {
+            self.input_scalar(scalar)
+        }
         self
     }
 
@@ -84,10 +89,6 @@ where
     }
 
     fn input_point<E: Curve>(&mut self, point: &Point<E>) {
-        self.input(&point.to_bytes(false))
-    }
-
-    fn input_pointz<E: Curve>(&mut self, point: &PointZ<E>) {
         match point.to_bytes(false) {
             Some(bytes) => self.input(&bytes),
             None => self.input(b"point at infinity"),
@@ -95,9 +96,6 @@ where
     }
 
     fn input_scalar<E: Curve>(&mut self, scalar: &Scalar<E>) {
-        self.input(&scalar.to_bigint().to_bytes())
-    }
-    fn input_scalarz<E: Curve>(&mut self, scalar: &ScalarZ<E>) {
         self.input(&scalar.to_bigint().to_bytes())
     }
 
@@ -108,8 +106,7 @@ where
 
     fn result_scalar<E: Curve>(self) -> Scalar<E> {
         let n = self.result_bigint();
-        let m = Scalar::<E>::group_order() - 1;
-        Scalar::from_bigint(&(n.modulus(&m) + 1)).expect("scalar is guaranteed to be nonzero")
+        Scalar::from_bigint(&n)
     }
 
     fn digest_bigint(bytes: &[u8]) -> BigInt {

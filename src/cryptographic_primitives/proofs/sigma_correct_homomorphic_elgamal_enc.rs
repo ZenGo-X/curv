@@ -12,7 +12,7 @@ use digest::Digest;
 use sha2::Sha256;
 
 use crate::cryptographic_primitives::hashing::DigestExt;
-use crate::elliptic::curves::{Curve, Point, PointZ, Scalar, ScalarZ};
+use crate::elliptic::curves::{Curve, Point, Scalar};
 
 use super::ProofError;
 
@@ -25,17 +25,17 @@ use super::ProofError;
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct HomoELGamalProof<E: Curve> {
-    pub T: PointZ<E>,
+    pub T: Point<E>,
     pub A3: Point<E>,
-    pub z1: ScalarZ<E>,
-    pub z2: ScalarZ<E>,
+    pub z1: Scalar<E>,
+    pub z2: Scalar<E>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct HomoElGamalWitness<E: Curve> {
-    pub r: ScalarZ<E>,
-    pub x: ScalarZ<E>,
+    pub r: Scalar<E>,
+    pub x: Scalar<E>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -44,8 +44,8 @@ pub struct HomoElGamalStatement<E: Curve> {
     pub G: Point<E>,
     pub H: Point<E>,
     pub Y: Point<E>,
-    pub D: PointZ<E>,
-    pub E: PointZ<E>,
+    pub D: Point<E>,
+    pub E: Point<E>,
 }
 
 impl<E: Curve> HomoELGamalProof<E> {
@@ -60,32 +60,28 @@ impl<E: Curve> HomoELGamalProof<E> {
         let A3 = &delta.G * &s2;
         let T = A1 + A2;
         let e = Sha256::new()
-            .chain_pointz(&T)
+            .chain_point(&T)
             .chain_point(&A3)
             .chain_point(&delta.G)
             .chain_point(&delta.H)
             .chain_point(&delta.Y)
-            .chain_pointz(&delta.D)
-            .chain_pointz(&delta.E)
+            .chain_point(&delta.D)
+            .chain_point(&delta.E)
             .result_scalar();
         // dealing with zero field element
-        let z1 = if !w.x.is_zero() {
-            &s1 + &w.x * &e
-        } else {
-            ScalarZ::from(s1)
-        };
+        let z1 = &s1 + &w.x * &e;
         let z2 = s2 + &w.r * e;
         HomoELGamalProof { T, A3, z1, z2 }
     }
     pub fn verify(&self, delta: &HomoElGamalStatement<E>) -> Result<(), ProofError> {
         let e = Sha256::new()
-            .chain_pointz(&self.T)
+            .chain_point(&self.T)
             .chain_point(&self.A3)
             .chain_point(&delta.G)
             .chain_point(&delta.H)
             .chain_point(&delta.Y)
-            .chain_pointz(&delta.D)
-            .chain_pointz(&delta.E)
+            .chain_point(&delta.D)
+            .chain_point(&delta.E)
             .result_scalar();
         let z1H_plus_z2Y = &delta.H * &self.z1 + &delta.Y * &self.z2;
         let T_plus_eD = &self.T + &delta.D * &e;
@@ -107,8 +103,8 @@ mod tests {
     test_for_all_curves!(test_correct_general_homo_elgamal);
     fn test_correct_general_homo_elgamal<E: Curve>() {
         let witness = HomoElGamalWitness::<E> {
-            r: ScalarZ::random(),
-            x: ScalarZ::random(),
+            r: Scalar::random(),
+            x: Scalar::random(),
         };
         let G = Point::<E>::generator();
         let h = Scalar::random();
@@ -131,8 +127,8 @@ mod tests {
     test_for_all_curves!(test_correct_homo_elgamal);
     fn test_correct_homo_elgamal<E: Curve>() {
         let witness = HomoElGamalWitness {
-            r: ScalarZ::random(),
-            x: ScalarZ::random(),
+            r: Scalar::random(),
+            x: Scalar::random(),
         };
         let G = Point::<E>::generator();
         let y = Scalar::random();
@@ -154,8 +150,8 @@ mod tests {
     fn test_wrong_homo_elgamal<E: Curve>() {
         // test for E = (r+1)G
         let witness = HomoElGamalWitness::<E> {
-            r: ScalarZ::random(),
-            x: ScalarZ::random(),
+            r: Scalar::random(),
+            x: Scalar::random(),
         };
         let G = Point::<E>::generator();
         let h = Scalar::random();

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
 use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
-use crate::elliptic::curves::{Curve, Point, Scalar, ScalarZ};
+use crate::elliptic::curves::{Curve, Point, Scalar};
 
 use super::ProofError;
 
@@ -30,7 +30,7 @@ use super::ProofError;
 pub struct ECDDHProof<E: Curve> {
     pub a1: Point<E>,
     pub a2: Point<E>,
-    pub z: ScalarZ<E>,
+    pub z: Scalar<E>,
 }
 
 #[derive(Clone, PartialEq, Debug)]

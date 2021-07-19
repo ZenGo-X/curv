@@ -1,58 +1,39 @@
-use std::convert::TryFrom;
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use crate::elliptic::curves::traits::*;
+use crate::elliptic::curves::traits::{Curve, ECScalar};
 use crate::BigInt;
 
-use super::{error::ZeroScalarError, format::ScalarFormat, ScalarZ};
+use super::format::ScalarFormat;
+use crate::elliptic::curves::ZeroScalarError;
 
-/// Scalar value in a prime field that _guaranteed_ to be non zero
-///
-/// ## Security
-///
-/// Non-zero scalars are preferred to be used in cryptographic algorithms. Lack of checking whether
-/// computation on field scalars results into zero scalar might lead to vulnerability. Using `Scalar<E>`
-/// ensures you and reviewers that check on scalar not being zero was made.
+/// Scalar value in a prime field
 ///
 /// ## Guarantees
 ///
-/// * Belongs to the curve prime field
+/// * Modulus group order
 ///
-///   Denoting group order as `n`, any instance `s` of `Scalar<E>` is guaranteed to be less than `n`:
-///   `s < n`
-/// * Not a zero
+///   Denoting [group order](Self::group_order) as `n`, any instance `s` of `Scalar<E>` is guaranteed
+///   to be non-negative integer modulo `n`: `0 <= s < n`
 ///
-///   Any instance `s` of `Scalar<E>` is guaranteed to be more than zero: `s > 0`
-///
-/// Combining two rules above, any instance `s` of `Scalar<E>` is guaranteed to be: `0 < s < n`.
-///
-/// ## Arithmetic
+/// ## Arithmetics
 ///
 /// Supported operations:
-/// * Unary: you can [invert](Self::invert) and negate a scalar by modulo of prime field
-/// * Binary: you can add, subtract, and multiply two points
+/// * Unary: you can [invert](Self::invert) and negate a scalar
+/// * Binary: you can add, subtract, and multiply two scalars
 ///
-/// Addition or subtraction of two (even non-zero) scalars might result into zero
-/// scalar, so these operations output [ScalarZ]. Use [ensure_nonzero](ScalarZ::ensure_nonzero) method
-/// to ensure that computation doesn't produce zero scalar:
+/// ### Example
 ///
-/// ```rust
-/// # use curv::elliptic::curves::{ScalarZ, Scalar, Secp256k1};
-/// let a = Scalar::<Secp256k1>::random();
-/// let b = Scalar::<Secp256k1>::random();
-/// let result: ScalarZ<Secp256k1> = a + b;
-/// let non_zero_result: Option<Scalar<Secp256k1>> = result.ensure_nonzero();
-/// ```
-///
-/// Multiplication of two nonzero scalars is always nonzero scalar (as scalar is by prime modulo):
-///
-/// ```rust
-/// # use curv::elliptic::curves::{ScalarZ, Scalar, Secp256k1};
-/// let a = Scalar::<Secp256k1>::random();
-/// let b = Scalar::<Secp256k1>::random();
-/// let result: Scalar<Secp256k1> = a * b;
+///  ```rust
+/// # use curv::elliptic::curves::{Scalar, Secp256k1};
+/// fn expression(
+///     a: &Scalar<Secp256k1>,
+///     b: &Scalar<Secp256k1>,
+///     c: &Scalar<Secp256k1>
+/// ) -> Scalar<Secp256k1> {
+///     a + b * c
+/// }
 /// ```
 #[derive(Serialize, Deserialize)]
 #[serde(try_from = "ScalarFormat<E>", into = "ScalarFormat<E>", bound = "")]
@@ -61,29 +42,33 @@ pub struct Scalar<E: Curve> {
 }
 
 impl<E: Curve> Scalar<E> {
-    /// Samples a random non-zero scalar
+    /// Ensures that `self` is not zero, returns `Err(_)` otherwise
+    pub fn ensure_nonzero(&self) -> Result<(), ZeroScalarError> {
+        if self.is_zero() {
+            Err(ZeroScalarError::new())
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Samples a random nonzero scalar
     pub fn random() -> Self {
         loop {
-            if let Some(scalar) = ScalarZ::from_raw(E::Scalar::random()).ensure_nonzero() {
-                break scalar;
+            let s = E::Scalar::random();
+            if !s.is_zero() {
+                break Scalar::from_raw(s);
             }
         }
     }
 
-    /// Returns modular multiplicative inverse of the scalar
-    ///
-    /// Inverse of non-zero scalar is always defined in a prime field, and inverted scalar is also
-    /// guaranteed to be non-zero.
-    pub fn invert(&self) -> Self {
-        self.as_raw()
-            .invert()
-            .map(|s| Scalar::from_raw(s).expect("inversion must be non-zero"))
-            .expect("non-zero scalar must have corresponding inversion")
+    /// Constructs zero scalar
+    pub fn zero() -> Self {
+        Self::from_raw(E::Scalar::zero())
     }
 
-    /// Returns a curve order
-    pub fn group_order() -> &'static BigInt {
-        E::Scalar::group_order()
+    /// Checks if a scalar is zero
+    pub fn is_zero(&self) -> bool {
+        self.as_raw().is_zero()
     }
 
     /// Converts a scalar to [BigInt]
@@ -91,37 +76,29 @@ impl<E: Curve> Scalar<E> {
         self.as_raw().to_bigint()
     }
 
-    /// Constructs a scalar from [BigInt] or returns error if it's zero
-    pub fn from_bigint(n: &BigInt) -> Result<Self, ZeroScalarError> {
+    /// Constructs a scalar `n % curve_order` from given `n`
+    pub fn from_bigint(n: &BigInt) -> Self {
         Self::from_raw(E::Scalar::from_bigint(n))
     }
 
+    /// Returns an order of generator point
+    pub fn group_order() -> &'static BigInt {
+        E::Scalar::group_order()
+    }
+
+    /// Returns inversion `self^-1 mod group_order`, or None if `self` is zero
+    pub fn invert(&self) -> Option<Self> {
+        self.as_raw().invert().map(Self::from_raw)
+    }
+
     /// Constructs a `Scalar<E>` from low-level [ECScalar] implementor
-    ///
-    /// Returns error if scalar is zero
     ///
     /// Typically, you don't need to use this constructor. See [random](Self::random),
     /// [from_bigint](Self::from_bigint) constructors, and `From<T>`, `TryFrom<T>` traits implemented
     /// for `Scalar<E>`.
     ///
     /// [ECScalar]: crate::elliptic::curves::ECScalar
-    pub fn from_raw(raw_scalar: E::Scalar) -> Result<Self, ZeroScalarError> {
-        if raw_scalar.is_zero() {
-            Err(ZeroScalarError(()))
-        } else {
-            Ok(Self { raw_scalar })
-        }
-    }
-
-    /// Constructs a `Scalar<E>` from low-level [ECScalar] implementor
-    ///
-    /// # Safety
-    ///
-    /// This function will not perform any checks against the scalar. You must guarantee that scalar
-    /// is not zero. To perform this check, you may use [ECScalar::is_zero][is_zero] method.
-    ///
-    /// [is_zero]: crate::elliptic::curves::ECScalar::is_zero
-    pub unsafe fn from_raw_unchecked(raw_scalar: E::Scalar) -> Self {
+    pub fn from_raw(raw_scalar: E::Scalar) -> Self {
         Self { raw_scalar }
     }
 
@@ -148,8 +125,7 @@ impl<E: Curve> Scalar<E> {
 
 impl<E: Curve> Clone for Scalar<E> {
     fn clone(&self) -> Self {
-        // Safety: `self` is guaranteed to be non-zero
-        unsafe { Scalar::from_raw_unchecked(self.as_raw().clone()) }
+        Self::from_raw(self.as_raw().clone())
     }
 }
 
@@ -165,50 +141,38 @@ impl<E: Curve> PartialEq for Scalar<E> {
     }
 }
 
-impl<E: Curve> PartialEq<ScalarZ<E>> for Scalar<E> {
-    fn eq(&self, other: &ScalarZ<E>) -> bool {
-        self.as_raw().eq(other.as_raw())
+impl<E: Curve> From<u16> for Scalar<E> {
+    fn from(n: u16) -> Self {
+        Self::from(&BigInt::from(n))
     }
 }
 
-impl<E: Curve> TryFrom<u16> for Scalar<E> {
-    type Error = ZeroScalarError;
-    fn try_from(n: u16) -> Result<Self, ZeroScalarError> {
-        Self::from_bigint(&BigInt::from(n))
+impl<E: Curve> From<u32> for Scalar<E> {
+    fn from(n: u32) -> Self {
+        Self::from(&BigInt::from(n))
     }
 }
 
-impl<E: Curve> TryFrom<u32> for Scalar<E> {
-    type Error = ZeroScalarError;
-    fn try_from(n: u32) -> Result<Self, ZeroScalarError> {
-        Self::from_bigint(&BigInt::from(n))
+impl<E: Curve> From<u64> for Scalar<E> {
+    fn from(n: u64) -> Self {
+        Self::from(&BigInt::from(n))
     }
 }
 
-impl<E: Curve> TryFrom<u64> for Scalar<E> {
-    type Error = ZeroScalarError;
-    fn try_from(n: u64) -> Result<Self, ZeroScalarError> {
-        Self::from_bigint(&BigInt::from(n))
+impl<E: Curve> From<i32> for Scalar<E> {
+    fn from(n: i32) -> Self {
+        Self::from(&BigInt::from(n))
     }
 }
 
-impl<E: Curve> TryFrom<i32> for Scalar<E> {
-    type Error = ZeroScalarError;
-    fn try_from(n: i32) -> Result<Self, ZeroScalarError> {
-        Self::from_bigint(&BigInt::from(n))
+impl<E: Curve> From<&BigInt> for Scalar<E> {
+    fn from(n: &BigInt) -> Self {
+        Scalar::from_raw(E::Scalar::from_bigint(n))
     }
 }
 
-impl<E: Curve> TryFrom<&BigInt> for Scalar<E> {
-    type Error = ZeroScalarError;
-    fn try_from(n: &BigInt) -> Result<Self, ZeroScalarError> {
-        Self::from_bigint(n)
-    }
-}
-
-impl<E: Curve> TryFrom<BigInt> for Scalar<E> {
-    type Error = ZeroScalarError;
-    fn try_from(n: BigInt) -> Result<Self, ZeroScalarError> {
-        Self::from_bigint(&n)
+impl<E: Curve> From<BigInt> for Scalar<E> {
+    fn from(n: BigInt) -> Self {
+        Self::from(&n)
     }
 }

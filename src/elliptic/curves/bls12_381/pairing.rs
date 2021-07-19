@@ -72,8 +72,7 @@ mod tests {
         let a = Point::<Bls12_381_1>::generator().to_point();
         let b = Point::<Bls12_381_2>::generator().to_point();
         let scalar_factor_1 = Scalar::<Bls12_381_1>::random();
-        let scalar_factor_2 =
-            Scalar::<Bls12_381_2>::from_raw(scalar_factor_1.as_raw().clone()).unwrap();
+        let scalar_factor_2 = Scalar::<Bls12_381_2>::from_raw(scalar_factor_1.as_raw().clone());
         let res_mul_a = &a * &scalar_factor_1;
         let res_mul_b = &b * &scalar_factor_2;
         let res_a_power = Pair::compute_pairing(&res_mul_a, &b);
@@ -87,7 +86,7 @@ mod tests {
         let p = Point::<Bls12_381_1>::generator().to_point();
         let q = Point::<Bls12_381_2>::generator().to_point();
         let r = Point::<Bls12_381_2>::base_point2().to_point();
-        let q_plus_r = (&q + &r).ensure_nonzero().unwrap();
+        let q_plus_r = &q + &r;
         let e_p_q = Pair::compute_pairing(&p, &q);
         let e_p_r = Pair::compute_pairing(&p, &r);
         let e_p_q_r = Pair::compute_pairing(&p, &q_plus_r);

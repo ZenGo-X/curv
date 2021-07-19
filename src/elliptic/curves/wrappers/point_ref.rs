@@ -5,11 +5,11 @@ use serde::Serialize;
 use crate::elliptic::curves::traits::*;
 use crate::BigInt;
 
-use super::{error::InvalidPoint, format::PointFormat, Generator, Point, PointZ};
+use super::{error::MismatchedPointOrder, format::PointFormat, Generator, Point};
 
-/// Reference on elliptic point of [group order](super::Scalar::group_order)
+/// Holds a reference to elliptic point of [group order](super::Scalar::group_order) or to zero point
 ///
-/// Holds internally a reference on [`Point<E>`](Point), refer to its documentation to learn
+/// Holds internally a reference to [`Point<E>`](Point), refer to its documentation to learn
 /// more about Point/PointRef guarantees, security notes, and arithmetics.
 #[derive(Serialize)]
 #[serde(into = "PointFormat<E>", bound = "")]
@@ -18,8 +18,11 @@ pub struct PointRef<'p, E: Curve> {
 }
 
 impl<E: Curve> PointRef<'static, E> {
+    /// Curve second generator
+    ///
+    /// We provide an alternative generator value and prove that it was picked randomly.
     pub fn base_point2() -> Self {
-        Self::from_raw(E::Point::base_point2()).expect("base_point2 must be non-zero")
+        Self::from_raw(E::Point::base_point2()).expect("base_point2 must be of group_order")
     }
 }
 
@@ -29,41 +32,36 @@ where
 {
     /// Returns point coordinates (`x` and `y`)
     ///
-    /// Method never fails as Point is guaranteed to have coordinates
-    pub fn coords(&self) -> PointCoords {
-        self.as_raw()
-            .coords()
-            .expect("Point guaranteed to have coordinates")
+    /// Point might not have coordinates (specifically, "point at infinity" doesn't), in this case
+    /// `None` is returned
+    pub fn coords(&self) -> Option<PointCoords> {
+        self.as_raw().coords()
     }
 
     /// Returns `x` coordinate of point
     ///
-    /// Method never fails as Point is guaranteed to have coordinates
-    pub fn x_coord(&self) -> BigInt {
-        self.as_raw()
-            .x_coord()
-            .expect("Point guaranteed to have coordinates")
+    /// See [coords](Self::coords) method that retrieves both x and y at once.
+    pub fn x_coord(&self) -> Option<BigInt> {
+        self.as_raw().x_coord()
     }
 
     /// Returns `y` coordinate of point
     ///
-    /// Method never fails as Point is guaranteed to have coordinates
-    pub fn y_coord(&self) -> BigInt {
-        self.as_raw()
-            .y_coord()
-            .expect("Point guaranteed to have coordinates")
+    /// See [coords](Self::coords) method that retrieves both x and y at once.
+    pub fn y_coord(&self) -> Option<BigInt> {
+        self.as_raw().y_coord()
     }
 
     /// Serializes point into (un)compressed form
-    pub fn to_bytes(self, compressed: bool) -> Vec<u8> {
-        self.as_raw()
-            .serialize(compressed)
-            .expect("non-zero point must always be serializable")
+    ///
+    /// Returns `None` if it's point at infinity
+    pub fn to_bytes(self, compressed: bool) -> Option<Vec<u8>> {
+        self.as_raw().serialize(compressed)
     }
 
     /// Clones the referenced point
     pub fn to_point(self) -> Point<E> {
-        // Safety: `self` is guaranteed to have order = group_order
+        // Safety: `self` holds the same guarantees as `Point` requires to meet
         unsafe { Point::from_raw_unchecked(self.as_raw().clone()) }
     }
 
@@ -77,13 +75,11 @@ where
     ///
     /// [ECPoint]: crate::elliptic::curves::ECPoint
     /// [group order]: crate::elliptic::curves::ECScalar::group_order
-    pub fn from_raw(raw_point: &'p E::Point) -> Result<Self, InvalidPoint> {
-        if raw_point.is_zero() {
-            Err(InvalidPoint::ZeroPoint)
-        } else if !raw_point.check_point_order_equals_group_order() {
-            Err(InvalidPoint::MismatchedPointOrder)
-        } else {
+    pub fn from_raw(raw_point: &'p E::Point) -> Result<Self, MismatchedPointOrder> {
+        if raw_point.is_zero() || raw_point.check_point_order_equals_group_order() {
             Ok(Self { raw_point })
+        } else {
+            Err(MismatchedPointOrder::new())
         }
     }
 
@@ -119,7 +115,7 @@ where
 
 impl<'p, E: Curve> Clone for PointRef<'p, E> {
     fn clone(&self) -> Self {
-        // Safety: `self` is guaranteed to be non-zero
+        // Safety: `self` is guaranteed to be nonzero
         unsafe { Self::from_raw_unchecked(self.as_raw()) }
     }
 }
@@ -129,13 +125,6 @@ impl<'p, E: Curve> Copy for PointRef<'p, E> {}
 impl<'p, E: Curve> fmt::Debug for PointRef<'p, E> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.as_raw().fmt(f)
-    }
-}
-
-impl<'p, E: Curve> From<&'p Point<E>> for PointRef<'p, E> {
-    fn from(point: &'p Point<E>) -> Self {
-        // Safety: `point` is guaranteed to be non-zero
-        unsafe { PointRef::from_raw_unchecked(point.as_raw()) }
     }
 }
 
@@ -151,14 +140,22 @@ impl<'p, E: Curve> PartialEq<Point<E>> for PointRef<'p, E> {
     }
 }
 
-impl<'p, E: Curve> PartialEq<PointZ<E>> for PointRef<'p, E> {
-    fn eq(&self, other: &PointZ<E>) -> bool {
+impl<'p, E: Curve> PartialEq<Generator<E>> for PointRef<'p, E> {
+    fn eq(&self, other: &Generator<E>) -> bool {
         self.as_raw().eq(other.as_raw())
     }
 }
 
-impl<'p, E: Curve> PartialEq<Generator<E>> for PointRef<'p, E> {
-    fn eq(&self, other: &Generator<E>) -> bool {
-        self.as_raw().eq(other.as_raw())
+impl<'p, E: Curve> From<&'p Point<E>> for PointRef<'p, E> {
+    fn from(point: &'p Point<E>) -> Self {
+        // Safety: `Point` holds the same guarantees as `PointRef`
+        unsafe { PointRef::from_raw_unchecked(point.as_raw()) }
+    }
+}
+
+impl<E: Curve> From<Generator<E>> for PointRef<'static, E> {
+    fn from(g: Generator<E>) -> Self {
+        // Safety: generator must be of group_order
+        unsafe { PointRef::from_raw_unchecked(g.as_raw()) }
     }
 }

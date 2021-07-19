@@ -10,7 +10,7 @@ use crate::arithmetic::*;
 use crate::elliptic::curves::traits::*;
 
 use super::{
-    error::{InvalidPoint, MismatchedPointOrder, PointFromCoordsError, PointZFromCoordsError},
+    error::{InvalidPoint, PointFromCoordsError},
     *,
 };
 
@@ -29,38 +29,6 @@ impl<E: Curve> PointFormat<E> {
     }
 }
 
-impl<E: Curve> TryFrom<PointFormat<E>> for PointZ<E> {
-    type Error = ConvertParsedPointError;
-    fn try_from(parsed: PointFormat<E>) -> Result<Self, ConvertParsedPointError> {
-        if parsed.curve != E::CURVE_NAME {
-            return Err(ConvertParsedPointError::MismatchedCurve {
-                expected: E::CURVE_NAME,
-                got: parsed.curve,
-            });
-        }
-        match parsed.point {
-            None => Ok(PointZ::zero()),
-            Some(coords) => match PointZ::from_coords(&coords.x, &coords.y) {
-                Ok(p) => Ok(p),
-                Err(PointZFromCoordsError::NotOnCurve) => Err(ConvertParsedPointError::NotOnCurve),
-                Err(PointZFromCoordsError::InvalidPoint(MismatchedPointOrder(()))) => Err(
-                    ConvertParsedPointError::InvalidPoint(InvalidPoint::MismatchedPointOrder),
-                ),
-            },
-        }
-    }
-}
-
-impl<E: Curve> From<PointZ<E>> for PointFormat<E> {
-    fn from(point: PointZ<E>) -> Self {
-        Self {
-            curve: E::CURVE_NAME.into(),
-            point: point.coords(),
-            _ph: PhantomData,
-        }
-    }
-}
-
 impl<E: Curve> TryFrom<PointFormat<E>> for Point<E> {
     type Error = ConvertParsedPointError;
     fn try_from(parsed: PointFormat<E>) -> Result<Self, ConvertParsedPointError> {
@@ -71,17 +39,13 @@ impl<E: Curve> TryFrom<PointFormat<E>> for Point<E> {
             });
         }
         match parsed.point {
-            None => Err(ConvertParsedPointError::InvalidPoint(
-                InvalidPoint::ZeroPoint,
-            )),
+            None => Ok(Point::zero()),
             Some(coords) => match Point::from_coords(&coords.x, &coords.y) {
                 Ok(p) => Ok(p),
-                Err(PointFromCoordsError::PointNotOnCurve) => {
-                    Err(ConvertParsedPointError::NotOnCurve)
-                }
-                Err(PointFromCoordsError::InvalidPoint(reason)) => {
-                    Err(ConvertParsedPointError::InvalidPoint(reason))
-                }
+                Err(PointFromCoordsError::NotOnCurve) => Err(ConvertParsedPointError::NotOnCurve),
+                Err(PointFromCoordsError::InvalidPoint(_e)) => Err(
+                    ConvertParsedPointError::InvalidPoint(InvalidPoint::MismatchedPointOrder),
+                ),
             },
         }
     }
@@ -91,7 +55,7 @@ impl<E: Curve> From<Point<E>> for PointFormat<E> {
     fn from(point: Point<E>) -> Self {
         Self {
             curve: E::CURVE_NAME.into(),
-            point: Some(point.coords()),
+            point: point.coords(),
             _ph: PhantomData,
         }
     }
@@ -101,7 +65,7 @@ impl<'p, E: Curve> From<PointRef<'p, E>> for PointFormat<E> {
     fn from(point: PointRef<'p, E>) -> Self {
         Self {
             curve: E::CURVE_NAME.into(),
-            point: Some(point.coords()),
+            point: point.coords(),
             _ph: PhantomData,
         }
     }
@@ -128,30 +92,6 @@ pub struct ScalarFormat<E: Curve> {
     scalar: ScalarHex<E>,
 }
 
-impl<E: Curve> TryFrom<ScalarFormat<E>> for ScalarZ<E> {
-    type Error = ConvertParsedScalarError;
-
-    fn try_from(parsed: ScalarFormat<E>) -> Result<Self, Self::Error> {
-        if parsed.curve != E::CURVE_NAME {
-            return Err(ConvertParsedScalarError::MismatchedCurve {
-                got: parsed.curve,
-                expected: E::CURVE_NAME,
-            });
-        }
-
-        Ok(ScalarZ::from_raw(parsed.scalar.0))
-    }
-}
-
-impl<E: Curve> From<ScalarZ<E>> for ScalarFormat<E> {
-    fn from(s: ScalarZ<E>) -> Self {
-        ScalarFormat {
-            curve: E::CURVE_NAME.into(),
-            scalar: ScalarHex(s.into_raw()),
-        }
-    }
-}
-
 impl<E: Curve> TryFrom<ScalarFormat<E>> for Scalar<E> {
     type Error = ConvertParsedScalarError;
 
@@ -163,9 +103,7 @@ impl<E: Curve> TryFrom<ScalarFormat<E>> for Scalar<E> {
             });
         }
 
-        ScalarZ::from_raw(parsed.scalar.0)
-            .ensure_nonzero()
-            .ok_or(ConvertParsedScalarError::ZeroScalar)
+        Ok(Scalar::from_raw(parsed.scalar.0))
     }
 }
 

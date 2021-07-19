@@ -16,11 +16,10 @@ use super::{Point, PointRef};
 /// ## Example
 ///
 /// ```rust
-/// # use curv::elliptic::curves::{PointZ, Point, Scalar, Secp256k1};
-/// let s = Scalar::<Secp256k1>::random();   // Non-zero scalar
-/// let g = Point::<Secp256k1>::generator(); // Curve generator
-/// let result: Point<Secp256k1> = s * g;    // Generator multiplied at non-zero scalar is
-///                                          // always a non-zero point
+/// # use curv::elliptic::curves::{Point, Scalar, Secp256k1};
+/// let s = Scalar::<Secp256k1>::random();
+/// let g = Point::<Secp256k1>::generator();
+/// let result: Point<Secp256k1> = s * g;
 /// ```
 ///
 /// ## Performance
@@ -29,7 +28,7 @@ use super::{Point, PointRef};
 /// converting generator into the `Point<E>` as long as it's possible:
 ///
 /// ```rust
-/// # use curv::elliptic::curves::{Point, Scalar, Secp256k1, Generator, PointZ};
+/// # use curv::elliptic::curves::{Point, Scalar, Secp256k1, Generator};
 /// let s: Scalar<Secp256k1> = Scalar::random();
 /// // Generator multiplication:
 /// let g: Generator<Secp256k1> = Point::generator();
@@ -51,20 +50,19 @@ impl<E: Curve> Default for Generator<E> {
 }
 
 impl<E: Curve> Generator<E> {
-    pub fn as_raw(self) -> &'static E::Point {
-        E::Point::generator()
-    }
-
     /// Clones generator point, returns `Point<E>`
     pub fn to_point(self) -> Point<E> {
-        // Safety: curve generator must be non-zero point, otherwise nothing will work at all
-        unsafe { Point::from_raw_unchecked(self.as_raw().clone()) }
+        Point::from(self)
     }
 
     /// Converts generator into `PointRef<E>`
     pub fn as_point(self) -> PointRef<'static, E> {
-        // Safety: curve generator must be non-zero point, otherwise nothing will work at all
-        unsafe { PointRef::from_raw_unchecked(self.as_raw()) }
+        PointRef::from(self)
+    }
+
+    /// Returns a reference to low-level point implementation
+    pub fn as_raw(self) -> &'static E::Point {
+        E::Point::generator()
     }
 }
 
