@@ -371,45 +371,31 @@ impl ECPoint for Secp256k1Point {
         }
     }
 
-    fn serialize(&self, compressed: bool) -> Option<Vec<u8>> {
-        let ge = self.ge.as_ref()?;
+    fn serialize(&self, compressed: bool) -> Vec<u8> {
+        let ge = match &self.ge {
+            Some(pk) => pk,
+            None => return vec![0],
+        };
         if compressed {
-            Some(ge.serialize().to_vec())
+            ge.serialize().to_vec()
         } else {
-            // TODO: why not using ge.serialize_uncompressed()?
-            //  https://docs.rs/secp256k1/0.20.3/secp256k1/key/struct.PublicKey.html#method.serialize_uncompressed
-            let mut v = vec![4_u8];
-            let x_vec = BigInt::to_bytes(
-                &self
-                    .x_coord()
-                    .expect("guaranteed by the first line of this function"),
-            );
-            let y_vec = BigInt::to_bytes(
-                &self
-                    .y_coord()
-                    .expect("guaranteed by the first line of this function"),
-            );
-
-            let mut raw_x: Vec<u8> = Vec::new();
-            let mut raw_y: Vec<u8> = Vec::new();
-            raw_x.extend(vec![0u8; 32 - x_vec.len()]);
-            raw_x.extend(x_vec);
-
-            raw_y.extend(vec![0u8; 32 - y_vec.len()]);
-            raw_y.extend(y_vec);
-
-            v.extend(raw_x);
-            v.extend(raw_y);
-            Some(v)
+            ge.serialize_uncompressed().to_vec()
         }
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Secp256k1Point, DeserializationError> {
-        let pk = PublicKey::from_slice(bytes).map_err(|_| DeserializationError)?;
-        Ok(Secp256k1Point {
-            purpose: "from_bytes",
-            ge: Some(PK(pk)),
-        })
+        if bytes == &[0] {
+            Ok(Secp256k1Point {
+                purpose: "from_bytes",
+                ge: None,
+            })
+        } else {
+            let pk = PublicKey::from_slice(bytes).map_err(|_| DeserializationError)?;
+            Ok(Secp256k1Point {
+                purpose: "from_bytes",
+                ge: Some(PK(pk)),
+            })
+        }
     }
 
     fn check_point_order_equals_group_order(&self) -> bool {
@@ -607,7 +593,7 @@ mod test {
         let base_point2 = GE::base_point2();
 
         let g = GE::generator();
-        let hash = Sha256::digest(&g.serialize(true).unwrap());
+        let hash = Sha256::digest(&g.serialize(true));
         let hash = Sha256::digest(&hash);
         let hash = Sha256::digest(&hash);
 

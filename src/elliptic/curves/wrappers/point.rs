@@ -154,9 +154,7 @@ impl<E: Curve> Point<E> {
     }
 
     /// Serializes a point in (un)compressed form
-    ///
-    /// Returns `None` if it's point at infinity
-    pub fn to_bytes(&self, compressed: bool) -> Option<Vec<u8>> {
+    pub fn to_bytes(&self, compressed: bool) -> Vec<u8> {
         self.as_raw().serialize(compressed)
     }
 

@@ -29,10 +29,7 @@ impl Blake {
     }
 
     pub fn chain_point<E: Curve>(&mut self, point: &Point<E>) -> &mut Self {
-        match point.to_bytes(false) {
-            Some(bytes) => self.state.update(&bytes),
-            None => self.state.update(b"point at infinity"),
-        };
+        self.state.update(&point.to_bytes(false));
         self
     }
 
@@ -67,10 +64,7 @@ impl Blake {
         //  let mut digest = Blake2b::with_params(64, &[], &[], persona);
 
         for value in ge_vec {
-            match value.to_bytes(false) {
-                Some(serialized) => digest.update(&serialized),
-                None => digest.update(b"infinity point"),
-            };
+            digest.update(&value.to_bytes(false));
         }
 
         let result = BigInt::from_bytes(digest.finalize().as_ref());

@@ -89,10 +89,7 @@ where
     }
 
     fn input_point<E: Curve>(&mut self, point: &Point<E>) {
-        match point.to_bytes(false) {
-            Some(bytes) => self.input(&bytes),
-            None => self.input(b"point at infinity"),
-        }
+        self.input(&point.to_bytes(false))
     }
 
     fn input_scalar<E: Curve>(&mut self, scalar: &Scalar<E>) {

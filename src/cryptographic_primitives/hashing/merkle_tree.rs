@@ -31,9 +31,7 @@ impl<E: Curve> MT256<E> {
         let vec_bytes = (0..vec.len())
             .map(|i| {
                 let mut array = [0u8; 32];
-                let bytes = vec[i]
-                    .to_bytes(false)
-                    .unwrap_or_else(|| b"infinity point".to_vec());
+                let bytes = vec[i].to_bytes(false);
                 array.copy_from_slice(&bytes[0..32]);
                 array
             })
@@ -48,9 +46,7 @@ impl<E: Curve> MT256<E> {
 
     pub fn gen_proof_for_ge(&self, value: &Point<E>) -> Proof<[u8; 32]> {
         let mut array = [0u8; 32];
-        let pk_slice = value
-            .to_bytes(false)
-            .unwrap_or_else(|| b"infinity point".to_vec());
+        let pk_slice = value.to_bytes(false);
         array.copy_from_slice(&pk_slice[0..32]);
         MerkleTree::gen_proof::<[u8; 32]>(&self.tree, array).expect("not found in tree")
     }

@@ -281,12 +281,8 @@ impl ECPoint for Secp256r1Point {
         Some(PointCoords { x, y })
     }
 
-    fn serialize(&self, compressed: bool) -> Option<Vec<u8>> {
-        if self.is_zero() {
-            None
-        } else {
-            Some(self.ge.to_encoded_point(compressed).to_bytes().into())
-        }
+    fn serialize(&self, compressed: bool) -> Vec<u8> {
+        self.ge.to_encoded_point(compressed).to_bytes().into()
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError> {
@@ -378,7 +374,7 @@ mod tests {
         let base_point2 = GE::base_point2();
 
         let g = GE::generator();
-        let hash = Sha256::digest(&g.serialize(true).unwrap());
+        let hash = Sha256::digest(&g.serialize(true));
         let hash = Sha256::digest(&hash);
 
         assert_eq!(BigInt::from_bytes(&hash), base_point2.x_coord().unwrap());

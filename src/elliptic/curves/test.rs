@@ -81,17 +81,25 @@ fn point_addition_multiplication<E: Curve>() {
 test_for_all_curves!(serialize_deserialize);
 fn serialize_deserialize<E: Curve>() {
     let point = <E::Point as ECPoint>::generator().scalar_mul(&random_nonzero_scalar());
-    let bytes = point
-        .serialize(true)
-        .expect("point has coordinates => must be serializable");
+    let bytes = point.serialize(true);
     let deserialized = <E::Point as ECPoint>::deserialize(&bytes).unwrap();
     assert_eq!(point, deserialized);
 
-    let bytes = point
-        .serialize(false)
-        .expect("point has coordinates => must be serializable");
+    let bytes = point.serialize(false);
     let deserialized = E::Point::deserialize(&bytes).unwrap();
     assert_eq!(point, deserialized);
+}
+
+test_for_all_curves!(zero_point_serialization);
+fn zero_point_serialization<E: Curve>() {
+    let point: E::Point = ECPoint::zero();
+    let bytes = point.serialize(true);
+    let point_from_compressed: E::Point = ECPoint::deserialize(&bytes).unwrap();
+    assert_eq!(point, point_from_compressed);
+
+    let bytes = point.serialize(false);
+    let point_from_uncompressed: E::Point = ECPoint::deserialize(&bytes).unwrap();
+    assert_eq!(point, point_from_uncompressed);
 }
 
 test_for_all_curves!(generator_mul_curve_order_is_zero);

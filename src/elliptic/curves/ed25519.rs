@@ -52,7 +52,7 @@ lazy_static::lazy_static! {
     };
 
     static ref BASE_POINT2: Ed25519Point = {
-        let bytes = GENERATOR.serialize(true).unwrap();
+        let bytes = GENERATOR.serialize(true);
         let hashed = sha2::Sha256::digest(&bytes);
         let hashed_twice = sha2::Sha256::digest(&hashed);
         let p = Ed25519Point::deserialize(&hashed_twice).unwrap();
@@ -338,8 +338,8 @@ impl ECPoint for Ed25519Point {
         Some(PointCoords { x: xrecover(&y), y })
     }
 
-    fn serialize(&self, _compress: bool) -> Option<Vec<u8>> {
-        Some(self.ge.to_bytes().to_vec())
+    fn serialize(&self, _compress: bool) -> Vec<u8> {
+        self.ge.to_bytes().to_vec()
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Ed25519Point, DeserializationError> {

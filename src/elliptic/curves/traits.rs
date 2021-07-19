@@ -147,9 +147,8 @@ pub trait ECPoint: Zeroize + Clone + PartialEq + fmt::Debug + 'static {
 
     /// Serializes point into bytes either in compressed or uncompressed form
     ///
-    /// Returns None if point doesn't have coordinates, ie. it is "at infinity". If point isn't
-    /// at infinity, serialize always succeeds.
-    fn serialize(&self, compressed: bool) -> Option<Vec<u8>>;
+    /// Serialization must always succeed even if it's point at infinity.
+    fn serialize(&self, compressed: bool) -> Vec<u8>;
     /// Deserializes point from bytes
     ///
     /// Whether point in compressed or uncompressed form will be deducted from its size

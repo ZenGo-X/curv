@@ -152,18 +152,23 @@ impl ECPoint for G1Point {
         }
     }
 
-    fn serialize(&self, compressed: bool) -> Option<Vec<u8>> {
+    fn serialize(&self, compressed: bool) -> Vec<u8> {
         if self.is_zero() {
-            None
+            vec![0]
         } else if compressed {
-            Some(G1Compressed::from_affine(self.ge).as_ref().to_vec())
+            G1Compressed::from_affine(self.ge).as_ref().to_vec()
         } else {
-            Some(G1Uncompressed::from_affine(self.ge).as_ref().to_vec())
+            G1Uncompressed::from_affine(self.ge).as_ref().to_vec()
         }
     }
 
     fn deserialize(bytes: &[u8]) -> Result<G1Point, DeserializationError> {
-        if bytes.len() == COMPRESSED_SIZE {
+        if bytes == &[0] {
+            Ok(G1Point {
+                purpose: "deserialize",
+                ge: Self::zero().ge,
+            })
+        } else if bytes.len() == COMPRESSED_SIZE {
             let mut compressed = G1Compressed::empty();
             compressed.as_mut().copy_from_slice(bytes);
             Ok(G1Point {
@@ -263,9 +268,7 @@ impl fmt::Debug for G1Point {
             f,
             "Point {{ purpose: {:?}, uncompressed: {:?} }}",
             self.purpose,
-            self.serialize(false)
-                .map(hex::encode)
-                .unwrap_or_else(|| "infinity".to_string()),
+            hex::encode(self.serialize(false)),
         )
     }
 }
