@@ -6,19 +6,16 @@ use std::marker::PhantomData;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::arithmetic::*;
 use crate::elliptic::curves::traits::*;
+use crate::elliptic::curves::InvalidPoint;
 
-use super::{
-    error::{InvalidPoint, PointFromCoordsError},
-    *,
-};
+use super::*;
 
 #[derive(Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct PointFormat<E: Curve> {
     curve: Cow<'static, str>,
-    point: Option<PointCoords>,
+    compressed_point: Box<[u8]>,
     #[serde(skip, default = "PointFormat::<E>::_ph")]
     _ph: PhantomData<E>,
 }
@@ -38,16 +35,11 @@ impl<E: Curve> TryFrom<PointFormat<E>> for Point<E> {
                 got: parsed.curve,
             });
         }
-        match parsed.point {
-            None => Ok(Point::zero()),
-            Some(coords) => match Point::from_coords(&coords.x, &coords.y) {
-                Ok(p) => Ok(p),
-                Err(PointFromCoordsError::NotOnCurve) => Err(ConvertParsedPointError::NotOnCurve),
-                Err(PointFromCoordsError::InvalidPoint(_e)) => Err(
-                    ConvertParsedPointError::InvalidPoint(InvalidPoint::MismatchedPointOrder),
-                ),
-            },
-        }
+        let point = E::Point::deserialize(&parsed.compressed_point)
+            .or(Err(ConvertParsedPointError::NotOnCurve))?;
+        Point::from_raw(point).or(Err(ConvertParsedPointError::InvalidPoint(
+            InvalidPoint::MismatchedPointOrder,
+        )))
     }
 }
 
@@ -55,7 +47,7 @@ impl<E: Curve> From<Point<E>> for PointFormat<E> {
     fn from(point: Point<E>) -> Self {
         Self {
             curve: E::CURVE_NAME.into(),
-            point: point.coords(),
+            compressed_point: point.as_raw().serialize(true).into(),
             _ph: PhantomData,
         }
     }
@@ -65,7 +57,7 @@ impl<'p, E: Curve> From<PointRef<'p, E>> for PointFormat<E> {
     fn from(point: PointRef<'p, E>) -> Self {
         Self {
             curve: E::CURVE_NAME.into(),
-            point: point.coords(),
+            compressed_point: point.as_raw().serialize(true).into(),
             _ph: PhantomData,
         }
     }
@@ -116,6 +108,29 @@ impl<E: Curve> From<Scalar<E>> for ScalarFormat<E> {
     }
 }
 
+struct ScalarHex<E: Curve>(E::Scalar);
+
+impl<E: Curve> hex::ToHex for &ScalarHex<E> {
+    fn encode_hex<T: iter::FromIterator<char>>(&self) -> T {
+        self.0.serialize().encode_hex()
+    }
+
+    fn encode_hex_upper<T: iter::FromIterator<char>>(&self) -> T {
+        self.0.serialize().encode_hex_upper()
+    }
+}
+
+impl<E: Curve> hex::FromHex for ScalarHex<E> {
+    type Error = ScalarFromhexError;
+
+    fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
+        let bytes = Vec::from_hex(hex).map_err(ScalarFromhexError::InvalidHex)?;
+        E::Scalar::deserialize(&bytes)
+            .or(Err(ScalarFromhexError::InvalidScalar))
+            .map(ScalarHex)
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum ConvertParsedScalarError {
     #[error("scalar must not be zero")]
@@ -127,24 +142,10 @@ pub enum ConvertParsedScalarError {
     },
 }
 
-struct ScalarHex<E: Curve>(E::Scalar);
-
-impl<E: Curve> hex::ToHex for &ScalarHex<E> {
-    fn encode_hex<T: iter::FromIterator<char>>(&self) -> T {
-        self.0.to_bigint().to_bytes().encode_hex()
-    }
-
-    fn encode_hex_upper<T: iter::FromIterator<char>>(&self) -> T {
-        self.0.to_bigint().to_bytes().encode_hex_upper()
-    }
-}
-
-impl<E: Curve> hex::FromHex for ScalarHex<E> {
-    type Error = hex::FromHexError;
-
-    fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
-        let bytes = Vec::<u8>::from_hex(hex)?;
-        let big_int = BigInt::from_bytes(&bytes);
-        Ok(ScalarHex(E::Scalar::from_bigint(&big_int)))
-    }
+#[derive(Debug, Error)]
+pub enum ScalarFromhexError {
+    #[error("scalar contains invalid hex: {0}")]
+    InvalidHex(hex::FromHexError),
+    #[error("scalar is not valid")]
+    InvalidScalar,
 }
