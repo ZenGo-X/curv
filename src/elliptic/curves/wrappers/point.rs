@@ -160,7 +160,8 @@ impl<E: Curve> Point<E> {
 
     /// Constructs a `Point<E>` from low-level [ECPoint] implementor
     ///
-    /// Returns error if point is zero, or its order isn't equal to [group order].
+    /// Returns error if point is not valid. Valid point is either a zero point, or a point of
+    /// [group order].
     ///
     /// Typically, you don't need to use this constructor. See [generator](Point::generator),
     /// [base_point2](Point::base_point2), [from_coords](Self::from_coords), [from_bytes](Self::from_bytes)

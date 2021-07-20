@@ -65,7 +65,8 @@ where
 
     /// Constructs a `PointRef<E>` from reference to low-level [ECPoint] implementor
     ///
-    /// Returns error if point is zero, or its order isn't equal to [group order].
+    /// Returns error if point is not valid. Valid point is either a zero point, or a point of
+    /// [group order].
     ///
     /// Typically, you don't need to use this constructor. See [generator](Point::generator),
     /// [base_point2](Point::base_point2) constructors, and `From<T>` and `TryFrom<T>` traits
