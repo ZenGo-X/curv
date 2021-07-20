@@ -16,23 +16,18 @@
 
 mod errors;
 mod macros;
-mod samplable;
 pub mod traits;
 
-#[cfg(not(any(feature = "rust-gmp-kzen", feature = "num-bigint")))]
+pub use traits::{BigInt, NumberTheoreticOps};
+
+#[cfg(not(any(feature = "rug", feature = "num-bigint")))]
 compile_error!("You need to choose which bigint implementation to use. See crate features.");
-#[cfg(all(feature = "rust-gmp-kzen", feature = "num-bigint"))]
-compile_error!("You can choose only one bigint implementation. See crate features.");
 
-#[cfg(feature = "rust-gmp-kzen")]
-mod big_gmp;
-#[cfg(feature = "rust-gmp-kzen")]
-pub use big_gmp::BigInt;
+#[cfg(feature = "rug")]
+pub mod gmp;
 
 #[cfg(feature = "num-bigint")]
-mod big_native;
-#[cfg(feature = "num-bigint")]
-pub use big_native::BigInt;
+pub mod native;
 
 pub use errors::{ParseBigIntError, TryFromBigIntError};
 pub use traits::*;
