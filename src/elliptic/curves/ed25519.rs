@@ -276,7 +276,6 @@ impl PartialEq for Ed25519Point {
 impl Zeroize for Ed25519Point {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(&mut self.ge, GENERATOR.ge) };
-        atomic::fence(atomic::Ordering::SeqCst);
         atomic::compiler_fence(atomic::Ordering::SeqCst);
     }
 }

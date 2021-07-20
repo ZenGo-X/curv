@@ -8,9 +8,7 @@
 use std::fmt;
 
 use ff_zeroize::{PrimeField, ScalarEngine};
-use pairing_plus::bls12_381::G2Compressed;
-use pairing_plus::bls12_381::G2Uncompressed;
-use pairing_plus::bls12_381::G2;
+use pairing_plus::bls12_381::{G2Compressed, G2Uncompressed, G2};
 use pairing_plus::hash_to_curve::HashToCurve;
 use pairing_plus::hash_to_field::ExpandMsgXmd;
 use pairing_plus::{CurveAffine, CurveProjective, Engine};
@@ -101,21 +99,16 @@ impl ECPoint for G2Point {
     }
 
     fn from_coords(x: &BigInt, y: &BigInt) -> Result<G2Point, NotOnCurve> {
-        let x = x.to_bytes();
-        let y = y.to_bytes();
-
-        let mut uncompressed = [0u8; COMPRESSED_SIZE * 2];
-        if x.len() <= COMPRESSED_SIZE {
-            uncompressed[COMPRESSED_SIZE - x.len()..COMPRESSED_SIZE].copy_from_slice(&x)
-        } else {
+        let vec_x = x.to_bytes();
+        let vec_y = y.to_bytes();
+        if vec_x.len() > COMPRESSED_SIZE || vec_y.len() > COMPRESSED_SIZE {
             return Err(NotOnCurve);
         }
-
-        if y.len() <= COMPRESSED_SIZE {
-            uncompressed[2 * COMPRESSED_SIZE - y.len()..2 * COMPRESSED_SIZE].copy_from_slice(&y)
-        } else {
-            return Err(NotOnCurve);
-        }
+        let mut uncompressed = [0u8; 2 * COMPRESSED_SIZE];
+        uncompressed[COMPRESSED_SIZE - vec_x.len()..COMPRESSED_SIZE].copy_from_slice(&vec_x);
+        uncompressed[(2 * COMPRESSED_SIZE) - vec_y.len()..].copy_from_slice(&vec_y);
+        debug_assert_eq!(x, &BigInt::from_bytes(&uncompressed[..COMPRESSED_SIZE]));
+        debug_assert_eq!(y, &BigInt::from_bytes(&uncompressed[COMPRESSED_SIZE..]));
 
         let mut point = G2Uncompressed::empty();
         point.as_mut().copy_from_slice(&uncompressed);

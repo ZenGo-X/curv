@@ -6,6 +6,7 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
+use std::convert::TryInto;
 use std::ptr;
 use std::sync::atomic;
 
@@ -89,38 +90,15 @@ impl ECScalar for RistrettoScalar {
     }
 
     fn from_bigint(n: &BigInt) -> RistrettoScalar {
-        let mut v = BigInt::to_bytes(n);
-        //TODO: add consistency check for sizes max 32/ max 64
-        let mut bytes_array_32: [u8; 32];
-        let mut bytes_array_64: [u8; 64];
-        if v.len() < SECRET_KEY_SIZE {
-            let mut template = vec![0; SECRET_KEY_SIZE - v.len()];
-            template.extend_from_slice(&v);
-            v = template;
-        } else if v.len() > SECRET_KEY_SIZE && v.len() < 2 * SECRET_KEY_SIZE {
-            let mut template = vec![0; 2 * SECRET_KEY_SIZE - v.len()];
-            template.extend_from_slice(&v);
-            v = template;
-        }
-
-        if v.len() == SECRET_KEY_SIZE {
-            bytes_array_32 = [0; SECRET_KEY_SIZE];
-            let bytes = &v[..];
-            bytes_array_32.copy_from_slice(&bytes);
-            bytes_array_32.reverse();
-            RistrettoScalar {
-                purpose: "from_bigint",
-                fe: SK::from_bytes_mod_order(bytes_array_32).into(),
-            }
-        } else {
-            bytes_array_64 = [0; 2 * SECRET_KEY_SIZE];
-            let bytes = &v[..];
-            bytes_array_64.copy_from_slice(&bytes);
-            bytes_array_64.reverse();
-            RistrettoScalar {
-                purpose: "from_bigint",
-                fe: SK::from_bytes_mod_order_wide(&bytes_array_64).into(),
-            }
+        let curve_order = RistrettoScalar::group_order();
+        let mut bytes = n
+            .modulus(&curve_order)
+            .to_bytes_array::<32>()
+            .expect("n mod curve_order must be equal or less than 32 bytes");
+        bytes.reverse();
+        RistrettoScalar {
+            purpose: "from_bigint",
+            fe: SK::from_bytes_mod_order(bytes).into(),
         }
     }
 
@@ -227,23 +205,13 @@ impl ECPoint for RistrettoPoint {
     }
 
     fn from_coords(x: &BigInt, y: &BigInt) -> Result<RistrettoPoint, NotOnCurve> {
-        if x != &BigInt::from_bytes(&Sha256::digest(&y.to_bytes())) {
+        let mut y_bytes = y.to_bytes_array::<32>().ok_or(NotOnCurve)?;
+        if x != &BigInt::from_bytes(&Sha256::digest(&y_bytes)) {
             return Err(NotOnCurve);
         }
 
-        let y = y.to_bytes();
-        let mut y = match y.len() {
-            32 => y,
-            n if n < 32 => {
-                let mut padded = vec![0u8; 32 - y.len()];
-                padded.extend_from_slice(&y);
-                padded
-            }
-            _ => y[y.len() - 32..].to_vec(),
-        };
-
-        y.reverse();
-        let compressed = CompressedRistretto::from_slice(&y);
+        y_bytes.reverse();
+        let compressed = CompressedRistretto::from_slice(&y_bytes);
 
         Ok(RistrettoPoint {
             purpose: "from_coords",
@@ -254,7 +222,10 @@ impl ECPoint for RistrettoPoint {
     fn x_coord(&self) -> Option<BigInt> {
         // Underlying library intentionally hides x coordinate. We return x=hash(y) as was proposed
         // here: https://github.com/dalek-cryptography/curve25519-dalek/issues/235
-        let y = self.y_coord()?.to_bytes();
+        let y = self
+            .y_coord()?
+            .to_bytes_array::<32>()
+            .expect("y coordinate is mod n, meaning it must be <= 32 bytes");
         let x = Sha256::digest(&y);
         Some(BigInt::from_bytes(&x))
     }
@@ -267,7 +238,10 @@ impl ECPoint for RistrettoPoint {
 
     fn coords(&self) -> Option<PointCoords> {
         let y = self.y_coord()?;
-        let x = Sha256::digest(&y.to_bytes());
+        let y_bytes = y
+            .to_bytes_array::<32>()
+            .expect("y coordinate is mod n, meaning it must be <= 32 bytes");
+        let x = Sha256::digest(&y_bytes);
         Some(PointCoords {
             x: BigInt::from_bytes(&x),
             y,
@@ -359,7 +333,6 @@ impl PartialEq for RistrettoPoint {
 impl Zeroize for RistrettoPoint {
     fn zeroize(&mut self) {
         unsafe { ptr::write_volatile(&mut self.ge, PK::default()) };
-        atomic::fence(atomic::Ordering::SeqCst);
         atomic::compiler_fence(atomic::Ordering::SeqCst);
     }
 }

@@ -17,13 +17,14 @@
 //
 
 use std::ops;
+use std::ops::Deref;
 use std::ptr;
 use std::sync::atomic;
 
 use secp256k1::constants::{
     self, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
-use secp256k1::{PublicKey, SecretKey};
+use secp256k1::{PublicKey, SecretKey, SECP256K1};
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, Zeroizing};
 
@@ -32,32 +33,32 @@ use crate::arithmetic::*;
 use super::traits::*;
 
 lazy_static::lazy_static! {
-    static ref CONTEXT: secp256k1::Secp256k1<secp256k1::All> = secp256k1::Secp256k1::new();
-
     static ref CURVE_ORDER: BigInt = BigInt::from_bytes(&constants::CURVE_ORDER);
 
-    static ref GENERATOR_UNCOMRESSED: Vec<u8> = {
-        let mut g = vec![4_u8];
-        g.extend_from_slice(&GENERATOR_X);
-        g.extend_from_slice(&GENERATOR_Y);
+    static ref GENERATOR_UNCOMRESSED: [u8; 65] = {
+        let mut g = [0u8; 65];
+        g[0] = 0x04;
+        g[1..33].copy_from_slice(&GENERATOR_X);
+        g[33..].copy_from_slice(&GENERATOR_Y);
         g
     };
 
-    static ref BASE_POINT2_UNCOMPRESSED: Vec<u8> = {
-        let mut g = vec![4_u8];
-        g.extend_from_slice(BASE_POINT2_X.as_ref());
-        g.extend_from_slice(BASE_POINT2_Y.as_ref());
+    static ref BASE_POINT2_UNCOMPRESSED: [u8; 65] = {
+        let mut g = [0u8; 65];
+        g[0] = 0x04;
+        g[1..33].copy_from_slice(&BASE_POINT2_X);
+        g[33..].copy_from_slice(&BASE_POINT2_Y);
         g
     };
 
     static ref GENERATOR: Secp256k1Point = Secp256k1Point {
         purpose: "generator",
-        ge: Some(PK(PublicKey::from_slice(&GENERATOR_UNCOMRESSED).unwrap())),
+        ge: Some(PK(PublicKey::from_slice(&GENERATOR_UNCOMRESSED[..]).unwrap())),
     };
 
     static ref BASE_POINT2: Secp256k1Point = Secp256k1Point {
         purpose: "base_point2",
-        ge: Some(PK(PublicKey::from_slice(&BASE_POINT2_UNCOMPRESSED).unwrap())),
+        ge: Some(PK(PublicKey::from_slice(&BASE_POINT2_UNCOMPRESSED[..]).unwrap())),
     };
 }
 
@@ -119,7 +120,6 @@ impl Zeroize for PK {
     fn zeroize(&mut self) {
         let zeroed = unsafe { secp256k1::ffi::PublicKey::new() };
         unsafe { ptr::write_volatile(self.0.as_mut_ptr(), zeroed) };
-        atomic::fence(atomic::Ordering::SeqCst);
         atomic::compiler_fence(atomic::Ordering::SeqCst);
     }
 }
@@ -174,25 +174,22 @@ impl ECScalar for Secp256k1Scalar {
     }
 
     fn from_bigint(n: &BigInt) -> Secp256k1Scalar {
+        let n = n.modulus(Self::group_order());
         if n.is_zero() {
-            return Self::zero();
+            return Secp256k1Scalar {
+                purpose: "from_bigint",
+                fe: Self::zero().fe,
+            };
         }
-
-        let group_order = Self::group_order();
-        let n_reduced = n.modulus(group_order);
-        let bytes = BigInt::to_bytes(&n_reduced);
-
-        let bytes = if bytes.len() < SECRET_KEY_SIZE {
-            let mut zero_prepended = vec![0; SECRET_KEY_SIZE - bytes.len()];
-            zero_prepended.extend_from_slice(&bytes);
-            zero_prepended
-        } else {
-            bytes
-        };
+        let bytes = n
+            .to_bytes_array::<SECRET_KEY_SIZE>()
+            .expect("n mod curve_order must be equal or less than 32 bytes");
 
         Secp256k1Scalar {
             purpose: "from_bigint",
-            fe: Zeroizing::new(SecretKey::from_slice(&bytes).map(SK).ok()),
+            fe: Zeroizing::new(Some(SK(
+                SecretKey::from_slice(&bytes).expect("fe is in (0, order) and exactly 32 bytes")
+            ))),
         }
     }
 
@@ -204,41 +201,56 @@ impl ECScalar for Secp256k1Scalar {
     }
 
     fn add(&self, other: &Self) -> Secp256k1Scalar {
-        // TODO: use add_assign?
-        //  https://docs.rs/secp256k1/0.20.3/secp256k1/key/struct.SecretKey.html#method.add_assign
-        let n = BigInt::mod_add(&self.to_bigint(), &other.to_bigint(), Self::group_order());
+        let fe = match (&*self.fe, &*other.fe) {
+            (None, right) => right.clone(),
+            (left, None) => left.clone(),
+            (Some(left), Some(right)) => {
+                let mut res = left.clone();
+                res.add_assign(&right.0[..]).ok().map(|_| res) // right might be the negation of left.
+            }
+        };
+
         Secp256k1Scalar {
             purpose: "add",
-            fe: Self::from_bigint(&n).fe,
+            fe: Zeroizing::new(fe),
         }
     }
 
     fn mul(&self, other: &Self) -> Secp256k1Scalar {
-        // TODO: use mul_assign?
-        //  https://docs.rs/secp256k1/0.20.3/secp256k1/key/struct.SecretKey.html#method.mul_assign
-        let n = BigInt::mod_mul(&self.to_bigint(), &other.to_bigint(), Self::group_order());
+        let fe = match (&*self.fe, &*other.fe) {
+            (None, _) | (_, None) => None,
+            (Some(left), Some(right)) => {
+                let mut res = left.clone();
+                res.0
+                    .mul_assign(&right.0[..])
+                    .expect("Can't fail as it's a valid secret");
+                Some(res)
+            }
+        };
+
         Secp256k1Scalar {
             purpose: "mul",
-            fe: Self::from_bigint(&n).fe,
+            fe: Zeroizing::new(fe),
         }
     }
 
     fn sub(&self, other: &Self) -> Secp256k1Scalar {
-        // TODO: use negate+add_assign?
-        //  https://docs.rs/secp256k1/0.20.3/secp256k1/key/struct.SecretKey.html#method.negate_assign
-        //  https://docs.rs/secp256k1/0.20.3/secp256k1/key/struct.SecretKey.html#method.add_assign
-        let n = BigInt::mod_sub(&self.to_bigint(), &other.to_bigint(), Self::group_order());
+        let right = other.neg();
+        let res = self.clone().add(&right);
         Secp256k1Scalar {
             purpose: "sub",
-            fe: Self::from_bigint(&n).fe,
+            fe: res.fe,
         }
     }
 
     fn neg(&self) -> Self {
-        let n = BigInt::mod_sub(&BigInt::zero(), &self.to_bigint(), Self::group_order());
+        let fe = self.fe.deref().clone().map(|mut fe| {
+            fe.negate_assign();
+            fe
+        });
         Secp256k1Scalar {
             purpose: "neg",
-            fe: Self::from_bigint(&n).fe,
+            fe: Zeroizing::new(fe),
         }
     }
 
@@ -301,32 +313,18 @@ impl ECPoint for Secp256k1Point {
     }
 
     fn from_coords(x: &BigInt, y: &BigInt) -> Result<Self, NotOnCurve> {
-        let mut vec_x = BigInt::to_bytes(x);
-        let mut vec_y = BigInt::to_bytes(y);
-        let coor_size = (UNCOMPRESSED_PUBLIC_KEY_SIZE - 1) / 2;
+        let vec_x = x.to_bytes();
+        let vec_y = y.to_bytes();
+        const COOR_SIZE: usize = (UNCOMPRESSED_PUBLIC_KEY_SIZE - 1) / 2;
+        let mut point = [0u8; UNCOMPRESSED_PUBLIC_KEY_SIZE];
+        point[0] = 0x04;
+        point[1 + COOR_SIZE - vec_x.len()..1 + COOR_SIZE].copy_from_slice(&vec_x);
+        point[1 + (2 * COOR_SIZE) - vec_y.len()..].copy_from_slice(&vec_y);
 
-        if vec_x.len() < coor_size {
-            // pad
-            let mut x_padded = vec![0; coor_size - vec_x.len()];
-            x_padded.extend_from_slice(&vec_x);
-            vec_x = x_padded
-        }
+        debug_assert_eq!(x, &BigInt::from_bytes(&point[1..1 + COOR_SIZE]));
+        debug_assert_eq!(y, &BigInt::from_bytes(&point[1 + COOR_SIZE..]));
 
-        if vec_y.len() < coor_size {
-            // pad
-            let mut y_padded = vec![0; coor_size - vec_y.len()];
-            y_padded.extend_from_slice(&vec_y);
-            vec_y = y_padded
-        }
-
-        assert_eq!(x, &BigInt::from_bytes(vec_x.as_ref()));
-        assert_eq!(y, &BigInt::from_bytes(vec_y.as_ref()));
-
-        let mut v = vec![4_u8];
-        v.extend(vec_x);
-        v.extend(vec_y);
-
-        PublicKey::from_slice(&v)
+        PublicKey::from_slice(&point)
             .map(|ge| Secp256k1Point {
                 purpose: "from_coords",
                 ge: Some(PK(ge)),
@@ -372,14 +370,10 @@ impl ECPoint for Secp256k1Point {
     }
 
     fn serialize(&self, compressed: bool) -> Vec<u8> {
-        let ge = match &self.ge {
-            Some(pk) => pk,
-            None => return vec![0],
-        };
-        if compressed {
-            ge.serialize().to_vec()
-        } else {
-            ge.serialize_uncompressed().to_vec()
+        match self.ge {
+            None => vec![0],
+            Some(ge) if compressed => ge.serialize().to_vec(),
+            Some(ge) => ge.serialize_uncompressed().to_vec(),
         }
     }
 
@@ -404,150 +398,60 @@ impl ECPoint for Secp256k1Point {
     }
 
     fn scalar_mul(&self, scalar: &Self::Scalar) -> Secp256k1Point {
-        let mut new_point = match &self.ge {
-            Some(ge) => *ge,
-            None => {
-                // Point is zero => O * a = O
-                return Secp256k1Point {
-                    purpose: "mul",
-                    ge: None,
-                };
-            }
-        };
-        let scalar = match &*scalar.fe {
-            Some(s) => s,
-            None => {
-                // Scalar is zero => p * 0 = O
-                return Secp256k1Point {
-                    purpose: "mul",
-                    ge: None,
-                };
-            }
-        };
-        let result = new_point.mul_assign(&CONTEXT, &scalar[..]);
-        if result.is_err() {
-            // Multiplication resulted into zero point
-            return Secp256k1Point {
-                purpose: "mul",
-                ge: None,
-            };
-        }
-
+        let mut res = *self;
+        res.scalar_mul_assign(scalar);
         Secp256k1Point {
             purpose: "mul",
-            ge: Some(new_point),
+            ge: res.ge,
         }
     }
 
     fn generator_mul(scalar: &Self::Scalar) -> Self {
-        match &*scalar.fe {
-            Some(sk) => Secp256k1Point {
-                purpose: "generator_mul",
-                ge: Some(PK(PublicKey::from_secret_key(&CONTEXT, sk))),
-            },
-            None => Secp256k1Point {
-                purpose: "generator_mul",
-                ge: None,
-            },
+        let ge = scalar
+            .fe
+            .as_ref()
+            .map(|sk| PK(PublicKey::from_secret_key(&SECP256K1, sk)));
+        Secp256k1Point {
+            purpose: "generator_mul",
+            ge,
         }
     }
 
     fn add_point(&self, other: &Self) -> Secp256k1Point {
-        let ge1 = match &self.ge {
-            Some(ge) => ge,
-            None => {
-                // Point1 is zero => O + p2 = p2
-                return Secp256k1Point {
-                    purpose: "add",
-                    ge: other.ge,
-                };
-            }
+        let ge = match (&self.ge, &other.ge) {
+            (None, right) => *right,
+            (left, None) => *left,
+            (Some(left), Some(right)) => left.combine(right).ok().map(PK), // right might be the negation of left
         };
-        let ge2 = match &other.ge {
-            Some(ge) => ge,
-            None => {
-                // Point2 is zero => p1 + O = p1
-                return Secp256k1Point {
-                    purpose: "add",
-                    ge: Some(*ge1),
-                };
-            }
-        };
-        Secp256k1Point {
-            purpose: "add",
-            ge: ge1.combine(ge2).map(PK).ok(),
-        }
+
+        Secp256k1Point { purpose: "add", ge }
     }
 
     fn sub_point(&self, other: &Self) -> Secp256k1Point {
-        let mut ge2_negated = match &other.ge {
-            Some(ge) => *ge,
-            None => {
-                // Point2 is zero => p1 - O = p1
-                return Secp256k1Point {
-                    purpose: "sub",
-                    ge: self.ge,
-                };
-            }
-        };
-        ge2_negated.negate_assign(&CONTEXT);
-
-        let ge1 = match &self.ge {
-            Some(ge) => ge,
-            None => {
-                // Point1 is zero => O - p2 = -p2
-                return Secp256k1Point {
-                    purpose: "sub",
-                    ge: Some(ge2_negated),
-                };
-            }
-        };
-
-        Secp256k1Point {
-            purpose: "sub",
-            ge: ge1.combine(&ge2_negated).map(PK).ok(),
-        }
+        let other_negated = other.neg_point();
+        let ge = self.add_point(&other_negated).ge;
+        Secp256k1Point { purpose: "sub", ge }
     }
 
     fn neg_point(&self) -> Secp256k1Point {
-        Secp256k1Point {
-            purpose: "neg",
-            ge: match self.ge {
-                Some(mut ge) => {
-                    ge.negate_assign(&CONTEXT);
-                    Some(ge)
-                }
-                None => {
-                    // Point is zero => -O = O
-                    None
-                }
-            },
-        }
+        let ge = self.ge.map(|mut ge| {
+            ge.0.negate_assign(&SECP256K1);
+            ge
+        });
+        Secp256k1Point { purpose: "neg", ge }
     }
 
     fn scalar_mul_assign(&mut self, scalar: &Self::Scalar) {
-        let ge = match self.ge.as_mut() {
-            Some(ge) => ge,
-            None => {
-                // Point is zero => O * s = O
+        match (&mut self.ge, &*scalar.fe) {
+            (None, _) | (_, None) => {
                 self.ge = None;
-                return;
+            }
+            (Some(ge), Some(fe)) => {
+                ge.0.mul_assign(&SECP256K1, &fe.0[..])
+                    .expect("Can't fail as it's a valid secret");
             }
         };
-
-        let fe = match scalar.fe.as_ref() {
-            Some(fe) => fe,
-            None => {
-                // Scalar is zero => p * 0 = O
-                self.ge = None;
-                return;
-            }
-        };
-
-        if ge.mul_assign(&CONTEXT, &fe[..]).is_err() {
-            // Multiplication resulted into zero
-            self.ge = None
-        }
+        self.purpose = "mul_assign";
     }
 
     fn underlying_ref(&self) -> &Self::Underlying {

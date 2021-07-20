@@ -2,10 +2,8 @@
 
 use p256::elliptic_curve::group::prime::PrimeCurveAffine;
 use p256::elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint};
-use p256::{AffinePoint, EncodedPoint, ProjectivePoint, Scalar};
+use p256::{AffinePoint, EncodedPoint, FieldBytes, ProjectivePoint, Scalar};
 
-use generic_array::typenum::U32;
-use generic_array::GenericArray;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use zeroize::Zeroize;
@@ -14,14 +12,16 @@ use super::traits::{ECPoint, ECScalar};
 use crate::arithmetic::traits::*;
 use crate::elliptic::curves::{Curve, DeserializationError, NotOnCurve, PointCoords};
 use crate::BigInt;
+use p256::elliptic_curve::group::ff::PrimeField;
 
 lazy_static::lazy_static! {
     static ref GROUP_ORDER: BigInt = BigInt::from_bytes(&GROUP_ORDER_BYTES);
 
     static ref BASE_POINT2_ENCODED: EncodedPoint = {
-        let mut g = vec![4_u8];
-        g.extend_from_slice(BASE_POINT2_X.as_ref());
-        g.extend_from_slice(BASE_POINT2_Y.as_ref());
+        let mut g = [0u8; 65];
+        g[0] = 0x04;
+        g[1..33].copy_from_slice(&BASE_POINT2_X);
+        g[33..].copy_from_slice(&BASE_POINT2_Y);
         EncodedPoint::from_bytes(&g).unwrap()
     };
 
@@ -84,12 +84,17 @@ impl ECScalar for Secp256r1Scalar {
     type Underlying = SK;
 
     fn random() -> Secp256r1Scalar {
-        let mut arr = [0u8; 32];
-        thread_rng().fill(&mut arr[..]);
-        let gen_arr: GenericArray<u8, U32> = *GenericArray::from_slice(&arr);
+        let mut rng = thread_rng();
+        let scalar = loop {
+            let mut bytes = FieldBytes::default();
+            rng.fill(&mut bytes[..]);
+            if let Some(scalar) = Scalar::from_repr(bytes) {
+                break scalar;
+            }
+        };
         Secp256r1Scalar {
             purpose: "random",
-            fe: Scalar::from_bytes_reduced(&gen_arr).into(),
+            fe: scalar.into(),
         }
     }
 
@@ -106,20 +111,14 @@ impl ECScalar for Secp256r1Scalar {
 
     fn from_bigint(n: &BigInt) -> Secp256r1Scalar {
         let curve_order = Secp256r1Scalar::group_order();
-        let n_reduced = n.modulus(&curve_order);
-        let mut v = BigInt::to_bytes(&n_reduced);
-        const SECRET_KEY_SIZE: usize = 32;
-
-        if v.len() < SECRET_KEY_SIZE {
-            let mut template = vec![0; SECRET_KEY_SIZE - v.len()];
-            template.extend_from_slice(&v);
-            v = template;
-        }
-        let arr: GenericArray<u8, U32> = *GenericArray::from_slice(&v);
+        let n_reduced = n
+            .modulus(&curve_order)
+            .to_bytes_array::<32>()
+            .expect("n mod curve_order must be equal or less than 32 bytes");
 
         Secp256r1Scalar {
             purpose: "from_bigint",
-            fe: Scalar::from_bytes_reduced(&arr).into(),
+            fe: Scalar::from_bytes_reduced(&n_reduced.into()).into(),
         }
     }
 
@@ -222,37 +221,12 @@ impl ECPoint for Secp256r1Point {
     }
 
     fn from_coords(x: &BigInt, y: &BigInt) -> Result<Secp256r1Point, NotOnCurve> {
-        let mut vec_x = BigInt::to_bytes(x);
-        let mut vec_y = BigInt::to_bytes(y);
-
-        const COORDINATE_SIZE: usize = 32;
-        if vec_x.len() > COORDINATE_SIZE {
-            // x coordinate is too big
-            return Err(NotOnCurve);
-        }
-        if vec_y.len() > COORDINATE_SIZE {
-            // y coordinate is too big
-            return Err(NotOnCurve);
-        }
-
-        if vec_x.len() < COORDINATE_SIZE {
-            // pad
-            let mut x_buffer = vec![0; COORDINATE_SIZE - vec_x.len()];
-            x_buffer.extend_from_slice(&vec_x);
-            vec_x = x_buffer
-        }
-        if vec_y.len() < COORDINATE_SIZE {
-            // pad
-            let mut y_buffer = vec![0; COORDINATE_SIZE - vec_y.len()];
-            y_buffer.extend_from_slice(&vec_y);
-            vec_y = y_buffer
-        }
-
-        let x_arr: GenericArray<u8, U32> = *GenericArray::from_slice(&vec_x);
-        let y_arr: GenericArray<u8, U32> = *GenericArray::from_slice(&vec_y);
-
+        let x_arr = x.to_bytes_array::<32>().ok_or(NotOnCurve)?;
+        let y_arr = y.to_bytes_array::<32>().ok_or(NotOnCurve)?;
         let ge = PK::from_encoded_point(&EncodedPoint::from_affine_coordinates(
-            &x_arr, &y_arr, false,
+            &x_arr.into(),
+            &y_arr.into(),
+            false,
         ))
         .ok_or(NotOnCurve)?;
 

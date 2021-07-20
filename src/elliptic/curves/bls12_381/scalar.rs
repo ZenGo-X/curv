@@ -1,8 +1,7 @@
 use std::fmt;
-use std::io::Cursor;
 
 use ff_zeroize::{Field, PrimeField, PrimeFieldRepr, ScalarEngine};
-use pairing_plus::bls12_381::Fr;
+use pairing_plus::bls12_381::{Fr, FrRepr};
 use rand::rngs::OsRng;
 use zeroize::Zeroizing;
 
@@ -54,17 +53,13 @@ impl ECScalar for FieldScalar {
     }
 
     fn from_bigint(n: &BigInt) -> FieldScalar {
-        let n_mod = BigInt::modulus(n, &FieldScalar::group_order());
-        let n_mod = n_mod.to_bytes();
-        let mut bytes_array = [0u8; SECRET_KEY_SIZE];
-        if n_mod.len() < SECRET_KEY_SIZE {
-            bytes_array[SECRET_KEY_SIZE - n_mod.len()..].copy_from_slice(&n_mod)
-        } else {
-            bytes_array.copy_from_slice(&n_mod[..SECRET_KEY_SIZE])
-        }
+        let bytes = n
+            .modulus(Self::group_order())
+            .to_bytes_array::<SECRET_KEY_SIZE>()
+            .expect("n mod curve_order must be equal or less than 32 bytes");
 
-        let mut repr = SK::default().into_repr();
-        repr.read_be(Cursor::new(&bytes_array[..])).unwrap();
+        let mut repr = FrRepr::default();
+        repr.read_be(bytes.as_ref()).unwrap();
         FieldScalar {
             purpose: "from_bigint",
             fe: Fr::from_repr(repr).unwrap().into(),
@@ -73,8 +68,8 @@ impl ECScalar for FieldScalar {
 
     fn to_bigint(&self) -> BigInt {
         let repr = self.fe.into_repr();
-        let mut bytes = vec![];
-        repr.write_be(&mut bytes).unwrap();
+        let mut bytes = [0u8; SECRET_KEY_SIZE];
+        repr.write_be(&mut bytes[..]).unwrap();
         BigInt::from_bytes(&bytes)
     }
 

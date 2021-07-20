@@ -20,7 +20,7 @@
 //! // Samples a random nonzero scalar (mod group order)
 //! let secret = Scalar::<Secp256k1>::random();
 //! // Multiplies generator at secret, retrieving a public point
-//! let public = Point::generator() * secret;    
+//! let public = Point::generator() * secret;
 //! ```
 //!
 //! ### Diffie-Hellman
