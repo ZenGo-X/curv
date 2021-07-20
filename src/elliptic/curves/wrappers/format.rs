@@ -149,3 +149,98 @@ pub enum ScalarFromhexError {
     #[error("scalar is not valid")]
     InvalidScalar,
 }
+
+#[cfg(test)]
+mod serde_tests {
+    use crate::elliptic::curves::{
+        Bls12_381_1, Bls12_381_2, Curve, ECPoint, ECScalar, Ed25519, Point, Ristretto, Secp256k1,
+        Secp256r1,
+    };
+    use serde_test::{assert_tokens, Configure, Token::*};
+
+    #[test]
+    fn test_serde_zero_point() {
+        fn generic<E: Curve>(serialized_zero_len: usize) {
+            let point = Point::<E>::zero();
+            let mut tokens = vec![
+                Struct {
+                    name: "PointFormat",
+                    len: 2,
+                },
+                Str("curve"),
+                Str(E::CURVE_NAME),
+                Str("compressed_point"),
+            ];
+            tokens.push(Seq {
+                len: Option::Some(serialized_zero_len),
+            });
+
+            for _ in 0..serialized_zero_len {
+                tokens.push(U8(0));
+            }
+            tokens.extend_from_slice(&[SeqEnd, StructEnd]);
+            assert_tokens(&point, &tokens);
+        }
+        generic::<Secp256k1>(1);
+        generic::<Secp256r1>(1);
+        generic::<Ristretto>(32);
+        generic::<Bls12_381_1>(1);
+        generic::<Bls12_381_2>(1);
+    }
+
+    #[test]
+    fn test_serde_zero_ed25519() {
+        let point = Point::<Ed25519>::zero();
+        let mut tokens = vec![
+            Struct {
+                name: "PointFormat",
+                len: 2,
+            },
+            Str("curve"),
+            Str(Ed25519::CURVE_NAME),
+            Str("compressed_point"),
+            Seq {
+                len: Option::Some(32),
+            },
+            U8(1),
+        ];
+        for _ in 0..31 {
+            tokens.push(U8(0));
+        }
+        tokens.extend_from_slice(&[SeqEnd, StructEnd]);
+
+        assert_tokens(&point, &tokens);
+    }
+
+    #[test]
+    fn test_serde_random_point() {
+        fn generic<E: Curve>() {
+            let random_point = E::Point::generator_mul(&E::Scalar::random());
+            let point: Point<E> = Point::from_raw(random_point).unwrap();
+            let serialized = ECPoint::serialize(point.as_raw(), true);
+            let mut tokens = vec![
+                Struct {
+                    name: "PointFormat",
+                    len: 2,
+                },
+                Str("curve"),
+                Str(E::CURVE_NAME),
+                Str("compressed_point"),
+            ];
+            tokens.push(Seq {
+                len: Option::Some(serialized.len()),
+            });
+
+            for i in serialized {
+                tokens.push(U8(i));
+            }
+            tokens.extend_from_slice(&[SeqEnd, StructEnd]);
+            assert_tokens(&point.compact(), &tokens);
+        }
+        generic::<Secp256k1>();
+        generic::<Secp256r1>();
+        generic::<Ristretto>();
+        generic::<Bls12_381_1>();
+        generic::<Bls12_381_2>();
+    }
+}
