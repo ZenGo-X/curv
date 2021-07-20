@@ -7,6 +7,7 @@
 */
 
 use std::convert::{TryFrom, TryInto};
+use std::{fmt, ops};
 
 use serde::{Deserialize, Serialize};
 
@@ -32,6 +33,21 @@ pub struct VerifiableSS<E: Curve> {
     pub commitments: Vec<Point<E>>,
 }
 
+/// Shared secret produced by [VerifiableSS::share]
+///
+/// After you shared your secret, you need to distribute `shares` among other parties, and erase
+/// secret from your memory (SharedSecret zeroizes on drop).
+///
+/// You can retrieve a [polynomial](Self::polynomial) that was used to derive secret shares. It is
+/// only needed to combine with other proofs (e.g. [low degree exponent interpolation]).
+///
+/// [low degree exponent interpolation]: crate::cryptographic_primitives::proofs::low_degree_exponent_interpolation
+#[derive(Clone)]
+pub struct SecretShares<E: Curve> {
+    shares: Vec<Scalar<E>>,
+    polynomial: Polynomial<E>,
+}
+
 impl<E: Curve> VerifiableSS<E> {
     pub fn reconstruct_limit(&self) -> usize {
         self.parameters.threshold + 1
@@ -39,16 +55,16 @@ impl<E: Curve> VerifiableSS<E> {
 
     // TODO: share should accept u16 rather than usize
     // generate VerifiableSS from a secret
-    pub fn share(t: usize, n: usize, secret: &Scalar<E>) -> (VerifiableSS<E>, Vec<Scalar<E>>) {
+    pub fn share(t: usize, n: usize, secret: &Scalar<E>) -> (VerifiableSS<E>, SecretShares<E>) {
         assert!(t < n);
         let t = u16::try_from(t).unwrap();
         let n = u16::try_from(n).unwrap();
 
-        let poly = Polynomial::<E>::sample_exact_with_fixed_const_term(t, secret.clone());
-        let secret_shares = poly.evaluate_many_bigint(1..=n).collect();
+        let polynomial = Polynomial::<E>::sample_exact_with_fixed_const_term(t, secret.clone());
+        let shares = polynomial.evaluate_many_bigint(1..=n).collect();
 
         let g = Point::<E>::generator();
-        let commitments = poly
+        let commitments = polynomial
             .coefficients()
             .iter()
             .map(|coef| g * coef)
@@ -61,7 +77,7 @@ impl<E: Curve> VerifiableSS<E> {
                 },
                 commitments,
             },
-            secret_shares,
+            SecretShares { shares, polynomial },
         )
     }
 
@@ -97,18 +113,18 @@ impl<E: Curve> VerifiableSS<E> {
         n: usize,
         secret: &Scalar<E>,
         index_vec: &[usize],
-    ) -> (VerifiableSS<E>, Vec<Scalar<E>>) {
+    ) -> (VerifiableSS<E>, SecretShares<E>) {
         assert_eq!(n, index_vec.len());
         // TODO: share_at_indices should accept u16 rather than usize (t, n, index_vec)
         let t = u16::try_from(t).unwrap();
         let n = u16::try_from(n).unwrap();
         let index_vec = index_vec.iter().map(|&i| u16::try_from(i).unwrap());
 
-        let poly = Polynomial::<E>::sample_exact_with_fixed_const_term(t, secret.clone());
-        let secret_shares = poly.evaluate_many_bigint(index_vec).collect();
+        let polynomial = Polynomial::<E>::sample_exact_with_fixed_const_term(t, secret.clone());
+        let shares = polynomial.evaluate_many_bigint(index_vec).collect();
 
         let g = Point::<E>::generator();
-        let commitments = poly
+        let commitments = polynomial
             .coefficients()
             .iter()
             .map(|coef| g * coef)
@@ -121,7 +137,7 @@ impl<E: Curve> VerifiableSS<E> {
                 },
                 commitments,
             },
-            secret_shares,
+            SecretShares { shares, polynomial },
         )
     }
 
@@ -241,7 +257,7 @@ impl<E: Curve> VerifiableSS<E> {
         //     assert!(s_len > self.reconstruct_limit());
         // add one to indices to get points
         let points: Vec<Scalar<E>> = (0..params.share_count)
-            .map(|i| Scalar::try_from(i as u32 + 1).expect("guaranteed to be positive"))
+            .map(|i| Scalar::from(i as u32 + 1))
             .collect();
 
         let xi = &points[index];
@@ -264,6 +280,27 @@ impl<E: Curve> VerifiableSS<E> {
         });
         let denum = denum.invert().unwrap();
         num * denum
+    }
+}
+
+impl<E: Curve> SecretShares<E> {
+    /// Polynomial that was used to derive secret shares
+    pub fn polynomial(&self) -> &Polynomial<E> {
+        &self.polynomial
+    }
+}
+
+impl<E: Curve> fmt::Debug for SecretShares<E> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // blind sensitive data stored by the structure
+        write!(f, "SecretShares{{ ... }}")
+    }
+}
+
+impl<E: Curve> ops::Deref for SecretShares<E> {
+    type Target = [Scalar<E>];
+    fn deref(&self) -> &Self::Target {
+        &self.shares
     }
 }
 
