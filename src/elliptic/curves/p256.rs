@@ -126,6 +126,21 @@ impl ECScalar for Secp256r1Scalar {
         BigInt::from_bytes(self.fe.to_bytes().as_slice())
     }
 
+    fn serialize(&self) -> Vec<u8> {
+        self.fe.to_bytes().to_vec()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError> {
+        if bytes.len() != 32 {
+            return Err(DeserializationError);
+        }
+        let bytes = *FieldBytes::from_slice(bytes);
+        Ok(Secp256r1Scalar {
+            purpose: "deserialize",
+            fe: Scalar::from_repr(bytes).ok_or(DeserializationError)?.into(),
+        })
+    }
+
     fn add(&self, other: &Self) -> Secp256r1Scalar {
         Secp256r1Scalar {
             purpose: "add",

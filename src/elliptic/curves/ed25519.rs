@@ -162,6 +162,20 @@ impl ECScalar for Ed25519Scalar {
         BigInt::from_bytes(&t)
     }
 
+    fn serialize(&self) -> Vec<u8> {
+        self.fe.to_bytes().to_vec()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError> {
+        if bytes.len() != 32 {
+            return Err(DeserializationError);
+        }
+        Ok(Ed25519Scalar {
+            purpose: "deserialize",
+            fe: SK(Fe::from_bytes(bytes)).into(),
+        })
+    }
+
     fn add(&self, other: &Self) -> Ed25519Scalar {
         Ed25519Scalar {
             purpose: "add",

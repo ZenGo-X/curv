@@ -108,6 +108,20 @@ impl ECScalar for RistrettoScalar {
         BigInt::from_bytes(&t)
     }
 
+    fn serialize(&self) -> Vec<u8> {
+        self.fe.to_bytes().to_vec()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError> {
+        let bytes: [u8; 32] = bytes.try_into().or(Err(DeserializationError))?;
+        Ok(RistrettoScalar {
+            purpose: "from_bigint",
+            fe: SK::from_canonical_bytes(bytes)
+                .ok_or(DeserializationError)?
+                .into(),
+        })
+    }
+
     fn add(&self, other: &Self) -> RistrettoScalar {
         RistrettoScalar {
             purpose: "add",

@@ -200,6 +200,28 @@ impl ECScalar for Secp256k1Scalar {
         }
     }
 
+    fn serialize(&self) -> Vec<u8> {
+        let scalar = match &*self.fe {
+            Some(s) => s,
+            None => return vec![0u8],
+        };
+        scalar.0[..].to_vec()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError> {
+        let pk = if bytes == [0] {
+            None
+        } else {
+            Some(SK(
+                SecretKey::from_slice(bytes).or(Err(DeserializationError))?
+            ))
+        };
+        Ok(Secp256k1Scalar {
+            purpose: "deserialize",
+            fe: pk.into(),
+        })
+    }
+
     fn add(&self, other: &Self) -> Secp256k1Scalar {
         let fe = match (&*self.fe, &*other.fe) {
             (None, right) => right.clone(),

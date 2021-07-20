@@ -51,6 +51,10 @@ pub trait ECScalar: Clone + PartialEq + fmt::Debug + 'static {
     fn from_bigint(n: &BigInt) -> Self;
     /// Converts a scalar to BigInt
     fn to_bigint(&self) -> BigInt;
+    /// Serializes scalar into bytes
+    fn serialize(&self) -> Vec<u8>;
+    /// Deserializes scalar from bytes
+    fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError>;
 
     /// Calculates `(self + other) mod group_order`
     fn add(&self, other: &Self) -> Self;
@@ -228,7 +232,7 @@ pub struct DeserializationError;
 
 impl fmt::Display for DeserializationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "failed to deserialize the point")
+        write!(f, "failed to deserialize the point/scalar")
     }
 }
 
