@@ -288,11 +288,9 @@ impl ECPoint for Secp256r1Point {
     }
 
     fn scalar_mul(&self, fe: &Self::Scalar) -> Secp256r1Point {
-        // TODO: p256 v0.5.0 cannot multiply AffinePoint * Scalar, but can multiply
-        //  ProjectivePoint * Scalar. It was fixed in v0.9.0
         Secp256r1Point {
             purpose: "scalar_mul",
-            ge: (ProjectivePoint::from(self.ge) * *fe.fe).to_affine(),
+            ge: (self.ge * *fe.fe).to_affine(),
         }
     }
 
