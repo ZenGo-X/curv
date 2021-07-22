@@ -78,16 +78,17 @@ fn point_addition_multiplication<E: Curve>() {
     assert_eq!(addition, multiplication);
 }
 
-test_for_all_curves!(serialize_deserialize);
-fn serialize_deserialize<E: Curve>() {
-    let point = <E::Point as ECPoint>::generator().scalar_mul(&random_nonzero_scalar());
-    let bytes = point.serialize(true);
-    let deserialized = <E::Point as ECPoint>::deserialize(&bytes).unwrap();
-    assert_eq!(point, deserialized);
-
-    let bytes = point.serialize(false);
-    let deserialized = E::Point::deserialize(&bytes).unwrap();
-    assert_eq!(point, deserialized);
+test_for_all_curves!(serialize_deserialize_point);
+fn serialize_deserialize_point<E: Curve>() {
+    let rand_point = <E::Point as ECPoint>::generator().scalar_mul(&random_nonzero_scalar());
+    let zero = E::Point::zero();
+    for point in [rand_point, zero] {
+        for compressed in [true, false] {
+            let bytes = point.serialize(compressed);
+            let deserialized = <E::Point as ECPoint>::deserialize(&bytes).unwrap();
+            assert_eq!(point, deserialized);
+        }
+    }
 }
 
 test_for_all_curves!(zero_point_serialization);
@@ -287,6 +288,17 @@ fn test_assign_multiplication_point_at_scalar<E: Curve>() {
     };
 
     assert_eq!(abG_1, abG_2);
+}
+
+test_for_all_curves!(serialize_deserialize_scalar);
+fn serialize_deserialize_scalar<E: Curve>() {
+    let rand_point: E::Scalar = random_nonzero_scalar();
+    let zero = E::Scalar::zero();
+    for scalar in [rand_point, zero] {
+        let bytes = scalar.serialize();
+        let deserialized = <E::Scalar as ECScalar>::deserialize(&bytes).unwrap();
+        assert_eq!(scalar, deserialized);
+    }
 }
 
 test_for_all_curves!(scalar_invert);
