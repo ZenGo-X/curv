@@ -34,12 +34,12 @@
 //! [dh_key_exchange_variant_with_pok_comm]: crate::cryptographic_primitives::twoparty::dh_key_exchange_variant_with_pok_comm
 //!
 //! ```rust
-//! use curv::elliptic::curves::{Point, Scalar, Secp256k1};
+//! use curv::elliptic::curves::{Point, Scalar, Ed25519};
 //!
 //! fn diffie_hellman(
-//!     my_secret: &Scalar<Secp256k1>,
-//!     counterparty_point: &Point<Secp256k1>
-//! ) -> Point<Secp256k1> {
+//!     my_secret: &Scalar<Ed25519>,
+//!     counterparty_point: &Point<Ed25519>
+//! ) -> Point<Ed25519> {
 //!     my_secret * counterparty_point
 //! }
 //! ```
@@ -53,8 +53,7 @@
 //! [subgroup-attack]: http://safecurves.cr.yp.to/twist.html
 //! [Guarantees section]: Point#guarantees
 //!
-//! The function above performs DH only on secp256k1 curve, which is disappointing — the code will
-//! look the same for any curve. Luckily, we can make it generic over choice of curve:
+//! Function above can be slightly modified to be generic over choice of curve:
 //!
 //! ```rust
 //! use curv::elliptic::curves::{Curve, Point, Scalar};
