@@ -31,14 +31,15 @@ pub fn ped_com<E: Curve>(message: &BigInt) {
 
 fn main() {
     let message = "commit me!";
-    let _message_bn = BigInt::from_bytes(message.as_bytes());
+    let message_bn = BigInt::from_bytes(message.as_bytes());
     let curve_name = std::env::args().nth(1);
     match curve_name.as_deref() {
-        Some("secp256k1") => ped_com::<Secp256k1>(&_message_bn),
-        // Some("ristretto") => ped_com::<curv::elliptic::curves::curve_ristretto::GE>(&_message_bn),
-        // Some("ed25519") => ped_com::<curv::elliptic::curves::ed25519::GE>(&_message_bn),
-        // Some("bls12_381") => ped_com::<curv::elliptic::curves::bls12_381::g1::GE>(&_message_bn),
-        // Some("p256") => ped_com::<curv::elliptic::curves::p256::GE>(&_message_bn),
+        Some("secp256k1") => ped_com::<Secp256k1>(&message_bn),
+        Some("ristretto") => ped_com::<Ristretto>(&message_bn),
+        Some("ed25519") => ped_com::<Ed25519>(&message_bn),
+        Some("bls12_381_1") => ped_com::<Bls12_381_1>(&message_bn),
+        Some("bls12_381_2") => ped_com::<Bls12_381_2>(&message_bn),
+        Some("p256") => ped_com::<Secp256r1>(&message_bn),
         Some(unknown_curve) => eprintln!("Unknown curve: {}", unknown_curve),
         None => eprintln!("Missing curve name"),
     }

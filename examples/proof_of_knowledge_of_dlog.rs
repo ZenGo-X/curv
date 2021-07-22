@@ -21,10 +21,11 @@ fn main() {
     let curve_name = std::env::args().nth(1);
     match curve_name.as_deref() {
         Some("secp256k1") => dlog_proof::<Secp256k1>(),
-        // Some("ristretto") => dlog_proof::<curv::elliptic::curves::curve_ristretto::GE>(),
-        // Some("ed25519") => dlog_proof::<curv::elliptic::curves::ed25519::GE>(),
-        // Some("bls12_381") => dlog_proof::<curv::elliptic::curves::bls12_381::g1::GE>(),
-        // Some("p256") => dlog_proof::<curv::elliptic::curves::p256::GE>(),
+        Some("ristretto") => dlog_proof::<Ristretto>(),
+        Some("ed25519") => dlog_proof::<Ed25519>(),
+        Some("bls12_381_1") => dlog_proof::<Bls12_381_1>(),
+        Some("bls12_381_2") => dlog_proof::<Bls12_381_2>(),
+        Some("p256") => dlog_proof::<Secp256r1>(),
         Some(unknown_curve) => eprintln!("Unknown curve: {}", unknown_curve),
         None => eprintln!("Missing curve name"),
     }
