@@ -17,8 +17,8 @@ use crate::ErrorSS::{self, VerifyShareError};
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct ShamirSecretSharing {
-    pub threshold: usize,   //t
-    pub share_count: usize, //n
+    pub threshold: u16,   //t
+    pub share_count: u16, //n
 }
 
 /// Feldman VSS, based on  Paul Feldman. 1987. A practical scheme for non-interactive verifiable secret sharing.
@@ -49,17 +49,13 @@ pub struct SecretShares<E: Curve> {
 }
 
 impl<E: Curve> VerifiableSS<E> {
-    pub fn reconstruct_limit(&self) -> usize {
+    pub fn reconstruct_limit(&self) -> u16 {
         self.parameters.threshold + 1
     }
 
-    // TODO: share should accept u16 rather than usize
     // generate VerifiableSS from a secret
-    pub fn share(t: usize, n: usize, secret: &Scalar<E>) -> (VerifiableSS<E>, SecretShares<E>) {
+    pub fn share(t: u16, n: u16, secret: &Scalar<E>) -> (VerifiableSS<E>, SecretShares<E>) {
         assert!(t < n);
-        let t = u16::try_from(t).unwrap();
-        let n = u16::try_from(n).unwrap();
-
         let polynomial = Polynomial::<E>::sample_exact_with_fixed_const_term(t, secret.clone());
         let shares = polynomial.evaluate_many_bigint(1..=n).collect();
 
@@ -72,8 +68,8 @@ impl<E: Curve> VerifiableSS<E> {
         (
             VerifiableSS {
                 parameters: ShamirSecretSharing {
-                    threshold: t.into(),
-                    share_count: n.into(),
+                    threshold: t,
+                    share_count: n,
                 },
                 commitments,
             },
@@ -83,9 +79,8 @@ impl<E: Curve> VerifiableSS<E> {
 
     // takes given VSS and generates a new VSS for the same secret and a secret shares vector to match the new commitments
     pub fn reshare(&self) -> (VerifiableSS<E>, Vec<Scalar<E>>) {
-        // TODO: ShamirSecretSharing::{threshold, share_count} should be u16 rather than usize
-        let t = u16::try_from(self.parameters.threshold).unwrap();
-        let n = u16::try_from(self.parameters.share_count).unwrap();
+        let t = self.parameters.threshold;
+        let n = self.parameters.share_count;
 
         let one = Scalar::<E>::from(1);
         let poly = Polynomial::<E>::sample_exact_with_fixed_const_term(t, one.clone());
@@ -109,19 +104,17 @@ impl<E: Curve> VerifiableSS<E> {
 
     // generate VerifiableSS from a secret and user defined x values (in case user wants to distribute point f(1), f(4), f(6) and not f(1),f(2),f(3))
     pub fn share_at_indices(
-        t: usize,
-        n: usize,
+        t: u16,
+        n: u16,
         secret: &Scalar<E>,
-        index_vec: &[usize],
+        index_vec: &[u16],
     ) -> (VerifiableSS<E>, SecretShares<E>) {
-        assert_eq!(n, index_vec.len());
-        // TODO: share_at_indices should accept u16 rather than usize (t, n, index_vec)
-        let t = u16::try_from(t).unwrap();
-        let n = u16::try_from(n).unwrap();
-        let index_vec = index_vec.iter().map(|&i| u16::try_from(i).unwrap());
+        assert_eq!(usize::from(n), index_vec.len());
 
         let polynomial = Polynomial::<E>::sample_exact_with_fixed_const_term(t, secret.clone());
-        let shares = polynomial.evaluate_many_bigint(index_vec).collect();
+        let shares = polynomial
+            .evaluate_many_bigint(index_vec.iter().cloned())
+            .collect();
 
         let g = Point::<E>::generator();
         let commitments = polynomial
@@ -132,8 +125,8 @@ impl<E: Curve> VerifiableSS<E> {
         (
             VerifiableSS {
                 parameters: ShamirSecretSharing {
-                    threshold: t.into(),
-                    share_count: n.into(),
+                    threshold: t,
+                    share_count: n,
                 },
                 commitments,
             },
@@ -164,13 +157,13 @@ impl<E: Curve> VerifiableSS<E> {
         Polynomial::<E>::from_coefficients(coefficients.to_vec()).evaluate(&point)
     }
 
-    pub fn reconstruct(&self, indices: &[usize], shares: &[Scalar<E>]) -> Scalar<E> {
+    pub fn reconstruct(&self, indices: &[u16], shares: &[Scalar<E>]) -> Scalar<E> {
         assert_eq!(shares.len(), indices.len());
-        assert!(shares.len() >= self.reconstruct_limit());
+        assert!(shares.len() >= usize::from(self.reconstruct_limit()));
         // add one to indices to get points
         let points = indices
             .iter()
-            .map(|i| Scalar::from(*i as u32 + 1))
+            .map(|i| Scalar::from(*i + 1))
             .collect::<Vec<_>>();
         VerifiableSS::<E>::lagrange_interpolation_at_zero(&points, &shares)
     }
@@ -223,13 +216,13 @@ impl<E: Curve> VerifiableSS<E> {
         tail.fold(head.clone(), |acc, x| acc + x)
     }
 
-    pub fn validate_share(&self, secret_share: &Scalar<E>, index: usize) -> Result<(), ErrorSS> {
+    pub fn validate_share(&self, secret_share: &Scalar<E>, index: u16) -> Result<(), ErrorSS> {
         let g = Point::generator();
         let ss_point = g * secret_share;
         self.validate_share_public(&ss_point, index)
     }
 
-    pub fn validate_share_public(&self, ss_point: &Point<E>, index: usize) -> Result<(), ErrorSS> {
+    pub fn validate_share_public(&self, ss_point: &Point<E>, index: u16) -> Result<(), ErrorSS> {
         let comm_to_point = self.get_point_commitment(index);
         if *ss_point == comm_to_point {
             Ok(())
@@ -238,8 +231,8 @@ impl<E: Curve> VerifiableSS<E> {
         }
     }
 
-    pub fn get_point_commitment(&self, index: usize) -> Point<E> {
-        let index_fe = Scalar::from(index as u32);
+    pub fn get_point_commitment(&self, index: u16) -> Point<E> {
+        let index_fe = Scalar::from(index);
         let mut comm_iterator = self.commitments.iter().rev();
         let head = comm_iterator.next().unwrap();
         let tail = comm_iterator;
@@ -250,29 +243,29 @@ impl<E: Curve> VerifiableSS<E> {
     // used in http://stevengoldfeder.com/papers/GG18.pdf
     pub fn map_share_to_new_params(
         params: &ShamirSecretSharing,
-        index: usize,
-        s: &[usize],
+        index: u16,
+        s: &[u16],
     ) -> Scalar<E> {
         let s_len = s.len();
         //     assert!(s_len > self.reconstruct_limit());
         // add one to indices to get points
         let points: Vec<Scalar<E>> = (0..params.share_count)
-            .map(|i| Scalar::from(i as u32 + 1))
+            .map(|i| Scalar::from(i + 1))
             .collect();
 
-        let xi = &points[index];
+        let xi = &points[usize::from(index)];
         let num = Scalar::from(1);
         let denum = Scalar::from(1);
         let num = (0..s_len).fold(num, |acc, i| {
             if s[i] != index {
-                acc * &points[s[i]]
+                acc * &points[usize::from(s[i])]
             } else {
                 acc
             }
         });
         let denum = (0..s_len).fold(denum, |acc, i| {
             if s[i] != index {
-                let xj_sub_xi = &points[s[i]] - xi;
+                let xj_sub_xi = &points[usize::from(s[i])] - xi;
                 acc * xj_sub_xi
             } else {
                 acc
