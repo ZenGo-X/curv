@@ -494,7 +494,7 @@ mod test {
         }
     }
 
-    /// Function asserts that S2 can be added to S1 (ie. S1 + S2) and result is Scalar.
+    /// Function asserts that S2 can be subtracted from S1 (ie. S1 - S2) and result is Scalar.
     /// If any condition doesn't meet, function won't compile.
     #[allow(dead_code)]
     fn assert_scalars_subtraction_defined<E, S1, S2>()
