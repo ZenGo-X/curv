@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, iter};
 
 use serde::{Deserialize, Serialize};
 
@@ -174,5 +174,29 @@ impl<E: Curve> From<&BigInt> for Scalar<E> {
 impl<E: Curve> From<BigInt> for Scalar<E> {
     fn from(n: BigInt) -> Self {
         Self::from(&n)
+    }
+}
+
+impl<E: Curve> iter::Sum for Scalar<E> {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Scalar::zero(), |acc, s| acc + s)
+    }
+}
+
+impl<'s, E: Curve> iter::Sum<&'s Scalar<E>> for Scalar<E> {
+    fn sum<I: Iterator<Item = &'s Scalar<E>>>(iter: I) -> Self {
+        iter.fold(Scalar::zero(), |acc, s| acc + s)
+    }
+}
+
+impl<E: Curve> iter::Product for Scalar<E> {
+    fn product<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Scalar::from(1), |acc, s| acc * s)
+    }
+}
+
+impl<'s, E: Curve> iter::Product<&'s Scalar<E>> for Scalar<E> {
+    fn product<I: Iterator<Item = &'s Scalar<E>>>(iter: I) -> Self {
+        iter.fold(Scalar::from(1), |acc, s| acc * s)
     }
 }

@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, iter};
 
 use serde::{Deserialize, Serialize};
 
@@ -257,5 +257,23 @@ impl<'p, E: Curve> From<PointRef<'p, E>> for Point<E> {
     fn from(p: PointRef<E>) -> Self {
         // Safety: `PointRef` holds the same guarantees as `Point`
         unsafe { Point::from_raw_unchecked(p.as_raw().clone()) }
+    }
+}
+
+impl<E: Curve> iter::Sum for Point<E> {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Point::zero(), |acc, p| acc + p)
+    }
+}
+
+impl<'p, E: Curve> iter::Sum<&'p Point<E>> for Point<E> {
+    fn sum<I: Iterator<Item = &'p Point<E>>>(iter: I) -> Self {
+        iter.fold(Point::zero(), |acc, p| acc + p)
+    }
+}
+
+impl<'p, E: Curve> iter::Sum<PointRef<'p, E>> for Point<E> {
+    fn sum<I: Iterator<Item = PointRef<'p, E>>>(iter: I) -> Self {
+        iter.fold(Point::zero(), |acc, p| acc + p)
     }
 }
