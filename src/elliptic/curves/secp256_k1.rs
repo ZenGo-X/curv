@@ -124,6 +124,7 @@ impl Zeroize for PK {
     }
 }
 
+/// K-256 curve implementation based on [secp256k1] library
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Secp256k1 {}
 

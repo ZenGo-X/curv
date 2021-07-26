@@ -51,6 +51,7 @@ pub const COMPRESSED_SIZE: usize = 48;
 
 pub type PK = <pairing_plus::bls12_381::Bls12 as Engine>::G1Affine;
 
+/// Bls12-381-1 (G1) curve implementation based on [pairing_plus] library
 #[derive(Debug, PartialEq, Clone)]
 pub enum Bls12_381_1 {}
 

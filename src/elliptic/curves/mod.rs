@@ -87,6 +87,7 @@ mod test;
 mod traits;
 mod wrappers;
 
+#[doc(inline)]
 pub use self::{
     bls12_381::{Bls12_381_1, Bls12_381_2},
     curve_ristretto::Ristretto,
