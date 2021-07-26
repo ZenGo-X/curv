@@ -1,16 +1,17 @@
+use std::marker::PhantomData;
 use std::{fmt, iter};
 
+use serde::de::{Deserializer, Error, MapAccess, Visitor};
+use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
 
 use crate::elliptic::curves::traits::*;
 use crate::BigInt;
 
 use super::{
-    error::{MismatchedPointOrder, PointFromBytesError, PointFromCoordsError},
-    format::PointFormat,
-    Generator, PointRef,
+    error::{MismatchedPointOrder, PointFromBytesError, PointFromCoordsError, ZeroPointError},
+    EncodedPoint, Generator, PointRef,
 };
-use crate::elliptic::curves::ZeroPointError;
 
 /// Elliptic point of a [group order](super::Scalar::group_order), or a zero point
 ///
@@ -54,8 +55,6 @@ use crate::elliptic::curves::ZeroPointError;
 ///     a + b * c
 /// }
 /// ```
-#[derive(Serialize, Deserialize)]
-#[serde(try_from = "PointFormat<E>", into = "PointFormat<E>", bound = "")]
 pub struct Point<E: Curve> {
     raw_point: E::Point,
 }
@@ -150,15 +149,19 @@ impl<E: Curve> Point<E> {
     /// Tries to parse a point in (un)compressed form
     ///
     /// Whether it's in compressed or uncompressed form will be deduced from its length
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, PointFromBytesError> {
-        let p = E::Point::deserialize(bytes)
+    pub fn from_bytes(bytes: impl AsRef<[u8]>) -> Result<Self, PointFromBytesError> {
+        let p = E::Point::deserialize(bytes.as_ref())
             .map_err(|_: DeserializationError| PointFromBytesError::DeserializationError)?;
         Self::from_raw(p).map_err(PointFromBytesError::InvalidPoint)
     }
 
     /// Serializes a point in (un)compressed form
-    pub fn to_bytes(&self, compressed: bool) -> Vec<u8> {
-        self.as_raw().serialize(compressed)
+    pub fn to_bytes(&self, compressed: bool) -> EncodedPoint<E> {
+        if compressed {
+            EncodedPoint::Compressed(self.as_raw().serialize_compressed())
+        } else {
+            EncodedPoint::Uncompressed(self.as_raw().serialize_uncompressed())
+        }
     }
 
     /// Constructs a `Point<E>` from low-level [ECPoint] implementor
@@ -278,5 +281,179 @@ impl<'p, E: Curve> iter::Sum<&'p Point<E>> for Point<E> {
 impl<'p, E: Curve> iter::Sum<PointRef<'p, E>> for Point<E> {
     fn sum<I: Iterator<Item = PointRef<'p, E>>>(iter: I) -> Self {
         iter.fold(Point::zero(), |acc, p| acc + p)
+    }
+}
+
+impl<E: Curve> Serialize for Point<E> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.as_point().serialize(serializer)
+    }
+}
+
+impl<'de, E: Curve> Deserialize<'de> for Point<E> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct PointVisitor<E: Curve>(PhantomData<E>);
+
+        impl<'de, E: Curve> Visitor<'de> for PointVisitor<E> {
+            type Value = Point<E>;
+
+            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                write!(f, "point of {} curve", E::CURVE_NAME)
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: MapAccess<'de>,
+            {
+                let mut curve_name: Option<CurveNameGuard<E>> = None;
+                let mut point: Option<PointFromBytes<E>> = None;
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::Curve => {
+                            if curve_name.is_some() {
+                                return Err(A::Error::duplicate_field("curve_name"));
+                            }
+                            curve_name = Some(map.next_value()?)
+                        }
+                        Field::Point => {
+                            if point.is_some() {
+                                return Err(A::Error::duplicate_field("point"));
+                            }
+                            point = Some(map.next_value()?)
+                        }
+                    }
+                }
+                let _curve_name =
+                    curve_name.ok_or_else(|| A::Error::missing_field("curve_name"))?;
+                let point = point.ok_or_else(|| A::Error::missing_field("point"))?;
+                Ok(point.0)
+            }
+        }
+
+        deserializer.deserialize_struct("Point", &["curve", "point"], PointVisitor(PhantomData))
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(field_identifier, rename_all = "snake_case")]
+enum Field {
+    Curve,
+    Point,
+}
+
+/// Efficient guard for asserting that deserialized `&str`/`String` is `E::CURVE_NAME`
+pub(super) struct CurveNameGuard<E: Curve>(PhantomData<E>);
+
+impl<'de, E: Curve> Deserialize<'de> for CurveNameGuard<E> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct CurveNameVisitor<E: Curve>(PhantomData<E>);
+
+        impl<'de, E: Curve> Visitor<'de> for CurveNameVisitor<E> {
+            type Value = ();
+
+            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                write!(f, "curve name (constrained to be '{}')", E::CURVE_NAME)
+            }
+
+            fn visit_str<Err>(self, v: &str) -> Result<Self::Value, Err>
+            where
+                Err: Error,
+            {
+                if v == E::CURVE_NAME {
+                    Ok(())
+                } else {
+                    Err(Err::invalid_value(
+                        serde::de::Unexpected::Str(v),
+                        &E::CURVE_NAME,
+                    ))
+                }
+            }
+        }
+
+        deserializer
+            .deserialize_str(CurveNameVisitor(PhantomData::<E>))
+            .map(|_| CurveNameGuard(PhantomData))
+    }
+}
+
+struct PointFromBytes<E: Curve>(Point<E>);
+
+impl<'de, E: Curve> Deserialize<'de> for PointFromBytes<E> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct PointBytesVisitor<E: Curve>(PhantomData<E>);
+
+        impl<'de, E: Curve> Visitor<'de> for PointBytesVisitor<E> {
+            type Value = Point<E>;
+
+            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                write!(f, "point of {} curve", E::CURVE_NAME)
+            }
+
+            fn visit_bytes<Err>(self, v: &[u8]) -> Result<Self::Value, Err>
+            where
+                Err: Error,
+            {
+                Point::from_bytes(v).map_err(|e| Err::custom(format!("invalid point: {}", e)))
+            }
+        }
+
+        deserializer
+            .deserialize_bytes(PointBytesVisitor(PhantomData))
+            .map(PointFromBytes)
+    }
+}
+
+#[cfg(test)]
+mod serde_tests {
+    use serde_test::{assert_tokens, Token::*};
+
+    use crate::elliptic::curves::*;
+
+    #[test]
+    fn test_serde_point() {
+        fn generic<E: Curve>(point: Point<E>) {
+            let bytes = point.to_bytes(true).to_vec();
+            let tokens = vec![
+                Struct {
+                    name: "Point",
+                    len: 2,
+                },
+                Str("curve"),
+                Str(E::CURVE_NAME),
+                Str("point"),
+                Bytes(bytes.leak()),
+                StructEnd,
+            ];
+            assert_tokens(&point, &tokens);
+        }
+
+        // Test **zero points** (de)serializing
+        generic::<Secp256k1>(Point::zero());
+        generic::<Secp256r1>(Point::zero());
+        generic::<Ed25519>(Point::zero());
+        generic::<Ristretto>(Point::zero());
+        generic::<Bls12_381_1>(Point::zero());
+        generic::<Bls12_381_2>(Point::zero());
+
+        // Test **random point** (de)serializing
+        generic::<Secp256k1>(Point::generator() * Scalar::random());
+        generic::<Secp256r1>(Point::generator() * Scalar::random());
+        generic::<Ed25519>(Point::generator() * Scalar::random());
+        generic::<Ristretto>(Point::generator() * Scalar::random());
+        generic::<Bls12_381_1>(Point::generator() * Scalar::random());
+        generic::<Bls12_381_2>(Point::generator() * Scalar::random());
     }
 }

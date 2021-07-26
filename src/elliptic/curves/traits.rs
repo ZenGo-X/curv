@@ -111,6 +111,15 @@ pub trait ECPoint: Zeroize + Clone + PartialEq + fmt::Debug + 'static {
     /// Underlying curve implementation that can be retrieved in case of missing methods in this trait
     type Underlying;
 
+    /// Point serialized in compressed form
+    ///
+    /// Usually represented as byte array `[u8; COMPRESSED_LEN]`
+    type CompressedPoint: AsRef<[u8]>;
+    /// Point serialized in uncompressed form
+    ///
+    /// Usually represented as byte array `[u8; UNCOMPRESSED_LEN]`
+    type UncompressedPoint: AsRef<[u8]>;
+
     /// Zero point
     ///
     /// Zero point is usually denoted as O. It's curve neutral element, i.e. `forall A. A + O = A`.
@@ -149,10 +158,14 @@ pub trait ECPoint: Zeroize + Clone + PartialEq + fmt::Debug + 'static {
     /// Returns point coordinates (`x` and `y`), or `None` if point is at infinity
     fn coords(&self) -> Option<PointCoords>;
 
-    /// Serializes point into bytes either in compressed or uncompressed form
+    /// Serializes point into bytes in compressed
     ///
     /// Serialization must always succeed even if it's point at infinity.
-    fn serialize(&self, compressed: bool) -> Vec<u8>;
+    fn serialize_compressed(&self) -> Self::CompressedPoint;
+    /// Serializes point into bytes in uncompressed
+    ///
+    /// Serialization must always succeed even if it's point at infinity.
+    fn serialize_uncompressed(&self) -> Self::UncompressedPoint;
     /// Deserializes point from bytes
     ///
     /// Whether point in compressed or uncompressed form will be deducted from its size

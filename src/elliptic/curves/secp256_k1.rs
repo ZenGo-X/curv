@@ -316,6 +316,9 @@ impl ECPoint for Secp256k1Point {
     type Scalar = Secp256k1Scalar;
     type Underlying = Option<PK>;
 
+    type CompressedPoint = [u8; 33];
+    type UncompressedPoint = [u8; 65];
+
     fn zero() -> Secp256k1Point {
         Secp256k1Point {
             purpose: "zero",
@@ -392,16 +395,22 @@ impl ECPoint for Secp256k1Point {
         }
     }
 
-    fn serialize(&self, compressed: bool) -> Vec<u8> {
+    fn serialize_compressed(&self) -> Self::CompressedPoint {
         match self.ge {
-            None => vec![0],
-            Some(ge) if compressed => ge.serialize().to_vec(),
-            Some(ge) => ge.serialize_uncompressed().to_vec(),
+            None => [0u8; 33],
+            Some(ge) => ge.serialize(),
+        }
+    }
+
+    fn serialize_uncompressed(&self) -> Self::UncompressedPoint {
+        match self.ge {
+            None => [0u8; 65],
+            Some(ge) => ge.serialize_uncompressed(),
         }
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Secp256k1Point, DeserializationError> {
-        if bytes == [0] {
+        if bytes == [0; 33] || bytes == [0; 65] {
             Ok(Secp256k1Point {
                 purpose: "from_bytes",
                 ge: None,
@@ -520,7 +529,7 @@ mod test {
         let base_point2 = GE::base_point2();
 
         let g = GE::generator();
-        let hash = Sha256::digest(&g.serialize(true));
+        let hash = Sha256::digest(&g.serialize_compressed());
         let hash = Sha256::digest(&hash);
         let hash = Sha256::digest(&hash);
 

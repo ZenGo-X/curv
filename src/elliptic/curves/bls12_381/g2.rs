@@ -80,6 +80,9 @@ impl ECPoint for G2Point {
     type Scalar = FieldScalar;
     type Underlying = PK;
 
+    type CompressedPoint = G2Compressed;
+    type UncompressedPoint = G2Uncompressed;
+
     fn zero() -> G2Point {
         G2Point {
             purpose: "zero",
@@ -155,23 +158,16 @@ impl ECPoint for G2Point {
         }
     }
 
-    fn serialize(&self, compressed: bool) -> Vec<u8> {
-        if self.is_zero() {
-            vec![0]
-        } else if compressed {
-            G2Compressed::from_affine(self.ge).as_ref().to_vec()
-        } else {
-            G2Uncompressed::from_affine(self.ge).as_ref().to_vec()
-        }
+    fn serialize_compressed(&self) -> Self::CompressedPoint {
+        G2Compressed::from_affine(self.ge)
+    }
+
+    fn serialize_uncompressed(&self) -> Self::UncompressedPoint {
+        G2Uncompressed::from_affine(self.ge)
     }
 
     fn deserialize(bytes: &[u8]) -> Result<G2Point, DeserializationError> {
-        if bytes == [0] {
-            Ok(G2Point {
-                purpose: "deserialize",
-                ge: Self::zero().ge,
-            })
-        } else if bytes.len() == COMPRESSED_SIZE {
+        if bytes.len() == COMPRESSED_SIZE {
             let mut compressed = G2Compressed::empty();
             compressed.as_mut().copy_from_slice(bytes);
             Ok(G2Point {
@@ -271,7 +267,7 @@ impl fmt::Debug for G2Point {
             f,
             "Point {{ purpose: {:?}, uncompressed: {:?} }}",
             self.purpose,
-            hex::encode(self.serialize(false)),
+            hex::encode(self.serialize_uncompressed()),
         )
     }
 }

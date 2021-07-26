@@ -35,7 +35,7 @@ lazy_static::lazy_static! {
 
     static ref BASE_POINT2: RistrettoPoint = {
         let g = RistrettoPoint::generator();
-        let hash = Sha256::digest(&g.serialize(true));
+        let hash = Sha256::digest(g.serialize_compressed().as_ref());
         RistrettoPoint {
             purpose: "base_point2",
             ge: RistrettoPoint::deserialize(&hash).unwrap().ge,
@@ -207,6 +207,9 @@ impl ECPoint for RistrettoPoint {
     type Scalar = RistrettoScalar;
     type Underlying = PK;
 
+    type CompressedPoint = [u8; 32];
+    type UncompressedPoint = [u8; 32];
+
     fn zero() -> RistrettoPoint {
         RistrettoPoint {
             purpose: "zero",
@@ -248,9 +251,14 @@ impl ECPoint for RistrettoPoint {
         None
     }
 
-    fn serialize(&self, _compressed: bool) -> Vec<u8> {
-        self.ge.compress().to_bytes().to_vec()
+    fn serialize_compressed(&self) -> Self::CompressedPoint {
+        self.ge.compress().to_bytes()
     }
+
+    fn serialize_uncompressed(&self) -> Self::UncompressedPoint {
+        self.ge.compress().to_bytes()
+    }
+
     fn deserialize(bytes: &[u8]) -> Result<RistrettoPoint, DeserializationError> {
         let mut buffer = [0u8; 32];
         let n = bytes.len();

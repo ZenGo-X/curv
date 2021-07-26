@@ -89,7 +89,7 @@ where
     }
 
     fn input_point<E: Curve>(&mut self, point: &Point<E>) {
-        self.input(&point.to_bytes(false))
+        self.input(&point.to_bytes(false)[..])
     }
 
     fn input_scalar<E: Curve>(&mut self, scalar: &Scalar<E>) {

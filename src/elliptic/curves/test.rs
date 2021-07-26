@@ -83,23 +83,24 @@ fn serialize_deserialize_point<E: Curve>() {
     let rand_point = <E::Point as ECPoint>::generator().scalar_mul(&random_nonzero_scalar());
     let zero = E::Point::zero();
     for point in [rand_point, zero] {
-        for compressed in [true, false] {
-            let bytes = point.serialize(compressed);
-            let deserialized = <E::Point as ECPoint>::deserialize(&bytes).unwrap();
-            assert_eq!(point, deserialized);
-        }
+        let bytes = point.serialize_compressed();
+        let deserialized = <E::Point as ECPoint>::deserialize(bytes.as_ref()).unwrap();
+        assert_eq!(point, deserialized);
+        let bytes = point.serialize_uncompressed();
+        let deserialized = <E::Point as ECPoint>::deserialize(bytes.as_ref()).unwrap();
+        assert_eq!(point, deserialized);
     }
 }
 
 test_for_all_curves!(zero_point_serialization);
 fn zero_point_serialization<E: Curve>() {
     let point: E::Point = ECPoint::zero();
-    let bytes = point.serialize(true);
-    let point_from_compressed: E::Point = ECPoint::deserialize(&bytes).unwrap();
+    let bytes = point.serialize_compressed();
+    let point_from_compressed: E::Point = ECPoint::deserialize(bytes.as_ref()).unwrap();
     assert_eq!(point, point_from_compressed);
 
-    let bytes = point.serialize(false);
-    let point_from_uncompressed: E::Point = ECPoint::deserialize(&bytes).unwrap();
+    let bytes = point.serialize_uncompressed();
+    let point_from_uncompressed: E::Point = ECPoint::deserialize(bytes.as_ref()).unwrap();
     assert_eq!(point, point_from_uncompressed);
 }
 

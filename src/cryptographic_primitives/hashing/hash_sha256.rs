@@ -34,7 +34,7 @@ impl Hash for HSha256 {
     fn create_hash_from_ge<E: Curve>(ge_vec: &[&Point<E>]) -> Scalar<E> {
         let mut hasher = Sha256::new();
         for value in ge_vec {
-            hasher.input(&value.to_bytes(false));
+            hasher.input(&value.to_bytes(false)[..]);
         }
 
         let result_hex = hasher.result();

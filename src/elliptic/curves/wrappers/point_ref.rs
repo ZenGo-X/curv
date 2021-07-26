@@ -1,18 +1,16 @@
 use std::fmt;
 
-use serde::Serialize;
+use serde::ser::{Serialize, SerializeStruct, Serializer};
 
 use crate::elliptic::curves::traits::*;
 use crate::BigInt;
 
-use super::{error::MismatchedPointOrder, format::PointFormat, Generator, Point};
+use super::{error::MismatchedPointOrder, EncodedPoint, Generator, Point};
 
 /// Holds a reference to elliptic point of [group order](super::Scalar::group_order) or to zero point
 ///
 /// Holds internally a reference to [`Point<E>`](Point), refer to its documentation to learn
 /// more about Point/PointRef guarantees, security notes, and arithmetics.
-#[derive(Serialize)]
-#[serde(into = "PointFormat<E>", bound = "")]
 pub struct PointRef<'p, E: Curve> {
     raw_point: &'p E::Point,
 }
@@ -56,8 +54,12 @@ where
     }
 
     /// Serializes point into (un)compressed form
-    pub fn to_bytes(self, compressed: bool) -> Vec<u8> {
-        self.as_raw().serialize(compressed)
+    pub fn to_bytes(self, compressed: bool) -> EncodedPoint<E> {
+        if compressed {
+            EncodedPoint::Compressed(self.as_raw().serialize_compressed())
+        } else {
+            EncodedPoint::Uncompressed(self.as_raw().serialize_uncompressed())
+        }
     }
 
     /// Clones the referenced point
@@ -159,5 +161,23 @@ impl<E: Curve> From<Generator<E>> for PointRef<'static, E> {
     fn from(g: Generator<E>) -> Self {
         // Safety: generator must be of group_order
         unsafe { PointRef::from_raw_unchecked(g.as_raw()) }
+    }
+}
+
+impl<'p, E: Curve> Serialize for PointRef<'p, E> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use serde_bytes::Bytes;
+
+        let mut s = serializer.serialize_struct("Point", 2)?;
+        s.serialize_field("curve", E::CURVE_NAME)?;
+        s.serialize_field(
+            "point",
+            // Serializes bytes efficiently
+            Bytes::new(&self.to_bytes(true)),
+        )?;
+        s.end()
     }
 }
