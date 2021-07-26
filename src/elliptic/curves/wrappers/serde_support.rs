@@ -99,10 +99,11 @@ impl<'de, E: Curve> Deserialize<'de> for CurveNameGuard<E> {
                 if v == E::CURVE_NAME {
                     Ok(())
                 } else {
-                    Err(Err::invalid_value(
-                        serde::de::Unexpected::Str(v),
-                        &E::CURVE_NAME,
-                    ))
+                    Err(Err::custom(format!(
+                        "belongs to {} curve, expected {} curve",
+                        v,
+                        E::CURVE_NAME
+                    )))
                 }
             }
         }
@@ -250,13 +251,16 @@ enum ScalarField {
 
 #[cfg(test)]
 mod serde_tests {
-    use serde_test::{assert_tokens, Token::*};
+    use serde_test::{assert_de_tokens_error, assert_tokens, Token::*};
 
     use crate::elliptic::curves::*;
+    use crate::test_for_all_curves;
 
-    #[test]
-    fn test_serde_point() {
-        fn generic<E: Curve>(point: Point<E>) {
+    test_for_all_curves!(test_serde_point);
+    fn test_serde_point<E: Curve>() {
+        let random_point = Point::<E>::generator() * Scalar::random();
+        for point in [Point::zero(), random_point] {
+            println!("Point: {:?}", point);
             let bytes = point.to_bytes(true).to_vec();
             let tokens = vec![
                 Struct {
@@ -271,27 +275,12 @@ mod serde_tests {
             ];
             assert_tokens(&point, &tokens);
         }
-
-        // Test **zero points** (de)serializing
-        generic::<Secp256k1>(Point::zero());
-        generic::<Secp256r1>(Point::zero());
-        generic::<Ed25519>(Point::zero());
-        generic::<Ristretto>(Point::zero());
-        generic::<Bls12_381_1>(Point::zero());
-        generic::<Bls12_381_2>(Point::zero());
-
-        // Test **random point** (de)serializing
-        generic::<Secp256k1>(Point::generator() * Scalar::random());
-        generic::<Secp256r1>(Point::generator() * Scalar::random());
-        generic::<Ed25519>(Point::generator() * Scalar::random());
-        generic::<Ristretto>(Point::generator() * Scalar::random());
-        generic::<Bls12_381_1>(Point::generator() * Scalar::random());
-        generic::<Bls12_381_2>(Point::generator() * Scalar::random());
     }
 
-    #[test]
-    fn test_serde_scalar() {
-        fn generic<E: Curve>(scalar: Scalar<E>) {
+    test_for_all_curves!(test_serde_scalar);
+    fn test_serde_scalar<E: Curve>() {
+        for scalar in [Scalar::<E>::zero(), Scalar::random()] {
+            println!("Scalar: {:?}", scalar);
             let bytes = scalar.to_bytes().to_vec();
             let tokens = vec![
                 Struct {
@@ -306,21 +295,43 @@ mod serde_tests {
             ];
             assert_tokens(&scalar, &tokens);
         }
+    }
 
-        // Test **zero scalars** (de)serializing
-        generic::<Secp256k1>(Scalar::zero());
-        generic::<Secp256r1>(Scalar::zero());
-        generic::<Ed25519>(Scalar::zero());
-        generic::<Ristretto>(Scalar::zero());
-        generic::<Bls12_381_1>(Scalar::zero());
-        generic::<Bls12_381_2>(Scalar::zero());
+    test_for_all_curves!(doesnt_deserialize_point_from_different_curve);
+    fn doesnt_deserialize_point_from_different_curve<E: Curve>() {
+        let tokens = vec![
+            Struct {
+                name: "Point",
+                len: 2,
+            },
+            Str("curve"),
+            Str("%not_existing%"),
+        ];
+        assert_de_tokens_error::<Point<E>>(
+            &tokens,
+            &format!(
+                "belongs to %not_existing% curve, expected {} curve",
+                E::CURVE_NAME
+            ),
+        )
+    }
 
-        // Test **random scalars** (de)serializing
-        generic::<Secp256k1>(Scalar::random());
-        generic::<Secp256r1>(Scalar::random());
-        generic::<Ed25519>(Scalar::random());
-        generic::<Ristretto>(Scalar::random());
-        generic::<Bls12_381_1>(Scalar::random());
-        generic::<Bls12_381_2>(Scalar::random());
+    test_for_all_curves!(doesnt_deserialize_scalar_from_different_curve);
+    fn doesnt_deserialize_scalar_from_different_curve<E: Curve>() {
+        let tokens = vec![
+            Struct {
+                name: "Scalar",
+                len: 2,
+            },
+            Str("curve"),
+            Str("%not_existing%"),
+        ];
+        assert_de_tokens_error::<Scalar<E>>(
+            &tokens,
+            &format!(
+                "belongs to %not_existing% curve, expected {} curve",
+                E::CURVE_NAME
+            ),
+        )
     }
 }
