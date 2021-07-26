@@ -19,8 +19,8 @@ use crate::elliptic::curves::{Curve, Point, Scalar};
 /// use curv::elliptic::curves::{Secp256k1, Point};
 ///
 /// let hash = Sha256::new()
-///     .chain_point(&Point::<Secp256k1>::generator().to_point())
-///     .chain_point(&Point::<Secp256k1>::base_point2().to_point())
+///     .chain_point(&Point::<Secp256k1>::generator())
+///     .chain_point(Point::<Secp256k1>::base_point2())
 ///     .chain_bigint(&BigInt::from(10))
 ///     .result_bigint();
 ///
@@ -255,20 +255,20 @@ mod test {
 
     crate::test_for_all_curves!(create_sha512_from_ge_test);
     fn create_sha256_from_ge_test<E: Curve>() {
-        let generator = Point::<E>::generator().to_point();
-        let base_point2 = Point::<E>::base_point2().to_point();
+        let generator = Point::<E>::generator();
+        let base_point2 = Point::<E>::base_point2();
         let result1 = Sha256::new()
             .chain_point(&generator)
-            .chain_point(&base_point2)
+            .chain_point(base_point2)
             .result_scalar::<E>();
         assert!(result1.to_bigint().bit_length() > 240);
         let result2 = Sha256::new()
-            .chain_point(&base_point2)
+            .chain_point(base_point2)
             .chain_point(&generator)
             .result_scalar::<E>();
         assert_ne!(result1, result2);
         let result3 = Sha256::new()
-            .chain_point(&base_point2)
+            .chain_point(base_point2)
             .chain_point(&generator)
             .result_scalar::<E>();
         assert_eq!(result2, result3);
@@ -276,20 +276,20 @@ mod test {
 
     crate::test_for_all_curves!(create_sha256_from_ge_test);
     fn create_sha512_from_ge_test<E: Curve>() {
-        let generator = Point::<E>::generator().to_point();
-        let base_point2 = Point::<E>::base_point2().to_point();
+        let generator = Point::<E>::generator();
+        let base_point2 = Point::<E>::base_point2();
         let result1 = Sha512::new()
             .chain_point(&generator)
-            .chain_point(&base_point2)
+            .chain_point(base_point2)
             .result_scalar::<E>();
         assert!(result1.to_bigint().bit_length() > 240);
         let result2 = Sha512::new()
-            .chain_point(&base_point2)
+            .chain_point(base_point2)
             .chain_point(&generator)
             .result_scalar::<E>();
         assert_ne!(result1, result2);
         let result3 = Sha512::new()
-            .chain_point(&base_point2)
+            .chain_point(base_point2)
             .chain_point(&generator)
             .result_scalar::<E>();
         assert_eq!(result2, result3);

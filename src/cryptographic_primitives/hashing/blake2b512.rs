@@ -99,34 +99,34 @@ mod tests {
     crate::test_for_all_curves!(create_hash_from_ge_test_legacy);
     fn create_hash_from_ge_test_legacy<E: Curve>() {
         #![allow(deprecated)]
-        let base_point2 = Point::base_point2().to_point();
-        let generator = Point::generator().to_point();
+        let base_point2 = Point::<E>::base_point2();
+        let generator = Point::<E>::generator();
         let result1 =
-            Blake::create_hash_from_ge::<E>(&[&base_point2, &generator], b"Zcash_RedJubjubH");
+            Blake::create_hash_from_ge::<E>(&[base_point2, &generator], b"Zcash_RedJubjubH");
         assert!(result1.to_bigint().bit_length() > 240);
-        let result2 = Blake::create_hash_from_ge(&[&generator, &base_point2], b"Zcash_RedJubjubH");
+        let result2 = Blake::create_hash_from_ge(&[&generator, base_point2], b"Zcash_RedJubjubH");
         assert_ne!(result1, result2);
-        let result3 = Blake::create_hash_from_ge(&[&generator, &base_point2], b"Zcash_RedJubjubH");
+        let result3 = Blake::create_hash_from_ge(&[&generator, base_point2], b"Zcash_RedJubjubH");
         assert_eq!(result2, result3);
     }
 
     crate::test_for_all_curves!(create_hash_from_ge_test);
     fn create_hash_from_ge_test<E: Curve>() {
-        let base_point2 = Point::<E>::base_point2().to_point();
-        let generator = Point::<E>::generator().to_point();
+        let base_point2 = Point::<E>::base_point2();
+        let generator = Point::<E>::generator();
         let result1 = Blake::with_personal(b"Zcash_RedJubjubH")
-            .chain_point(&base_point2)
+            .chain_point(base_point2)
             .chain_point(&generator)
             .result_scalar::<E>();
         assert!(result1.to_bigint().bit_length() > 240);
         let result2 = Blake::with_personal(b"Zcash_RedJubjubH")
             .chain_point(&generator)
-            .chain_point(&base_point2)
+            .chain_point(base_point2)
             .result_scalar::<E>();
         assert_ne!(result1, result2);
         let result3 = Blake::with_personal(b"Zcash_RedJubjubH")
             .chain_point(&generator)
-            .chain_point(&base_point2)
+            .chain_point(base_point2)
             .result_scalar::<E>();
         assert_eq!(result2, result3);
     }

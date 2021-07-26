@@ -67,7 +67,7 @@
 //! ```
 //!
 //! `Point<E>` (for generic `E: Curve`) implements many traits you might need (e.g. Serialize, PartialEq,
-//! Debug, etc.) without specifying additional bounds. The same applies to other structures (PointRef, Scalar, ...).
+//! Debug, etc.) without specifying additional bounds. The same applies to `Scalar<E>`.
 //!
 //! ## Implementing your own curve
 //!
@@ -97,7 +97,7 @@ pub use self::{
 };
 pub use self::{
     traits::{Curve, ECPoint, ECScalar, PointCoords},
-    wrappers::{EncodedPoint, EncodedScalar, Generator, Point, PointRef, Scalar},
+    wrappers::{EncodedPoint, EncodedScalar, Generator, Point, Scalar},
 };
 
 pub mod error {

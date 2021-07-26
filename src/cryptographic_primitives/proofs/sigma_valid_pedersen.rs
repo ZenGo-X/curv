@@ -50,7 +50,7 @@ impl<E: Curve> PedersenProof<E> {
         );
 
         let e = Sha256::new()
-            .chain_points([&g.to_point(), &h.to_point(), &com, &a1, &a2])
+            .chain_points([&g.to_point(), h, &com, &a1, &a2])
             .result_scalar();
 
         let em = &e * m;
@@ -71,22 +71,9 @@ impl<E: Curve> PedersenProof<E> {
     pub fn verify(proof: &PedersenProof<E>) -> Result<(), ProofError> {
         let g = Point::<E>::generator();
         let h = Point::<E>::base_point2();
-        // let e = Sha256::new()
-        //     .chain_point(&g.to_point())
-        //     .chain_point(&h.to_point())
-        //     .chain_pointz(&proof.com)
-        //     .chain_point(&proof.a1)
-        //     .chain_point(&proof.a2)
-        //     .result_scalar();
 
         let e = Sha256::new()
-            .chain_points([
-                &g.to_point(),
-                &h.to_point(),
-                &proof.com,
-                &proof.a1,
-                &proof.a2,
-            ])
+            .chain_points([&g.to_point(), &h, &proof.com, &proof.a1, &proof.a2])
             .result_scalar();
 
         let z1g = g * &proof.z1;

@@ -128,32 +128,9 @@ macro_rules! matrix {
     };
 }
 
-#[cfg(not(release))]
 fn addition_of_two_points<E: Curve>(result: E::Point) -> Point<E> {
-    // In non-release environment we check that every addition results into correct point (either
-    // zero or of the expected order)
-    Point::from_raw(result)
-        .expect("addition of two points must be either a zero or of the same order")
+    unsafe { Point::from_raw_unchecked(result) }
 }
-#[cfg(release)]
-fn addition_of_two_points<E: Curve>(result: E::Point) -> Point<E> {
-    // In release we skip checks
-    Point::from_raw_unchecked(result)
-}
-
-//
-// (o_<> Point<E>, Point<E>), (o_ Point<E>, &Point<E>),
-// (o_<'p> Point<E>, PointRef<'p, E>), (o_<> Point<E>, Generator<E>),
-//
-// (_o<> &Point<E>, Point<E>), (r_ &Point<E>, &Point<E>),
-// (r_<'p> &Point<E>, PointRef<'p, E>), (r_<> &Point<E>, Generator<E>),
-//
-// (_o<'p> PointRef<'p, E>, Point<E>), (r_<'p> PointRef<'p, E>, &Point<E>),
-// (r_<'a, 'b> PointRef<'a, E>, PointRef<'b, E>), (r_<'p> PointRef<'p, E>, Generator<E>),
-//
-// (_o<> Generator<E>, Point<E>), (r_ Generator<E>, &Point<E>),
-// (r_<'p> Generator<E>, PointRef<'p, E>), (r_<> Generator<E>, Generator<E>),
-//
 
 matrix! {
     trait = Add,
@@ -164,30 +141,18 @@ matrix! {
     point_assign_fn = add_point_assign,
     pairs = {
         (o_<> Point<E>, Point<E>), (o_<> Point<E>, &Point<E>),
-        (o_<'p> Point<E>, PointRef<'p, E>), (o_<> Point<E>, Generator<E>),
+        (o_<> Point<E>, Generator<E>),
 
         (_o<> &Point<E>, Point<E>), (r_<> &Point<E>, &Point<E>),
-        (r_<'p> &Point<E>, PointRef<'p, E>), (r_<> &Point<E>, Generator<E>),
-
-        (_o<'p> PointRef<'p, E>, Point<E>), (r_<'p> PointRef<'p, E>, &Point<E>),
-        (r_<'a, 'b> PointRef<'a, E>, PointRef<'b, E>), (r_<'p> PointRef<'p, E>, Generator<E>),
+        (r_<> &Point<E>, Generator<E>),
 
         (_o<> Generator<E>, Point<E>), (r_<> Generator<E>, &Point<E>),
-        (r_<'p> Generator<E>, PointRef<'p, E>), (r_<> Generator<E>, Generator<E>),
+        (r_<> Generator<E>, Generator<E>),
     }
 }
 
-#[cfg(not(release))]
 fn subtraction_of_two_point<E: Curve>(result: E::Point) -> Point<E> {
-    // In non-release environment we check that every subtraction results into correct point (either
-    // zero or of the expected order)
-    Point::from_raw(result)
-        .expect("subtraction of two points must be either a zero or of the same order")
-}
-#[cfg(release)]
-fn subtraction_of_two_point<E: Curve>(result: E::Point) -> Point<E> {
-    // In release we skip checks
-    Point::from_raw_unchecked(result)
+    unsafe { Point::from_raw_unchecked(result) }
 }
 
 matrix! {
@@ -199,27 +164,18 @@ matrix! {
     point_assign_fn = sub_point_assign,
     pairs = {
         (o_<> Point<E>, Point<E>), (o_<> Point<E>, &Point<E>),
-        (o_<'p> Point<E>, PointRef<'p, E>), (o_<> Point<E>, Generator<E>),
+        (o_<> Point<E>, Generator<E>),
 
         (_o<> &Point<E>, Point<E>), (r_<> &Point<E>, &Point<E>),
-        (r_<'p> &Point<E>, PointRef<'p, E>), (r_<> &Point<E>, Generator<E>),
-
-        (_o<'p> PointRef<'p, E>, Point<E>), (r_<'p> PointRef<'p, E>, &Point<E>),
-        (r_<'a, 'b> PointRef<'a, E>, PointRef<'b, E>), (r_<'p> PointRef<'p, E>, Generator<E>),
+        (r_<> &Point<E>, Generator<E>),
 
         (_o<> Generator<E>, Point<E>), (r_<> Generator<E>, &Point<E>),
-        (r_<'p> Generator<E>, PointRef<'p, E>), (r_<> Generator<E>, Generator<E>),
+        (r_<> Generator<E>, Generator<E>),
     }
 }
 
-#[cfg(not(release))]
 fn multiplication_of_point_at_scalar<E: Curve>(result: E::Point) -> Point<E> {
-    Point::from_raw(result)
-        .expect("multiplication of point at scalar must always produce either a point of the same order or a zero point")
-}
-#[cfg(release)]
-fn multiplication_of_point_at_scalar<E: Curve>(result: E::Point) -> Point<E> {
-    Point::from_raw_unchecked(result)
+    unsafe { Point::from_raw_unchecked(result) }
 }
 
 matrix! {
@@ -232,11 +188,9 @@ matrix! {
     pairs = {
         (o_<> Point<E>, Scalar<E>), (o_<> Point<E>, &Scalar<E>),
         (r_<> &Point<E>, Scalar<E>), (r_<> &Point<E>, &Scalar<E>),
-        (r_<'p> PointRef<'p, E>, Scalar<E>), (r_<'p> PointRef<'p, E>, &Scalar<E>),
 
         (_o<> Scalar<E>, Point<E>), (_o<> &Scalar<E>, Point<E>),
         (_r<> Scalar<E>, &Point<E>), (_r<> &Scalar<E>, &Point<E>),
-        (_r<'p> Scalar<E>, PointRef<'p, E>), (_r<'p> &Scalar<E>, PointRef<'p, E>),
     }
 }
 
@@ -343,15 +297,6 @@ impl<E: Curve> ops::Neg for &Point<E> {
     }
 }
 
-impl<'p, E: Curve> ops::Neg for PointRef<'p, E> {
-    type Output = Point<E>;
-
-    fn neg(self) -> Self::Output {
-        Point::from_raw(self.as_raw().neg_point())
-            .expect("neg must not produce point of different order")
-    }
-}
-
 impl<E: Curve> ops::Neg for Generator<E> {
     type Output = Point<E>;
 
@@ -414,8 +359,8 @@ mod test {
         fn _curve<E: Curve>() {
             assert_operator_defined_for! {
                 assert_fn = assert_point_addition_defined,
-                lhs = {Point<E>, &Point<E>, PointRef<E>, Generator<E>},
-                rhs = {Point<E>, &Point<E>, PointRef<E>, Generator<E>},
+                lhs = {Point<E>, &Point<E>, Generator<E>},
+                rhs = {Point<E>, &Point<E>, Generator<E>},
             }
         }
     }
@@ -436,8 +381,8 @@ mod test {
         fn _curve<E: Curve>() {
             assert_operator_defined_for! {
                 assert_fn = assert_point_subtraction_defined,
-                lhs = {Point<E>, &Point<E>, PointRef<E>, Generator<E>},
-                rhs = {Point<E>, &Point<E>, PointRef<E>, Generator<E>},
+                lhs = {Point<E>, &Point<E>, Generator<E>},
+                rhs = {Point<E>, &Point<E>, Generator<E>},
             }
         }
     }
@@ -458,7 +403,7 @@ mod test {
         fn _curve<E: Curve>() {
             assert_operator_defined_for! {
                 assert_fn = assert_point_multiplication_defined,
-                lhs = {Point<E>, &Point<E>, PointRef<E>, Generator<E>},
+                lhs = {Point<E>, &Point<E>, Generator<E>},
                 rhs = {Scalar<E>, &Scalar<E>},
             }
 
@@ -467,7 +412,7 @@ mod test {
             assert_operator_defined_for! {
                 assert_fn = assert_point_multiplication_defined,
                 lhs = {Scalar<E>, &Scalar<E>},
-                rhs = {Point<E>, &Point<E>, PointRef<E>, Generator<E>},
+                rhs = {Point<E>, &Point<E>, Generator<E>},
             }
         }
     }

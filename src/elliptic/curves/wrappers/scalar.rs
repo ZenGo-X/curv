@@ -1,10 +1,9 @@
 use std::{fmt, iter};
 
 use crate::elliptic::curves::traits::{Curve, ECScalar};
-use crate::BigInt;
-
 use crate::elliptic::curves::wrappers::encoded_scalar::EncodedScalar;
 use crate::elliptic::curves::{DeserializationError, ZeroScalarError};
+use crate::BigInt;
 
 /// Scalar value in a prime field
 ///
@@ -33,6 +32,7 @@ use crate::elliptic::curves::{DeserializationError, ZeroScalarError};
 ///     a + b * c
 /// }
 /// ```
+#[repr(transparent)]
 pub struct Scalar<E: Curve> {
     raw_scalar: E::Scalar,
 }

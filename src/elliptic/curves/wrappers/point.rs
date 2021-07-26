@@ -5,8 +5,9 @@ use crate::BigInt;
 
 use super::{
     error::{MismatchedPointOrder, PointFromBytesError, PointFromCoordsError, ZeroPointError},
-    EncodedPoint, Generator, PointRef,
+    EncodedPoint, Generator,
 };
+use crate::elliptic::curves::wrappers::encoded_point::EncodedPointChoice;
 
 /// Elliptic point of a [group order](super::Scalar::group_order), or a zero point
 ///
@@ -50,6 +51,7 @@ use super::{
 ///     a + b * c
 /// }
 /// ```
+#[repr(transparent)]
 pub struct Point<E: Curve> {
     raw_point: E::Point,
 }
@@ -75,11 +77,12 @@ impl<E: Curve> Point<E> {
     ///
     /// We provide an alternative generator value and prove that it was picked randomly.
     ///
-    /// Returns a structure holding a static reference on actual value (in most cases referenced
-    /// value is fine). Use [`.to_point()`](PointRef::to_point) if you need to take it by value.
-    pub fn base_point2() -> PointRef<'static, E> {
+    /// Returns a static reference to actual point — in most cases referenced value is fine. Use
+    /// `.clone()` to take it by value.
+    pub fn base_point2() -> &'static Self {
         let p = E::Point::base_point2();
-        PointRef::from_raw(p).expect("base_point2 must have correct order")
+        // Safety: we proof that base_point2 has correct order
+        unsafe { Self::from_raw_ref_unchecked(p) }
     }
 
     /// Constructs zero point
@@ -136,11 +139,6 @@ impl<E: Curve> Point<E> {
         Self::from_raw(raw_point).map_err(PointFromCoordsError::InvalidPoint)
     }
 
-    /// Creates [PointRef] that holds a reference on `self`
-    pub fn as_point(&self) -> PointRef<E> {
-        PointRef::from(self)
-    }
-
     /// Tries to parse a point in (un)compressed form
     ///
     /// Whether it's in compressed or uncompressed form will be deduced from its length
@@ -153,9 +151,13 @@ impl<E: Curve> Point<E> {
     /// Serializes a point in (un)compressed form
     pub fn to_bytes(&self, compressed: bool) -> EncodedPoint<E> {
         if compressed {
-            EncodedPoint::Compressed(self.as_raw().serialize_compressed())
+            EncodedPoint(EncodedPointChoice::Compressed(
+                self.as_raw().serialize_compressed(),
+            ))
         } else {
-            EncodedPoint::Uncompressed(self.as_raw().serialize_uncompressed())
+            EncodedPoint(EncodedPointChoice::Uncompressed(
+                self.as_raw().serialize_uncompressed(),
+            ))
         }
     }
 
@@ -178,13 +180,36 @@ impl<E: Curve> Point<E> {
         }
     }
 
+    /// Constructs a `&Point<E>` from reference to low-level [ECPoint] implementation
+    ///
+    /// Returns error if point is not valid. Valid point is either a zero point, or a point of
+    /// [group order].
+    ///
+    /// Typically, you don't need to use this constructor. See [generator](Point::generator),
+    /// [base_point2](Point::base_point2) constructors.
+    ///
+    /// [ECPoint]: crate::elliptic::curves::ECPoint
+    /// [group order]: crate::elliptic::curves::ECScalar::group_order
+    pub fn from_raw_ref(raw_point: &E::Point) -> Result<&Self, MismatchedPointOrder> {
+        if raw_point.is_zero() || raw_point.check_point_order_equals_group_order() {
+            // Safety: Self is repr(transparent) wrapper over E::Point => cast is sound
+            let reference = unsafe { &*(raw_point as *const E::Point as *const Self) };
+            Ok(reference)
+        } else {
+            Err(MismatchedPointOrder::new())
+        }
+    }
+
     /// Constructs a `Point<E>` from low-level [ECPoint] implementor
+    ///
+    /// Unsafe equivalent of [from_raw](Self::from_raw). It debug asserts that given `raw_point` is
+    /// valid (the assertion is optimized out in release builds by default).
     ///
     /// # Safety
     ///
-    /// This function will not perform any checks against the point. You must guarantee that either
-    /// point order is equal to curve [group order] or it's a zero point. To perform this check, you
-    /// may use [ECPoint::check_point_order_equals_group_order][check_point_order_equals_group_order]
+    /// You must guarantee that either point order is equal to curve [group order] or it's a zero point.
+    /// To perform this check, you may use
+    /// [ECPoint::check_point_order_equals_group_order][check_point_order_equals_group_order]
     /// and [ECPoint::is_zero][is_zero] methods.
     ///
     /// [ECPoint]: crate::elliptic::curves::ECPoint
@@ -192,7 +217,29 @@ impl<E: Curve> Point<E> {
     /// [check_point_order_equals_group_order]: crate::elliptic::curves::ECPoint::check_point_order_equals_group_order
     /// [is_zero]: crate::elliptic::curves::ECPoint::is_zero
     pub unsafe fn from_raw_unchecked(raw_point: E::Point) -> Self {
+        debug_assert!(raw_point.is_zero() || raw_point.check_point_order_equals_group_order());
         Self { raw_point }
+    }
+
+    /// Constructs a `Point<E>` from reference to low-level [ECPoint] implementor
+    ///
+    /// Unsafe equivalent of [from_raw](Self::from_raw). It debug asserts that given `raw_point` is
+    /// valid (the assertion is optimized out in release builds by default).
+    ///
+    /// # Safety
+    ///
+    /// You must guarantee that either point order is equal to curve [group order] or it's a zero point.
+    /// To perform this check, you may use
+    /// [ECPoint::check_point_order_equals_group_order][check_point_order_equals_group_order]
+    /// and [ECPoint::is_zero][is_zero] methods.
+    ///
+    /// [ECPoint]: crate::elliptic::curves::ECPoint
+    /// [group order]: crate::elliptic::curves::ECScalar::group_order
+    /// [check_point_order_equals_group_order]: crate::elliptic::curves::ECPoint::check_point_order_equals_group_order
+    /// [is_zero]: crate::elliptic::curves::ECPoint::is_zero
+    pub unsafe fn from_raw_ref_unchecked(raw_point: &E::Point) -> &Self {
+        // Safety: Self is repr(transparent) wrapper over E::Point => cast is sound
+        &*(raw_point as *const E::Point as *const Self)
     }
 
     /// Returns a reference to low-level point implementation
@@ -222,12 +269,6 @@ impl<E: Curve> PartialEq for Point<E> {
     }
 }
 
-impl<'p, E: Curve> PartialEq<PointRef<'p, E>> for Point<E> {
-    fn eq(&self, other: &PointRef<'p, E>) -> bool {
-        self.as_raw().eq(other.as_raw())
-    }
-}
-
 impl<E: Curve> PartialEq<Generator<E>> for Point<E> {
     fn eq(&self, other: &Generator<E>) -> bool {
         self.as_raw().eq(other.as_raw())
@@ -254,13 +295,6 @@ impl<E: Curve> From<Generator<E>> for Point<E> {
     }
 }
 
-impl<'p, E: Curve> From<PointRef<'p, E>> for Point<E> {
-    fn from(p: PointRef<E>) -> Self {
-        // Safety: `PointRef` holds the same guarantees as `Point`
-        unsafe { Point::from_raw_unchecked(p.as_raw().clone()) }
-    }
-}
-
 impl<E: Curve> iter::Sum for Point<E> {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.fold(Point::zero(), |acc, p| acc + p)
@@ -269,12 +303,6 @@ impl<E: Curve> iter::Sum for Point<E> {
 
 impl<'p, E: Curve> iter::Sum<&'p Point<E>> for Point<E> {
     fn sum<I: Iterator<Item = &'p Point<E>>>(iter: I) -> Self {
-        iter.fold(Point::zero(), |acc, p| acc + p)
-    }
-}
-
-impl<'p, E: Curve> iter::Sum<PointRef<'p, E>> for Point<E> {
-    fn sum<I: Iterator<Item = PointRef<'p, E>>>(iter: I) -> Self {
         iter.fold(Point::zero(), |acc, p| acc + p)
     }
 }

@@ -46,7 +46,7 @@ impl<E: Curve> PedersenBlindingProof<E> {
         );
         let g = Point::<E>::generator();
         let e = Sha256::new()
-            .chain_points([&g.to_point(), &h.to_point(), &com, &a])
+            .chain_points([&g.to_point(), h, &com, &a])
             .chain_scalar(&m)
             .result_scalar();
 
@@ -65,7 +65,7 @@ impl<E: Curve> PedersenBlindingProof<E> {
         let g = Point::<E>::generator();
         let h = Point::<E>::base_point2();
         let e = Sha256::new()
-            .chain_points([&g.to_point(), &h.to_point(), &proof.com, &proof.a])
+            .chain_points([&g.to_point(), h, &proof.com, &proof.a])
             .chain_scalar(&proof.m)
             .result_scalar();
 

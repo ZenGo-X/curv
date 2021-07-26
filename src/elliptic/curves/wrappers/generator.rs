@@ -1,15 +1,16 @@
 use std::marker::PhantomData;
+use std::ops::Deref;
 
 use crate::elliptic::curves::traits::*;
 
-use super::{Point, PointRef};
+use super::Point;
 
 /// Elliptic curve generator
 ///
 /// Holds internally a static reference on curve generator. Can be used in arithmetic interchangeably
-/// as [`PointRef<E>`](PointRef).
+/// as [&Point\<E\>](Point<E>).
 ///
-/// You can convert the generator into `Point<E>` and `PointRef<E>` using
+/// You can convert the generator into `Point<E>` and `&'static Point<E>` using
 /// [`to_point`](Self::to_point) and [`as_point`](Self::as_point)
 /// methods respectively.
 ///
@@ -55,9 +56,10 @@ impl<E: Curve> Generator<E> {
         Point::from(self)
     }
 
-    /// Converts generator into `PointRef<E>`
-    pub fn as_point(self) -> PointRef<'static, E> {
-        PointRef::from(self)
+    /// Converts generator into `&'static Point<E>`
+    pub fn as_point(self) -> &'static Point<E> {
+        // Safety: generator point expected to have correct order
+        unsafe { Point::from_raw_ref_unchecked(self.as_raw()) }
     }
 
     /// Returns a reference to low-level point implementation
@@ -73,3 +75,10 @@ impl<E: Curve> Clone for Generator<E> {
 }
 
 impl<E: Curve> Copy for Generator<E> {}
+
+impl<E: Curve> Deref for Generator<E> {
+    type Target = Point<E>;
+    fn deref(&self) -> &Point<E> {
+        self.as_point()
+    }
+}

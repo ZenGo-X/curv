@@ -99,7 +99,7 @@ mod tests {
         let h2 = g2 * &x;
         let delta = ECDDHStatement {
             g1: g1.to_point(),
-            g2: g2.to_point(),
+            g2: g2.clone(),
             h1,
             h2,
         };
@@ -118,7 +118,7 @@ mod tests {
         let h2 = g2 * &x2;
         let delta = ECDDHStatement {
             g1: g1.to_point(),
-            g2: g2.to_point(),
+            g2: g2.clone(),
             h1,
             h2,
         };

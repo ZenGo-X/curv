@@ -115,13 +115,13 @@ mod tests {
     crate::test_for_all_curves!(create_sha256_from_ge_test);
 
     fn create_sha256_from_ge_test<E: Curve>() {
-        let generator = Point::generator().to_point();
-        let base_point2 = Point::base_point2().to_point();
-        let result1 = HSha256::create_hash_from_ge::<E>(&[&base_point2, &generator]);
+        let generator = Point::<E>::generator();
+        let base_point2 = Point::<E>::base_point2();
+        let result1 = HSha256::create_hash_from_ge::<E>(&[base_point2, &generator]);
         assert!(result1.to_bigint().bit_length() > 240);
-        let result2 = HSha256::create_hash_from_ge(&[&generator, &base_point2]);
+        let result2 = HSha256::create_hash_from_ge(&[&generator, base_point2]);
         assert_ne!(result1, result2);
-        let result3 = HSha256::create_hash_from_ge(&[&generator, &base_point2]);
+        let result3 = HSha256::create_hash_from_ge(&[&generator, base_point2]);
         assert_eq!(result2, result3);
     }
 }

@@ -75,7 +75,7 @@ mod tests {
     test_for_all_curves!(test_mt_functionality_four_leaves);
 
     fn test_mt_functionality_four_leaves<E: Curve>() {
-        let ge1: Point<E> = Point::generator().to_point().into();
+        let ge1: Point<E> = Point::generator().to_point();
         let ge2: Point<E> = ge1.clone();
         let ge3: Point<E> = &ge1 + &ge2;
         let ge4: Point<E> = &ge1 + &ge3;
@@ -90,7 +90,7 @@ mod tests {
     test_for_all_curves!(test_mt_functionality_three_leaves);
 
     fn test_mt_functionality_three_leaves<E: Curve>() {
-        let ge1: Point<E> = Point::generator().to_point().into();
+        let ge1: Point<E> = Point::generator().to_point();
         let ge2: Point<E> = ge1.clone();
         let ge3: Point<E> = &ge1 + &ge2;
 

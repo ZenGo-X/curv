@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 use serde::de::{Error, MapAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_bytes::Bytes;
 
 use crate::elliptic::curves::{Curve, Point, Scalar};
 
@@ -11,12 +12,19 @@ use crate::elliptic::curves::{Curve, Point, Scalar};
 // --- Point (de)serialization
 // ---
 
-impl<E: Curve> Serialize for Point<E> {
+impl<'p, E: Curve> Serialize for Point<E> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        self.as_point().serialize(serializer)
+        let mut s = serializer.serialize_struct("Point", 2)?;
+        s.serialize_field("curve", E::CURVE_NAME)?;
+        s.serialize_field(
+            "point",
+            // Serializes bytes efficiently
+            Bytes::new(&self.to_bytes(true)),
+        )?;
+        s.end()
     }
 }
 
@@ -158,7 +166,7 @@ impl<E: Curve> Serialize for Scalar<E> {
         s.serialize_field(
             "scalar",
             // Serializes bytes efficiently
-            serde_bytes::Bytes::new(&self.to_bytes()),
+            Bytes::new(&self.to_bytes()),
         )?;
         s.end()
     }
