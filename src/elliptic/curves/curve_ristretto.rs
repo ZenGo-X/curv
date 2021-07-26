@@ -50,6 +50,14 @@ pub const NUM_OF_COORDINATES: usize = 4;
 pub type SK = curve25519_dalek::scalar::Scalar;
 pub type PK = curve25519_dalek::ristretto::RistrettoPoint;
 
+/// Ristretto curve implementation based on [curve25519_dalek] library
+///
+/// ## Implementation notes
+/// * x coordinate
+///
+///   Underlying library intentionally doesn't expose x coordinate of curve point, therefore
+///   `.x_coord()`, `.coords()` methods always return `None`, `from_coords()` constructor always
+///   returns `Err(NotOnCurve)`
 #[derive(Debug, PartialEq, Clone)]
 pub enum Ristretto {}
 #[derive(Clone, Debug)]
@@ -218,30 +226,16 @@ impl ECPoint for RistrettoPoint {
         &BASE_POINT2
     }
 
-    fn from_coords(x: &BigInt, y: &BigInt) -> Result<RistrettoPoint, NotOnCurve> {
-        let mut y_bytes = y.to_bytes_array::<32>().ok_or(NotOnCurve)?;
-        if x != &BigInt::from_bytes(&Sha256::digest(&y_bytes)) {
-            return Err(NotOnCurve);
-        }
-
-        y_bytes.reverse();
-        let compressed = CompressedRistretto::from_slice(&y_bytes);
-
-        Ok(RistrettoPoint {
-            purpose: "from_coords",
-            ge: compressed.decompress().ok_or(NotOnCurve)?,
-        })
+    fn from_coords(_x: &BigInt, _y: &BigInt) -> Result<RistrettoPoint, NotOnCurve> {
+        // Underlying library intentionally hides x coordinate. There's no way to match if `x`
+        // correspond to given `y`.
+        Err(NotOnCurve)
     }
 
     fn x_coord(&self) -> Option<BigInt> {
-        // Underlying library intentionally hides x coordinate. We return x=hash(y) as was proposed
-        // here: https://github.com/dalek-cryptography/curve25519-dalek/issues/235
-        let y = self
-            .y_coord()?
-            .to_bytes_array::<32>()
-            .expect("y coordinate is mod n, meaning it must be <= 32 bytes");
-        let x = Sha256::digest(&y);
-        Some(BigInt::from_bytes(&x))
+        // Underlying library intentionally hides x coordinate. There's no way we can know x
+        // coordinate
+        None
     }
 
     fn y_coord(&self) -> Option<BigInt> {
@@ -251,15 +245,7 @@ impl ECPoint for RistrettoPoint {
     }
 
     fn coords(&self) -> Option<PointCoords> {
-        let y = self.y_coord()?;
-        let y_bytes = y
-            .to_bytes_array::<32>()
-            .expect("y coordinate is mod n, meaning it must be <= 32 bytes");
-        let x = Sha256::digest(&y_bytes);
-        Some(PointCoords {
-            x: BigInt::from_bytes(&x),
-            y,
-        })
+        None
     }
 
     fn serialize(&self, _compressed: bool) -> Vec<u8> {

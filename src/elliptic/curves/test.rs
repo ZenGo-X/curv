@@ -189,6 +189,10 @@ fn scalar_behaves_the_same_as_bigint<E: Curve>() {
 
 test_for_all_curves!(from_coords_produces_the_same_point);
 fn from_coords_produces_the_same_point<E: Curve>() {
+    if E::CURVE_NAME == "ristretto" {
+        // This curve is exception.
+        return;
+    }
     let s: E::Scalar = random_nonzero_scalar();
     println!("s={}", s.to_bigint());
 

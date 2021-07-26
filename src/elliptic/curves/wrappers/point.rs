@@ -112,7 +112,10 @@ impl<E: Curve> Point<E> {
     /// Returns point coordinates
     ///
     /// Point might not have coordinates (specifically, "point at infinity" doesn't), in this case
-    /// `None` is returned
+    /// `None` is returned. Also, some curve libraries do not expose point coordinates (eg. see
+    /// [Ristretto] curve implementation notes).
+    ///
+    /// [Ristretto]: crate::elliptic::curves::Ristretto
     pub fn coords(&self) -> Option<PointCoords> {
         self.as_raw().coords()
     }
