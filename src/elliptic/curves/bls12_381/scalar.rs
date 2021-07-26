@@ -38,6 +38,8 @@ pub struct FieldScalar {
 impl ECScalar for FieldScalar {
     type Underlying = SK;
 
+    type ScalarBytes = [u8; 32];
+
     fn random() -> FieldScalar {
         FieldScalar {
             purpose: "random",
@@ -73,10 +75,10 @@ impl ECScalar for FieldScalar {
         BigInt::from_bytes(&bytes)
     }
 
-    fn serialize(&self) -> Vec<u8> {
+    fn serialize(&self) -> Self::ScalarBytes {
         let repr = self.fe.into_repr();
-        let mut bytes = Vec::with_capacity(SECRET_KEY_SIZE);
-        repr.write_be(&mut bytes).unwrap();
+        let mut bytes = [0u8; SECRET_KEY_SIZE];
+        repr.write_be(&mut bytes[..]).unwrap();
         bytes
     }
 

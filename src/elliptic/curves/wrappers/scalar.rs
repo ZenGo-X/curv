@@ -1,12 +1,17 @@
+use std::marker::PhantomData;
 use std::{fmt, iter};
 
+use serde::de::{Error, MapAccess, Visitor};
+use serde::ser::SerializeStruct;
 use serde::{Deserialize, Serialize};
+use serde::{Deserializer, Serializer};
 
 use crate::elliptic::curves::traits::{Curve, ECScalar};
 use crate::BigInt;
 
-use super::format::ScalarFormat;
-use crate::elliptic::curves::ZeroScalarError;
+use super::point::CurveNameGuard;
+use crate::elliptic::curves::wrappers::encoded_scalar::EncodedScalar;
+use crate::elliptic::curves::{DeserializationError, ZeroScalarError};
 
 /// Scalar value in a prime field
 ///
@@ -35,8 +40,6 @@ use crate::elliptic::curves::ZeroScalarError;
 ///     a + b * c
 /// }
 /// ```
-#[derive(Serialize, Deserialize)]
-#[serde(try_from = "ScalarFormat<E>", into = "ScalarFormat<E>", bound = "")]
 pub struct Scalar<E: Curve> {
     raw_scalar: E::Scalar,
 }
@@ -79,6 +82,16 @@ impl<E: Curve> Scalar<E> {
     /// Constructs a scalar `n % curve_order` from given `n`
     pub fn from_bigint(n: &BigInt) -> Self {
         Self::from_raw(E::Scalar::from_bigint(n))
+    }
+
+    /// Serializes a scalar to bytes
+    pub fn to_bytes(&self) -> EncodedScalar<E> {
+        EncodedScalar::from(self)
+    }
+
+    /// Constructs a scalar from bytes
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, DeserializationError> {
+        ECScalar::deserialize(bytes).map(Self::from_raw)
     }
 
     /// Returns an order of generator point
@@ -198,5 +211,148 @@ impl<E: Curve> iter::Product for Scalar<E> {
 impl<'s, E: Curve> iter::Product<&'s Scalar<E>> for Scalar<E> {
     fn product<I: Iterator<Item = &'s Scalar<E>>>(iter: I) -> Self {
         iter.fold(Scalar::from(1), |acc, s| acc * s)
+    }
+}
+
+impl<E: Curve> Serialize for Scalar<E> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut s = serializer.serialize_struct("Scalar", 2)?;
+        s.serialize_field("curve", E::CURVE_NAME)?;
+        s.serialize_field(
+            "scalar",
+            // Serializes bytes efficiently
+            serde_bytes::Bytes::new(&self.to_bytes()),
+        )?;
+        s.end()
+    }
+}
+
+impl<'de, E: Curve> Deserialize<'de> for Scalar<E> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct ScalarVisitor<E: Curve>(PhantomData<E>);
+
+        impl<'de, E: Curve> Visitor<'de> for ScalarVisitor<E> {
+            type Value = Scalar<E>;
+
+            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                write!(f, "scalar of {} curve", E::CURVE_NAME)
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: MapAccess<'de>,
+            {
+                let mut curve_name: Option<CurveNameGuard<E>> = None;
+                let mut scalar: Option<ScalarFromBytes<E>> = None;
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::Curve => {
+                            if curve_name.is_some() {
+                                return Err(A::Error::duplicate_field("curve_name"));
+                            }
+                            curve_name = Some(map.next_value()?)
+                        }
+                        Field::Scalar => {
+                            if scalar.is_some() {
+                                return Err(A::Error::duplicate_field("scalar"));
+                            }
+                            scalar = Some(map.next_value()?)
+                        }
+                    }
+                }
+                let _curve_name =
+                    curve_name.ok_or_else(|| A::Error::missing_field("curve_name"))?;
+                let scalar = scalar.ok_or_else(|| A::Error::missing_field("scalar"))?;
+                Ok(scalar.0)
+            }
+        }
+
+        deserializer.deserialize_struct("Scalar", &["curve", "scalar"], ScalarVisitor(PhantomData))
+    }
+}
+
+struct ScalarFromBytes<E: Curve>(Scalar<E>);
+
+impl<'de, E: Curve> Deserialize<'de> for ScalarFromBytes<E> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct ScalarBytesVisitor<E: Curve>(PhantomData<E>);
+
+        impl<'de, E: Curve> Visitor<'de> for ScalarBytesVisitor<E> {
+            type Value = Scalar<E>;
+
+            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                write!(f, "scalar value of {} curve", E::CURVE_NAME)
+            }
+
+            fn visit_bytes<Err>(self, v: &[u8]) -> Result<Self::Value, Err>
+            where
+                Err: Error,
+            {
+                Scalar::from_bytes(v).map_err(|_| Err::custom("invalid scalar"))
+            }
+        }
+
+        deserializer
+            .deserialize_bytes(ScalarBytesVisitor(PhantomData))
+            .map(ScalarFromBytes)
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(field_identifier, rename_all = "snake_case")]
+enum Field {
+    Curve,
+    Scalar,
+}
+
+#[cfg(test)]
+mod serde_tests {
+    use serde_test::{assert_tokens, Token::*};
+
+    use crate::elliptic::curves::*;
+
+    #[test]
+    fn test_serde_scalar() {
+        fn generic<E: Curve>(scalar: Scalar<E>) {
+            let bytes = scalar.to_bytes().to_vec();
+            let tokens = vec![
+                Struct {
+                    name: "Scalar",
+                    len: 2,
+                },
+                Str("curve"),
+                Str(E::CURVE_NAME),
+                Str("scalar"),
+                Bytes(bytes.leak()),
+                StructEnd,
+            ];
+            assert_tokens(&scalar, &tokens);
+        }
+
+        // Test **zero scalars** (de)serializing
+        generic::<Secp256k1>(Scalar::zero());
+        generic::<Secp256r1>(Scalar::zero());
+        generic::<Ed25519>(Scalar::zero());
+        generic::<Ristretto>(Scalar::zero());
+        generic::<Bls12_381_1>(Scalar::zero());
+        generic::<Bls12_381_2>(Scalar::zero());
+
+        // Test **random scalars** (de)serializing
+        generic::<Secp256k1>(Scalar::random());
+        generic::<Secp256r1>(Scalar::random());
+        generic::<Ed25519>(Scalar::random());
+        generic::<Ristretto>(Scalar::random());
+        generic::<Bls12_381_1>(Scalar::random());
+        generic::<Bls12_381_2>(Scalar::random());
     }
 }

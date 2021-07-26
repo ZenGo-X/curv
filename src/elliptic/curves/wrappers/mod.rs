@@ -1,5 +1,6 @@
 mod arithmetic;
 mod encoded_point;
+mod encoded_scalar;
 pub mod error;
 mod format;
 mod generator;
@@ -8,6 +9,6 @@ mod point_ref;
 mod scalar;
 
 pub use self::{
-    encoded_point::EncodedPoint, generator::Generator, point::Point, point_ref::PointRef,
-    scalar::Scalar,
+    encoded_point::EncodedPoint, encoded_scalar::EncodedScalar, generator::Generator, point::Point,
+    point_ref::PointRef, scalar::Scalar,
 };

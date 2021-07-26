@@ -37,6 +37,9 @@ pub trait ECScalar: Clone + PartialEq + fmt::Debug + 'static {
     /// Underlying scalar type that can be retrieved in case of missing methods in this trait
     type Underlying;
 
+    /// Serialized scalar
+    type ScalarBytes: AsRef<[u8]>;
+
     /// Samples a random scalar
     fn random() -> Self;
 
@@ -52,7 +55,7 @@ pub trait ECScalar: Clone + PartialEq + fmt::Debug + 'static {
     /// Converts a scalar to BigInt
     fn to_bigint(&self) -> BigInt;
     /// Serializes scalar into bytes
-    fn serialize(&self) -> Vec<u8>;
+    fn serialize(&self) -> Self::ScalarBytes;
     /// Deserializes scalar from bytes
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError>;
 

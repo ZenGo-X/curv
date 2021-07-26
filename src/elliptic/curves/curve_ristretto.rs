@@ -83,6 +83,8 @@ impl Curve for Ristretto {
 impl ECScalar for RistrettoScalar {
     type Underlying = SK;
 
+    type ScalarBytes = [u8; 32];
+
     fn random() -> RistrettoScalar {
         RistrettoScalar {
             purpose: "random",
@@ -116,8 +118,8 @@ impl ECScalar for RistrettoScalar {
         BigInt::from_bytes(&t)
     }
 
-    fn serialize(&self) -> Vec<u8> {
-        self.fe.to_bytes().to_vec()
+    fn serialize(&self) -> Self::ScalarBytes {
+        self.fe.to_bytes()
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError> {

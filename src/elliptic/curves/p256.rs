@@ -84,6 +84,8 @@ impl Curve for Secp256r1 {
 impl ECScalar for Secp256r1Scalar {
     type Underlying = SK;
 
+    type ScalarBytes = FieldBytes;
+
     fn random() -> Secp256r1Scalar {
         let mut rng = thread_rng();
         let scalar = loop {
@@ -127,8 +129,8 @@ impl ECScalar for Secp256r1Scalar {
         BigInt::from_bytes(self.fe.to_bytes().as_slice())
     }
 
-    fn serialize(&self) -> Vec<u8> {
-        self.fe.to_bytes().to_vec()
+    fn serialize(&self) -> Self::ScalarBytes {
+        self.fe.to_bytes()
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError> {

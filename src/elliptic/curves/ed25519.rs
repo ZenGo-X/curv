@@ -126,6 +126,8 @@ impl Curve for Ed25519 {
 impl ECScalar for Ed25519Scalar {
     type Underlying = SK;
 
+    type ScalarBytes = [u8; 32];
+
     // we chose to multiply by 8 (co-factor) all group elements to work in the prime order sub group.
     // each random fe is having its 3 first bits zeroed
     fn random() -> Ed25519Scalar {
@@ -171,8 +173,8 @@ impl ECScalar for Ed25519Scalar {
         BigInt::from_bytes(&t)
     }
 
-    fn serialize(&self) -> Vec<u8> {
-        self.fe.to_bytes().to_vec()
+    fn serialize(&self) -> Self::ScalarBytes {
+        self.fe.to_bytes()
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError> {

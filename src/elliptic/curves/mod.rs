@@ -97,7 +97,7 @@ pub use self::{
 };
 pub use self::{
     traits::{Curve, ECPoint, ECScalar, PointCoords},
-    wrappers::{EncodedPoint, Generator, Point, PointRef, Scalar},
+    wrappers::{EncodedPoint, EncodedScalar, Generator, Point, PointRef, Scalar},
 };
 
 pub mod error {

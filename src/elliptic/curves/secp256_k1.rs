@@ -155,6 +155,8 @@ type FE = Secp256k1Scalar;
 impl ECScalar for Secp256k1Scalar {
     type Underlying = Option<SK>;
 
+    type ScalarBytes = [u8; 32];
+
     fn random() -> Secp256k1Scalar {
         let sk = SK(SecretKey::new(&mut rand_legacy::thread_rng()));
         Secp256k1Scalar {
@@ -201,16 +203,15 @@ impl ECScalar for Secp256k1Scalar {
         }
     }
 
-    fn serialize(&self) -> Vec<u8> {
-        let scalar = match &*self.fe {
-            Some(s) => s,
-            None => return vec![0u8],
-        };
-        scalar.0[..].to_vec()
+    fn serialize(&self) -> Self::ScalarBytes {
+        match &*self.fe {
+            Some(s) => *s.as_ref(),
+            None => [0u8; 32],
+        }
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError> {
-        let pk = if bytes == [0] {
+        let sk = if bytes == [0; 32] {
             None
         } else {
             Some(SK(
@@ -219,7 +220,7 @@ impl ECScalar for Secp256k1Scalar {
         };
         Ok(Secp256k1Scalar {
             purpose: "deserialize",
-            fe: pk.into(),
+            fe: sk.into(),
         })
     }
 

@@ -301,7 +301,7 @@ fn serialize_deserialize_scalar<E: Curve>() {
     let zero = E::Scalar::zero();
     for scalar in [rand_point, zero] {
         let bytes = scalar.serialize();
-        let deserialized = <E::Scalar as ECScalar>::deserialize(&bytes).unwrap();
+        let deserialized = <E::Scalar as ECScalar>::deserialize(bytes.as_ref()).unwrap();
         assert_eq!(scalar, deserialized);
     }
 }
