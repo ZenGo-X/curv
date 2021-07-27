@@ -142,8 +142,8 @@ impl<E: Curve> Point<E> {
     /// Tries to parse a point in (un)compressed form
     ///
     /// Whether it's in compressed or uncompressed form will be deduced from its length
-    pub fn from_bytes(bytes: impl AsRef<[u8]>) -> Result<Self, PointFromBytesError> {
-        let p = E::Point::deserialize(bytes.as_ref())
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, PointFromBytesError> {
+        let p = E::Point::deserialize(bytes)
             .map_err(|_: DeserializationError| PointFromBytesError::DeserializationError)?;
         Self::from_raw(p).map_err(PointFromBytesError::InvalidPoint)
     }
@@ -223,7 +223,7 @@ impl<E: Curve> Point<E> {
 
     /// Constructs a `Point<E>` from reference to low-level [ECPoint] implementor
     ///
-    /// Unsafe equivalent of [from_raw](Self::from_raw). It debug asserts that given `raw_point` is
+    /// Unsafe equivalent of [from_raw_ref](Self::from_raw_ref). It debug asserts that given `raw_point` is
     /// valid (the assertion is optimized out in release builds by default).
     ///
     /// # Safety
@@ -238,6 +238,7 @@ impl<E: Curve> Point<E> {
     /// [check_point_order_equals_group_order]: crate::elliptic::curves::ECPoint::check_point_order_equals_group_order
     /// [is_zero]: crate::elliptic::curves::ECPoint::is_zero
     pub unsafe fn from_raw_ref_unchecked(raw_point: &E::Point) -> &Self {
+        debug_assert!(raw_point.is_zero() || raw_point.check_point_order_equals_group_order());
         // Safety: Self is repr(transparent) wrapper over E::Point => cast is sound
         &*(raw_point as *const E::Point as *const Self)
     }

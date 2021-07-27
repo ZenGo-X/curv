@@ -135,7 +135,7 @@ impl<E: Curve> VerifiableSS<E> {
     }
 
     // returns vector of coefficients
-    #[deprecated(since = "0.7.1", note = "please use Polynomial::sample instead")]
+    #[deprecated(since = "0.8.0", note = "please use Polynomial::sample instead")]
     pub fn sample_polynomial(t: usize, coef0: &Scalar<E>) -> Vec<Scalar<E>> {
         Polynomial::<E>::sample_exact_with_fixed_const_term(t.try_into().unwrap(), coef0.clone())
             .coefficients()
@@ -143,7 +143,7 @@ impl<E: Curve> VerifiableSS<E> {
     }
 
     #[deprecated(
-        since = "0.7.1",
+        since = "0.8.0",
         note = "please use Polynomial::evaluate_many_bigint instead"
     )]
     pub fn evaluate_polynomial(coefficients: &[Scalar<E>], index_vec: &[usize]) -> Vec<Scalar<E>> {
@@ -152,7 +152,7 @@ impl<E: Curve> VerifiableSS<E> {
             .collect()
     }
 
-    #[deprecated(since = "0.7.1", note = "please use Polynomial::evaluate instead")]
+    #[deprecated(since = "0.8.0", note = "please use Polynomial::evaluate instead")]
     pub fn mod_evaluate_polynomial(coefficients: &[Scalar<E>], point: Scalar<E>) -> Scalar<E> {
         Polynomial::<E>::from_coefficients(coefficients.to_vec()).evaluate(&point)
     }

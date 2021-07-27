@@ -129,6 +129,8 @@ macro_rules! matrix {
 }
 
 fn addition_of_two_points<E: Curve>(result: E::Point) -> Point<E> {
+    // Safety: addition of two points of group order is always either a zero point or point of group
+    // order: `A + B = aG + bG = (a + b)G`
     unsafe { Point::from_raw_unchecked(result) }
 }
 
@@ -152,6 +154,8 @@ matrix! {
 }
 
 fn subtraction_of_two_point<E: Curve>(result: E::Point) -> Point<E> {
+    // Safety: subtraction of two points of group order is always either a zero point or point of group
+    // order: `A - B = aG - bG = (a - b)G`
     unsafe { Point::from_raw_unchecked(result) }
 }
 
@@ -175,6 +179,8 @@ matrix! {
 }
 
 fn multiplication_of_point_at_scalar<E: Curve>(result: E::Point) -> Point<E> {
+    // Safety: multiplication of point of group order at a scalar is always either a zero point or
+    // point of group order: `kA = kaG`
     unsafe { Point::from_raw_unchecked(result) }
 }
 
