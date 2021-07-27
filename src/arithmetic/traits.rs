@@ -48,6 +48,29 @@ pub trait Converter: Sized {
     /// ```
     fn from_bytes(bytes: &[u8]) -> Self;
 
+    /// Returns bytes representation of the number in an array with length chosen by the user
+    /// if the array is larger than the bytes it pads it with zeros in the most significant bytes
+    /// If the array is too small for the integer it returns None.
+    ///
+    /// ## Examples
+    /// ```
+    /// # use curv::arithmetic::{BigInt, Converter};
+    /// assert_eq!(BigInt::from(31).to_bytes_array(), Some([31]));
+    /// assert_eq!(BigInt::from(31).to_bytes_array(), Some([0, 31]));
+    /// assert_eq!(BigInt::from(1_000_000).to_bytes_array(), Some([15, 66, 64]));
+    /// assert_eq!(BigInt::from(1_000_000).to_bytes_array::<2>(), None);
+    /// assert_eq!(BigInt::from(1_000_000).to_bytes_array(), Some([0, 15, 66, 64]));
+    /// ```
+    fn to_bytes_array<const N: usize>(&self) -> Option<[u8; N]> {
+        let bytes = self.to_bytes();
+        if bytes.len() > N {
+            return None;
+        }
+        let mut array = [0u8; N];
+        array[N - bytes.len()..].copy_from_slice(&bytes);
+        Some(array)
+    }
+
     /// Converts BigInt to hex representation.
     ///
     /// If the number is negative, it will be serialized by absolute value, and minus character
@@ -160,7 +183,7 @@ pub trait Samplable {
 pub trait NumberTests {
     /// Returns `true` if `n` is zero
     ///
-    /// Alternatively, [BasicOps::sign] method can be used to check sign of the number.  
+    /// Alternatively, [BasicOps::sign] method can be used to check sign of the number.
     fn is_zero(n: &Self) -> bool;
     /// Returns `true` if `n` is negative
     ///

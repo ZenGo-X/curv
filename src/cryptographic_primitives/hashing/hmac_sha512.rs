@@ -5,6 +5,8 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
+#![allow(deprecated)]
+
 use crate::BigInt;
 
 use super::traits::KeyedHash;
@@ -15,6 +17,7 @@ use sha2::Sha512;
 use zeroize::Zeroize;
 type HmacSha256type = Hmac<Sha512>;
 
+#[deprecated(since = "0.8.0", note = "use HmacExt instead")]
 pub struct HMacSha512;
 
 impl KeyedHash for HMacSha512 {
@@ -49,7 +52,6 @@ impl KeyedHash for HMacSha512 {
 
 #[cfg(test)]
 mod tests {
-
     use super::HMacSha512;
     use crate::arithmetic::traits::*;
     use crate::cryptographic_primitives::hashing::traits::KeyedHash;

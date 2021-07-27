@@ -7,12 +7,11 @@
 */
 
 use serde::{Deserialize, Serialize};
-use zeroize::Zeroize;
+use sha2::Sha256;
 
 use super::ProofError;
-use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
-use crate::cryptographic_primitives::hashing::traits::Hash;
-use crate::elliptic::curves::traits::*;
+use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
+use crate::elliptic::curves::{Curve, Point, Scalar};
 
 /// This is a proof of knowledge that a pair of group elements {D, E}
 /// form a valid homomorphic ElGamal encryption (”in the exponent”) using public key Y .
@@ -21,62 +20,62 @@ use crate::elliptic::curves::traits::*;
 /// The relation R outputs 1 if D = xG+rY , E = rG, Q = xG
 ///
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct HomoELGamalDlogProof<P: ECPoint> {
-    pub A1: P,
-    pub A2: P,
-    pub A3: P,
-    pub z1: P::Scalar,
-    pub z2: P::Scalar,
+#[serde(bound = "")]
+pub struct HomoELGamalDlogProof<E: Curve> {
+    pub A1: Point<E>,
+    pub A2: Point<E>,
+    pub A3: Point<E>,
+    pub z1: Scalar<E>,
+    pub z2: Scalar<E>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct HomoElGamalDlogWitness<S: ECScalar> {
-    pub r: S,
-    pub x: S,
+#[serde(bound = "")]
+pub struct HomoElGamalDlogWitness<E: Curve> {
+    pub r: Scalar<E>,
+    pub x: Scalar<E>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct HomoElGamalDlogStatement<P: ECPoint> {
-    pub G: P,
-    pub Y: P,
-    pub Q: P,
-    pub D: P,
-    pub E: P,
+#[serde(bound = "")]
+pub struct HomoElGamalDlogStatement<E: Curve> {
+    pub G: Point<E>,
+    pub Y: Point<E>,
+    pub Q: Point<E>,
+    pub D: Point<E>,
+    pub E: Point<E>,
 }
 
-impl<P> HomoELGamalDlogProof<P>
-where
-    P: ECPoint + Clone,
-    P::Scalar: Zeroize + Clone,
-{
+impl<E: Curve> HomoELGamalDlogProof<E> {
     pub fn prove(
-        w: &HomoElGamalDlogWitness<P::Scalar>,
-        delta: &HomoElGamalDlogStatement<P>,
-    ) -> HomoELGamalDlogProof<P> {
-        let mut s1: P::Scalar = ECScalar::new_random();
-        let mut s2: P::Scalar = ECScalar::new_random();
-        let A1 = delta.G.clone() * s1.clone();
-        let A2 = delta.Y.clone() * s2.clone();
-        let A3 = delta.G.clone() * s2.clone();
-        let e =
-            HSha256::create_hash_from_ge(&[&A1, &A2, &A3, &delta.G, &delta.Y, &delta.D, &delta.E]);
-        let z1 = s1.clone() + e.clone() * w.x.clone();
-        let z2 = s2.clone() + e * w.r.clone();
-        s1.zeroize();
-        s2.zeroize();
+        w: &HomoElGamalDlogWitness<E>,
+        delta: &HomoElGamalDlogStatement<E>,
+    ) -> HomoELGamalDlogProof<E> {
+        let s1 = Scalar::<E>::random();
+        let s2 = Scalar::<E>::random();
+        let A1 = &delta.G * &s1;
+        let A2 = &delta.Y * &s2;
+        let A3 = &delta.G * &s2;
+        let e = Sha256::new()
+            .chain_points([&A1, &A2, &A3, &delta.G, &delta.Y, &delta.D, &delta.E])
+            .result_scalar();
+        let z1 = &s1 + &e * &w.x;
+        let z2 = &s2 + e * &w.r;
         HomoELGamalDlogProof { A1, A2, A3, z1, z2 }
     }
 
-    pub fn verify(&self, delta: &HomoElGamalDlogStatement<P>) -> Result<(), ProofError> {
-        let e = HSha256::create_hash_from_ge(&[
-            &self.A1, &self.A2, &self.A3, &delta.G, &delta.Y, &delta.D, &delta.E,
-        ]);
-        let z1G = delta.G.clone() * self.z1.clone();
-        let z2Y = delta.Y.clone() * self.z2.clone();
-        let z2G = delta.G.clone() * self.z2.clone();
-        let A1_plus_eQ = self.A1.clone() + delta.Q.clone() * e.clone();
-        let A3_plus_eE = self.A3.clone() + delta.E.clone() * e.clone();
-        let D_minus_Q = delta.D.sub_point(&delta.Q.get_element());
+    pub fn verify(&self, delta: &HomoElGamalDlogStatement<E>) -> Result<(), ProofError> {
+        let e = Sha256::new()
+            .chain_points([
+                &self.A1, &self.A2, &self.A3, &delta.G, &delta.Y, &delta.D, &delta.E,
+            ])
+            .result_scalar();
+        let z1G = &delta.G * &self.z1;
+        let z2Y = &delta.Y * &self.z2;
+        let z2G = &delta.G * &self.z2;
+        let A1_plus_eQ = &self.A1 + &delta.Q * &e;
+        let A3_plus_eE = &self.A3 + &delta.E * &e;
+        let D_minus_Q = &delta.D - &delta.Q;
         let A2_plus_eDmQ = self.A2.clone() + D_minus_Q * e;
         if z1G == A1_plus_eQ && z2G == A3_plus_eE && z2Y == A2_plus_eDmQ {
             Ok(())
@@ -88,53 +87,53 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::cryptographic_primitives::proofs::sigma_correct_homomorphic_elgamal_encryption_of_dlog::*;
     use crate::test_for_all_curves;
 
+    use super::*;
+
     test_for_all_curves!(test_correct_homo_elgamal);
-    fn test_correct_homo_elgamal<P>()
-    where
-        P: ECPoint + Clone,
-        P::Scalar: Zeroize + Clone,
-    {
-        let witness = HomoElGamalDlogWitness::<P::Scalar> {
-            r: ECScalar::new_random(),
-            x: ECScalar::new_random(),
+    fn test_correct_homo_elgamal<E: Curve>() {
+        let witness = HomoElGamalDlogWitness::<E> {
+            r: Scalar::random(),
+            x: Scalar::random(),
         };
-        let G: P = ECPoint::generator();
-        let y: P::Scalar = ECScalar::new_random();
-        let Y = G.clone() * y;
-        let D = G.clone() * witness.x.clone() + Y.clone() * witness.r.clone();
-        let E = G.clone() * witness.r.clone();
-        let Q = G.clone() * witness.x.clone();
-        let delta = HomoElGamalDlogStatement { G, Y, Q, D, E };
+        let G = Point::<E>::generator();
+        let Y = G * Scalar::random();
+        let D = G * &witness.x + &Y * &witness.r;
+        let E = G * &witness.r;
+        let Q = G * &witness.x;
+        let delta = HomoElGamalDlogStatement {
+            G: G.to_point(),
+            Y,
+            Q,
+            D,
+            E,
+        };
         let proof = HomoELGamalDlogProof::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
     }
 
     // TODO: add more fail scenarios
-    test_for_all_curves!(
-        #[should_panic]
-        test_wrong_homo_elgamal
-    );
-    fn test_wrong_homo_elgamal<P>()
-    where
-        P: ECPoint + Clone,
-        P::Scalar: Zeroize + Clone,
-    {
+    test_for_all_curves!(test_wrong_homo_elgamal);
+    fn test_wrong_homo_elgamal<E: Curve>() {
         // test for Q = (x+1)G
-        let witness = HomoElGamalDlogWitness::<P::Scalar> {
-            r: ECScalar::new_random(),
-            x: ECScalar::new_random(),
+        let witness = HomoElGamalDlogWitness::<E> {
+            r: Scalar::random(),
+            x: Scalar::random(),
         };
-        let G: P = ECPoint::generator();
-        let y: P::Scalar = ECScalar::new_random();
-        let Y = G.clone() * y;
-        let D = G.clone() * witness.x.clone() + Y.clone() * witness.r.clone();
-        let E = G.clone() * witness.r.clone() + G.clone();
-        let Q = G.clone() * witness.x.clone() + G.clone();
-        let delta = HomoElGamalDlogStatement { G, Y, Q, D, E };
+        let G = Point::<E>::generator();
+        let Y = G * Scalar::random();
+        let D = G * &witness.x + &Y * &witness.r;
+        let E = G * &witness.r + G;
+        let Q = G * &witness.x + G;
+        let delta = HomoElGamalDlogStatement {
+            G: G.to_point(),
+            Y,
+            Q,
+            D,
+            E,
+        };
         let proof = HomoELGamalDlogProof::prove(&witness, &delta);
-        assert!(proof.verify(&delta).is_ok());
+        assert!(!proof.verify(&delta).is_ok());
     }
 }

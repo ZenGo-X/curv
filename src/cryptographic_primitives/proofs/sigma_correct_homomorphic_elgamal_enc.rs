@@ -7,12 +7,14 @@
 */
 
 use serde::{Deserialize, Serialize};
-use zeroize::Zeroize;
+
+use digest::Digest;
+use sha2::Sha256;
+
+use crate::cryptographic_primitives::hashing::DigestExt;
+use crate::elliptic::curves::{Curve, Point, Scalar};
 
 use super::ProofError;
-use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
-use crate::cryptographic_primitives::hashing::traits::Hash;
-use crate::elliptic::curves::traits::*;
 
 /// This is a proof of knowledge that a pair of group elements {D, E}
 /// form a valid homomorphic ElGamal encryption (”in the exponent”) using public key Y .
@@ -21,67 +23,70 @@ use crate::elliptic::curves::traits::*;
 /// The relation R outputs 1 if D = xH+rY , E = rG (for the case of G=H this is ElGamal)
 ///
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct HomoELGamalProof<P: ECPoint> {
-    pub T: P,
-    pub A3: P,
-    pub z1: P::Scalar,
-    pub z2: P::Scalar,
+#[serde(bound = "")]
+pub struct HomoELGamalProof<E: Curve> {
+    pub T: Point<E>,
+    pub A3: Point<E>,
+    pub z1: Scalar<E>,
+    pub z2: Scalar<E>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct HomoElGamalWitness<S: ECScalar> {
-    pub r: S,
-    pub x: S,
+#[serde(bound = "")]
+pub struct HomoElGamalWitness<E: Curve> {
+    pub r: Scalar<E>,
+    pub x: Scalar<E>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct HomoElGamalStatement<P> {
-    pub G: P,
-    pub H: P,
-    pub Y: P,
-    pub D: P,
-    pub E: P,
+#[serde(bound = "")]
+pub struct HomoElGamalStatement<E: Curve> {
+    pub G: Point<E>,
+    pub H: Point<E>,
+    pub Y: Point<E>,
+    pub D: Point<E>,
+    pub E: Point<E>,
 }
 
-impl<P> HomoELGamalProof<P>
-where
-    P: ECPoint + Clone + Zeroize,
-    P::Scalar: PartialEq + Clone + Zeroize,
-{
+impl<E: Curve> HomoELGamalProof<E> {
     pub fn prove(
-        w: &HomoElGamalWitness<P::Scalar>,
-        delta: &HomoElGamalStatement<P>,
-    ) -> HomoELGamalProof<P> {
-        let mut s1: P::Scalar = ECScalar::new_random();
-        let mut s2: P::Scalar = ECScalar::new_random();
-        let mut A1 = delta.H.clone() * s1.clone();
-        let mut A2 = delta.Y.clone() * s2.clone();
-        let A3 = delta.G.clone() * s2.clone();
-        let T = A1.clone() + A2.clone();
-        let e = HSha256::create_hash_from_ge(&[
-            &T, &A3, &delta.G, &delta.H, &delta.Y, &delta.D, &delta.E,
-        ]);
+        w: &HomoElGamalWitness<E>,
+        delta: &HomoElGamalStatement<E>,
+    ) -> HomoELGamalProof<E> {
+        let s1: Scalar<E> = Scalar::random();
+        let s2: Scalar<E> = Scalar::random();
+        let A1 = &delta.H * &s1;
+        let A2 = &delta.Y * &s2;
+        let A3 = &delta.G * &s2;
+        let T = A1 + A2;
+        let e = Sha256::new()
+            .chain_point(&T)
+            .chain_point(&A3)
+            .chain_point(&delta.G)
+            .chain_point(&delta.H)
+            .chain_point(&delta.Y)
+            .chain_point(&delta.D)
+            .chain_point(&delta.E)
+            .result_scalar();
         // dealing with zero field element
-        let z1 = if w.x != P::Scalar::zero() {
-            s1.clone() + w.x.clone() * e.clone()
-        } else {
-            s1.clone()
-        };
-        let z2 = s2.clone() + w.r.clone() * e;
-        s1.zeroize();
-        s2.zeroize();
-        A1.zeroize();
-        A2.zeroize();
+        let z1 = &s1 + &w.x * &e;
+        let z2 = s2 + &w.r * e;
         HomoELGamalProof { T, A3, z1, z2 }
     }
-    pub fn verify(&self, delta: &HomoElGamalStatement<P>) -> Result<(), ProofError> {
-        let e = HSha256::create_hash_from_ge(&[
-            &self.T, &self.A3, &delta.G, &delta.H, &delta.Y, &delta.D, &delta.E,
-        ]);
-        let z1H_plus_z2Y = delta.H.clone() * self.z1.clone() + delta.Y.clone() * self.z2.clone();
-        let T_plus_eD = self.T.clone() + delta.D.clone() * e.clone();
-        let z2G = delta.G.clone() * self.z2.clone();
-        let A3_plus_eE = self.A3.clone() + delta.E.clone() * e;
+    pub fn verify(&self, delta: &HomoElGamalStatement<E>) -> Result<(), ProofError> {
+        let e = Sha256::new()
+            .chain_point(&self.T)
+            .chain_point(&self.A3)
+            .chain_point(&delta.G)
+            .chain_point(&delta.H)
+            .chain_point(&delta.Y)
+            .chain_point(&delta.D)
+            .chain_point(&delta.E)
+            .result_scalar();
+        let z1H_plus_z2Y = &delta.H * &self.z1 + &delta.Y * &self.z2;
+        let T_plus_eD = &self.T + &delta.D * &e;
+        let z2G = &delta.G * &self.z2;
+        let A3_plus_eE = &self.A3 + &delta.E * &e;
         if z1H_plus_z2Y == T_plus_eD && z2G == A3_plus_eE {
             Ok(())
         } else {
@@ -96,45 +101,21 @@ mod tests {
     use crate::test_for_all_curves;
 
     test_for_all_curves!(test_correct_general_homo_elgamal);
-    fn test_correct_general_homo_elgamal<P>()
-    where
-        P: ECPoint + Clone + Zeroize,
-        P::Scalar: PartialEq + Clone + Zeroize,
-    {
-        let witness = HomoElGamalWitness::<P::Scalar> {
-            r: ECScalar::new_random(),
-            x: ECScalar::new_random(),
+    fn test_correct_general_homo_elgamal<E: Curve>() {
+        let witness = HomoElGamalWitness::<E> {
+            r: Scalar::random(),
+            x: Scalar::random(),
         };
-        let G: P = ECPoint::generator();
-        let h: P::Scalar = ECScalar::new_random();
-        let H = G.clone() * h;
-        let y: P::Scalar = ECScalar::new_random();
-        let Y = G.clone() * y;
-        let D = H.clone() * witness.x.clone() + Y.clone() * witness.r.clone();
-        let E = G.clone() * witness.r.clone();
-        let delta = HomoElGamalStatement { G, H, Y, D, E };
-        let proof = HomoELGamalProof::prove(&witness, &delta);
-        assert!(proof.verify(&delta).is_ok());
-    }
-
-    test_for_all_curves!(test_correct_homo_elgamal);
-    fn test_correct_homo_elgamal<P: ECPoint>()
-    where
-        P: ECPoint + Clone + Zeroize,
-        P::Scalar: PartialEq + Clone + Zeroize,
-    {
-        let witness = HomoElGamalWitness {
-            r: P::Scalar::new_random(),
-            x: P::Scalar::new_random(),
-        };
-        let G: P = ECPoint::generator();
-        let y: P::Scalar = ECScalar::new_random();
-        let Y = G.clone() * y;
-        let D = G.clone() * witness.x.clone() + Y.clone() * witness.r.clone();
-        let E = G.clone() * witness.r.clone();
+        let G = Point::<E>::generator();
+        let h = Scalar::random();
+        let H = G * h;
+        let y = Scalar::random();
+        let Y = G * y;
+        let D = &H * &witness.x + &Y * &witness.r;
+        let E = G * &witness.r;
         let delta = HomoElGamalStatement {
-            G: G.clone(),
-            H: G,
+            G: G.to_point(),
+            H,
             Y,
             D,
             E,
@@ -143,29 +124,50 @@ mod tests {
         assert!(proof.verify(&delta).is_ok());
     }
 
-    test_for_all_curves!(
-        #[should_panic]
-        test_wrong_homo_elgamal
-    );
-    fn test_wrong_homo_elgamal<P: ECPoint>()
-    where
-        P: ECPoint + Clone + Zeroize,
-        P::Scalar: PartialEq + Clone + Zeroize,
-    {
-        // test for E = (r+1)G
-        let witness = HomoElGamalWitness::<P::Scalar> {
-            r: ECScalar::new_random(),
-            x: ECScalar::new_random(),
+    test_for_all_curves!(test_correct_homo_elgamal);
+    fn test_correct_homo_elgamal<E: Curve>() {
+        let witness = HomoElGamalWitness {
+            r: Scalar::random(),
+            x: Scalar::random(),
         };
-        let G: P = ECPoint::generator();
-        let h: P::Scalar = ECScalar::new_random();
-        let H = G.clone() * h;
-        let y: P::Scalar = ECScalar::new_random();
-        let Y = G.clone() * y;
-        let D = H.clone() * witness.x.clone() + Y.clone() * witness.r.clone();
-        let E = G.clone() * witness.r.clone() + G.clone();
-        let delta = HomoElGamalStatement { G, H, Y, D, E };
+        let G = Point::<E>::generator();
+        let y = Scalar::random();
+        let Y = G * y;
+        let D = G * &witness.x + &Y * &witness.r;
+        let E = G * &witness.r;
+        let delta = HomoElGamalStatement {
+            G: G.to_point(),
+            H: G.to_point(),
+            Y,
+            D,
+            E,
+        };
         let proof = HomoELGamalProof::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
+    }
+
+    test_for_all_curves!(test_wrong_homo_elgamal);
+    fn test_wrong_homo_elgamal<E: Curve>() {
+        // test for E = (r+1)G
+        let witness = HomoElGamalWitness::<E> {
+            r: Scalar::random(),
+            x: Scalar::random(),
+        };
+        let G = Point::<E>::generator();
+        let h = Scalar::random();
+        let H = G * h;
+        let y = Scalar::random();
+        let Y = G * y;
+        let D = &H * &witness.x + &Y * &witness.r;
+        let E = G * &witness.r + G;
+        let delta = HomoElGamalStatement {
+            G: G.to_point(),
+            H,
+            Y,
+            D,
+            E,
+        };
+        let proof = HomoELGamalProof::prove(&witness, &delta);
+        assert!(!proof.verify(&delta).is_ok());
     }
 }

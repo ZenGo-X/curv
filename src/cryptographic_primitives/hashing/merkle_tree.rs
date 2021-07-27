@@ -12,26 +12,26 @@ use std::marker::PhantomData;
 use crypto::sha3::Sha3;
 use merkle::{MerkleTree, Proof};
 
-use crate::elliptic::curves::traits::ECPoint;
+use crate::elliptic::curves::{Curve, Point};
 /*
 pub struct MT256<'a> {
     tree: MerkleTree<GE>,
     root: & 'a Vec<u8>,
 }
 */
-pub struct MT256<P> {
+pub struct MT256<E: Curve> {
     tree: MerkleTree<[u8; 32]>,
-    _ph: PhantomData<P>,
+    _ph: PhantomData<E>,
 }
 
 //impl <'a> MT256<'a>{
-impl<P: ECPoint> MT256<P> {
-    pub fn create_tree(vec: &[P]) -> MT256<P> {
+impl<E: Curve> MT256<E> {
+    pub fn create_tree(vec: &[Point<E>]) -> MT256<E> {
         let digest = Sha3::keccak256();
-        let mut array = [0u8; 32];
         let vec_bytes = (0..vec.len())
             .map(|i| {
-                let bytes = vec[i].pk_to_key_slice();
+                let mut array = [0u8; 32];
+                let bytes = vec[i].to_bytes(false);
                 array.copy_from_slice(&bytes[0..32]);
                 array
             })
@@ -44,9 +44,9 @@ impl<P: ECPoint> MT256<P> {
         }
     }
 
-    pub fn gen_proof_for_ge(&self, value: &P) -> Proof<[u8; 32]> {
+    pub fn gen_proof_for_ge(&self, value: &Point<E>) -> Proof<[u8; 32]> {
         let mut array = [0u8; 32];
-        let pk_slice = value.pk_to_key_slice();
+        let pk_slice = value.to_bytes(false);
         array.copy_from_slice(&pk_slice[0..32]);
         MerkleTree::gen_proof::<[u8; 32]>(&self.tree, array).expect("not found in tree")
     }
@@ -68,38 +68,36 @@ impl<P: ECPoint> MT256<P> {
 #[cfg(test)]
 mod tests {
     use super::MT256;
-    use crate::elliptic::curves::traits::ECPoint;
+    use crate::elliptic::curves::{Curve, Point};
 
     use crate::test_for_all_curves;
 
     test_for_all_curves!(test_mt_functionality_four_leaves);
 
-    fn test_mt_functionality_four_leaves<P: ECPoint>() {
-        let ge1: P = ECPoint::generator();
-        let ge2: P = ECPoint::generator();
-        let ge3: P = ge1.add_point(&ge2.get_element());
-        let ge4: P = ge1.add_point(&ge3.get_element());
-        let ge_vec = vec![ge1, ge2, ge3, ge4];
+    fn test_mt_functionality_four_leaves<E: Curve>() {
+        let ge1: Point<E> = Point::generator().to_point();
+        let ge2: Point<E> = ge1.clone();
+        let ge3: Point<E> = &ge1 + &ge2;
+        let ge4: Point<E> = &ge1 + &ge3;
+        let ge_vec = vec![ge1.clone(), ge2, ge3, ge4];
         let mt256 = MT256::create_tree(&ge_vec);
-        let ge1: P = ECPoint::generator();
         let proof1 = mt256.gen_proof_for_ge(&ge1);
         let root = mt256.get_root();
-        let valid_proof = MT256::<P>::validate_proof(&proof1, root).is_ok();
+        let valid_proof = MT256::<E>::validate_proof(&proof1, root).is_ok();
         assert!(valid_proof);
     }
 
     test_for_all_curves!(test_mt_functionality_three_leaves);
 
-    fn test_mt_functionality_three_leaves<P: ECPoint>() {
-        let ge1: P = ECPoint::generator();
-        let ge2: P = ECPoint::generator();
-        let ge3: P = ge1.add_point(&ge2.get_element());
+    fn test_mt_functionality_three_leaves<E: Curve>() {
+        let ge1: Point<E> = Point::generator().to_point();
+        let ge2: Point<E> = ge1.clone();
+        let ge3: Point<E> = &ge1 + &ge2;
 
-        let ge_vec = vec![ge1, ge2, ge3];
+        let ge_vec = vec![ge1.clone(), ge2, ge3];
         let mt256 = MT256::create_tree(&ge_vec);
-        let ge1: P = ECPoint::generator();
         let proof1 = mt256.gen_proof_for_ge(&ge1);
         let root = mt256.get_root();
-        assert!(MT256::<P>::validate_proof(&proof1, root).is_ok());
+        assert!(MT256::<E>::validate_proof(&proof1, root).is_ok());
     }
 }

@@ -5,15 +5,18 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
+#![allow(deprecated)]
+
 use super::traits::Hash;
 use crate::arithmetic::traits::*;
-use crate::elliptic::curves::traits::{ECPoint, ECScalar};
+use crate::elliptic::curves::{Curve, Point, Scalar};
 
 use digest::Digest;
 use sha2::Sha512;
 
 use crate::BigInt;
 
+#[deprecated(since = "0.8.0", note = "use DigestExt instead")]
 pub struct HSha512;
 
 impl Hash for HSha512 {
@@ -28,15 +31,15 @@ impl Hash for HSha512 {
         BigInt::from_bytes(&result_hex[..])
     }
 
-    fn create_hash_from_ge<P: ECPoint>(ge_vec: &[&P]) -> P::Scalar {
+    fn create_hash_from_ge<E: Curve>(ge_vec: &[&Point<E>]) -> Scalar<E> {
         let mut hasher = Sha512::new();
         for value in ge_vec {
-            hasher.input(&value.pk_to_key_slice());
+            hasher.input(&value.to_bytes(false)[..]);
         }
 
         let result_hex = hasher.result();
         let result = BigInt::from_bytes(&result_hex[..]);
-        ECScalar::from(&result)
+        Scalar::from(&result)
     }
 
     fn create_hash_from_slice(byte_slice: &[u8]) -> BigInt {
@@ -49,11 +52,11 @@ impl Hash for HSha512 {
 
 #[cfg(test)]
 mod tests {
+    use crate::arithmetic::*;
+    use crate::elliptic::curves::{Curve, Point};
+
     use super::HSha512;
     use super::Hash;
-    use crate::arithmetic::traits::*;
-    use crate::elliptic::curves::traits::{ECPoint, ECScalar};
-    use crate::BigInt;
 
     #[test]
     // Test Vectors taken from:
@@ -99,17 +102,14 @@ mod tests {
 
     crate::test_for_all_curves!(create_sha512_from_ge_test);
 
-    fn create_sha512_from_ge_test<P>()
-    where
-        P: ECPoint,
-        P::Scalar: PartialEq + std::fmt::Debug,
-    {
-        let point = P::base_point2();
-        let result1 = HSha512::create_hash_from_ge(&[&point, &P::generator()]);
-        assert!(result1.to_big_int().bit_length() > 240);
-        let result2 = HSha512::create_hash_from_ge(&[&P::generator(), &point]);
+    fn create_sha512_from_ge_test<E: Curve>() {
+        let generator = Point::<E>::generator();
+        let base_point2 = Point::<E>::base_point2();
+        let result1 = HSha512::create_hash_from_ge::<E>(&[base_point2, &generator]);
+        assert!(result1.to_bigint().bit_length() > 240);
+        let result2 = HSha512::create_hash_from_ge(&[&generator, base_point2]);
         assert_ne!(result1, result2);
-        let result3 = HSha512::create_hash_from_ge(&[&P::generator(), &point]);
+        let result3 = HSha512::create_hash_from_ge(&[&generator, base_point2]);
         assert_eq!(result2, result3);
     }
 }

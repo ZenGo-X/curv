@@ -356,7 +356,7 @@ mod test {
         // Conversion traits
         for<'a> u64: std::convert::TryFrom<&'a BigInt>,
         for<'a> i64: std::convert::TryFrom<&'a BigInt>,
-        BigInt: From<u32> + From<i32> + From<u64>,
+        BigInt: From<u16> + From<u32> + From<i32> + From<u64>,
         // STD Operators
         BigInt: Add<Output = BigInt>
             + Sub<Output = BigInt>
