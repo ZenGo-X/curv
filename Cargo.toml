@@ -1,19 +1,19 @@
 [package]
-name = "curv"
-version = "0.2.7"
+name = "curv-kzen"
+version = "0.2.8"
 edition = "2018"
-
+description = "Rust language general purpose elliptic curve cryptography."
+license = "MIT"
+authors = ["Omer Shlomovits <omer.shlomovits@gmail.com>]"]
 [lib]
 crate-type = ["lib"]
 
 [features]
-default = ["rust-gmp"]
-ec_secp256k1 = ["rust-gmp" ,"ecc", "secp256k1"]
-ec_ristretto = ["rust-gmp", "ecc" , "curve25519-dalek"]
-ec_ed25519 = ["rust-gmp", "ecc" , "cryptoxide"]
-ec_jubjub = ["rust-gmp", "ecc" , "pairing", "sapling-crypto"]
-ec_bls12_381 = ["rust-gmp", "ecc" , "bls12_381"]
-ec_p256 = ["rust-gmp" ,"ecc", "p256", "generic-array"]
+default = ["rust-gmp-kzen"]
+ec_secp256k1 = ["rust-gmp-kzen" ,"ecc", "secp256k1"]
+ec_ristretto = ["rust-gmp-kzen", "ecc" , "curve25519-dalek"]
+ec_ed25519 = ["rust-gmp-kzen", "ecc" , "cryptoxide"]
+ec_bls12_381 = ["rust-gmp-kzen", "ecc" , "bls12_381"]
 ecc = []
 merkle = ["rust-crypto", "merkle-sha3"]
 
@@ -21,7 +21,7 @@ merkle = ["rust-crypto", "merkle-sha3"]
 rand = "0.6"
 serde = "1.0"
 serde_derive = "1.0"
-zeroize = "0.10"
+zeroize = "1"
 sha3 = "0.8.2"
 sha2 = "0.8.0"
 hmac = "0.7.1"
@@ -42,20 +42,10 @@ optional = true
 version = "0.1.1"
 optional = true
 
-[dependencies.sapling-crypto]
-git = "https://github.com/omershlo/librustzcash.git"
-rev = "3e667406323430813f6dbae2a60b5a83046fa20a"
-optional = true
 
-[dependencies.pairing]
-git = "https://github.com/omershlo/librustzcash.git"
-rev = "3e667406323430813f6dbae2a60b5a83046fa20a"
-optional = true
-
-[dependencies.rust-gmp]
+[dependencies.rust-gmp-kzen]
 version = "0.5.0"
 features = ["serde_support"]
-git = "https://github.com/KZen-networks/rust-gmp"
 optional = true
 
 [dependencies.secp256k1]
@@ -70,16 +60,6 @@ optional = true
 [dependencies.cryptoxide]
 version = "0.1.2"
 optional = true
-
-[dependencies.p256]
-version = "0.5"
-features = ["ecdsa"]
-optional = true
-
-[dependencies.generic-array]
-version = "0.14"
-optional = true
-
 
 [dev-dependencies]
 bincode = "1.1"

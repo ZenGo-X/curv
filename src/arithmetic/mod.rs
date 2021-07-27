@@ -18,6 +18,6 @@ use rand;
 
 const HEX_RADIX: u8 = 16;
 
-#[cfg(feature = "rust-gmp")]
+#[cfg(feature = "rust-gmp-kzen")]
 pub mod big_gmp;
 pub mod traits;

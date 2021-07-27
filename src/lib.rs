@@ -44,16 +44,6 @@ mod ed25519instance {
 #[cfg(feature = "ec_ed25519")]
 pub use self::ed25519instance::*;
 
-#[cfg(feature = "ec_jubjub")]
-mod jubjubinstance {
-    pub use crate::elliptic::curves::curve_jubjub::FE;
-    pub use crate::elliptic::curves::curve_jubjub::GE;
-    pub use crate::elliptic::curves::curve_jubjub::PK;
-    pub use crate::elliptic::curves::curve_jubjub::SK;
-}
-
-#[cfg(feature = "ec_jubjub")]
-pub use self::jubjubinstance::*;
 
 #[cfg(feature = "ec_bls12_381")]
 mod bls12_381_instance {
@@ -66,20 +56,9 @@ mod bls12_381_instance {
 #[cfg(feature = "ec_bls12_381")]
 pub use self::bls12_381_instance::*;
 
-#[cfg(feature = "ec_p256")]
-mod p256instance {
-    pub use crate::elliptic::curves::p256::FE;
-    pub use crate::elliptic::curves::p256::GE;
-    pub use crate::elliptic::curves::p256::PK;
-    pub use crate::elliptic::curves::p256::SK;
-}
-
-#[cfg(feature = "ec_p256")]
-pub use self::p256instance::*;
-
-#[cfg(feature = "rust-gmp")]
+#[cfg(feature = "rust-gmp-kzen")]
 pub mod arithmetic;
-#[cfg(feature = "rust-gmp")]
+#[cfg(feature = "rust-gmp-kzen")]
 pub use crate::arithmetic::big_gmp::BigInt;
 
 #[cfg(feature = "ecc")]
