@@ -192,8 +192,8 @@ impl<E: Curve> Point<E> {
     /// [group order]: crate::elliptic::curves::ECScalar::group_order
     pub fn from_raw_ref(raw_point: &E::Point) -> Result<&Self, MismatchedPointOrder> {
         if raw_point.is_zero() || raw_point.check_point_order_equals_group_order() {
-            // Safety: Self is repr(transparent) wrapper over E::Point => cast is sound
-            let reference = unsafe { &*(raw_point as *const E::Point as *const Self) };
+            // Safety: we checked that point is either zero or has correct order
+            let reference = unsafe { Self::from_raw_ref_unchecked(raw_point) };
             Ok(reference)
         } else {
             Err(MismatchedPointOrder::new())
