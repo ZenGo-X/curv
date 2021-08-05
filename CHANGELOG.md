@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.8.0-rc2
+* Remove dependency on `ring_algorithm` crate [#125], [#124]
+
+[#125]: https://github.com/ZenGo-X/curv/pull/125
+[#124]: https://github.com/ZenGo-X/curv/issues/124
+
 ## v0.8.0-rc1
 * Elliptic curve API has been significantly changed [#120]
   
