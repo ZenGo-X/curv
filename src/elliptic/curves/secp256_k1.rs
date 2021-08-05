@@ -443,7 +443,7 @@ impl ECPoint for Secp256k1Point {
         let ge = scalar
             .fe
             .as_ref()
-            .map(|sk| PK(PublicKey::from_secret_key(&SECP256K1, sk)));
+            .map(|sk| PK(PublicKey::from_secret_key(SECP256K1, sk)));
         Secp256k1Point {
             purpose: "generator_mul",
             ge,
@@ -468,7 +468,7 @@ impl ECPoint for Secp256k1Point {
 
     fn neg_point(&self) -> Secp256k1Point {
         let ge = self.ge.map(|mut ge| {
-            ge.0.negate_assign(&SECP256K1);
+            ge.0.negate_assign(SECP256K1);
             ge
         });
         Secp256k1Point { purpose: "neg", ge }
@@ -480,7 +480,7 @@ impl ECPoint for Secp256k1Point {
                 self.ge = None;
             }
             (Some(ge), Some(fe)) => {
-                ge.0.mul_assign(&SECP256K1, &fe.0[..])
+                ge.0.mul_assign(SECP256K1, &fe.0[..])
                     .expect("Can't fail as it's a valid secret");
             }
         };

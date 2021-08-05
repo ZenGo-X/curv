@@ -43,7 +43,7 @@ impl<E: Curve> Party1FirstMessage<E> {
 }
 impl<E: Curve> Party2FirstMessage<E> {
     pub fn share(proof: &PedersenProof<E>) -> Party2FirstMessage<E> {
-        PedersenProof::verify(&proof).expect("{(m,r),c} proof failed");
+        PedersenProof::verify(proof).expect("{(m,r),c} proof failed");
         let seed = Scalar::random();
         Party2FirstMessage { seed }
     }
@@ -54,7 +54,7 @@ impl<E: Curve> Party1SecondMessage<E> {
         party1seed: &Scalar<E>,
         party1blinding: &Scalar<E>,
     ) -> (Party1SecondMessage<E>, Scalar<E>) {
-        let proof = PedersenBlindingProof::<E>::prove(&party1seed, &party1blinding);
+        let proof = PedersenBlindingProof::<E>::prove(party1seed, party1blinding);
         let coin_flip_result = &party1seed.to_bigint() ^ &party2seed.to_bigint();
         (
             Party1SecondMessage {
@@ -72,7 +72,7 @@ pub fn finalize<E: Curve>(
     party2seed: &Scalar<E>,
     party1comm: &Point<E>,
 ) -> Scalar<E> {
-    PedersenBlindingProof::<E>::verify(&proof).expect("{r,(m,c)} proof failed");
+    PedersenBlindingProof::<E>::verify(proof).expect("{r,(m,c)} proof failed");
     assert_eq!(&proof.com, party1comm);
     let coin_flip_result = &proof.m.to_bigint() ^ &party2seed.to_bigint();
     Scalar::from(&coin_flip_result)

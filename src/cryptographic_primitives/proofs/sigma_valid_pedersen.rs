@@ -73,7 +73,7 @@ impl<E: Curve> PedersenProof<E> {
         let h = Point::<E>::base_point2();
 
         let e = Sha256::new()
-            .chain_points([&g.to_point(), &h, &proof.com, &proof.a1, &proof.a2])
+            .chain_points([&g.to_point(), h, &proof.com, &proof.a1, &proof.a2])
             .result_scalar();
 
         let z1g = g * &proof.z1;

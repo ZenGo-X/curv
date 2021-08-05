@@ -109,7 +109,7 @@ fn generator_mul_curve_order_is_zero<E: Curve>() {
     let g: &E::Point = ECPoint::generator();
     let n = E::Scalar::group_order() - 1;
     let s = E::Scalar::from_bigint(&n);
-    assert!(g.scalar_mul(&s).add_point(&g).is_zero());
+    assert!(g.scalar_mul(&s).add_point(g).is_zero());
 }
 
 test_for_all_curves!(scalar_behaves_the_same_as_bigint);
@@ -134,11 +134,11 @@ fn scalar_behaves_the_same_as_bigint<E: Curve>() {
                 n_inv
                     .as_ref()
                     .map(|i| i.to_string())
-                    .unwrap_or("None".to_string()),
+                    .unwrap_or_else(|| "None".to_string()),
                 s_inv
                     .as_ref()
                     .map(|i| i.to_string())
-                    .unwrap_or("None".to_string()),
+                    .unwrap_or_else(|| "None".to_string()),
             );
         } else {
             let n_was = n.clone();

@@ -215,7 +215,7 @@ impl Party2SecondMessage {
         if party_one_pk_commitment
             != &HashCommitment::create_commitment_with_user_defined_randomness(
                 &BigInt::from_bytes(&party_one_public_share.to_bytes(true)),
-                &party_one_pk_commitment_blind_factor,
+                party_one_pk_commitment_blind_factor,
             )
         {
             flag = false
@@ -224,14 +224,14 @@ impl Party2SecondMessage {
         if party_one_zk_pok_commitment
             != &HashCommitment::create_commitment_with_user_defined_randomness(
                 &BigInt::from_bytes(&party_one_d_log_proof.pk_t_rand_commitment.to_bytes(true)),
-                &party_one_zk_pok_blind_factor,
+                party_one_zk_pok_blind_factor,
             )
         {
             flag = false
         };
 
         assert!(flag);
-        DLogProof::verify(&party_one_d_log_proof)?;
+        DLogProof::verify(party_one_d_log_proof)?;
         Ok(Party2SecondMessage {})
     }
 }

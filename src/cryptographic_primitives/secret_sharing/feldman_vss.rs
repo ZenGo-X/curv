@@ -165,7 +165,7 @@ impl<E: Curve> VerifiableSS<E> {
             .iter()
             .map(|i| Scalar::from(*i + 1))
             .collect::<Vec<_>>();
-        VerifiableSS::<E>::lagrange_interpolation_at_zero(&points, &shares)
+        VerifiableSS::<E>::lagrange_interpolation_at_zero(&points, shares)
     }
 
     // Performs a Lagrange interpolation in field Zp at the origin
@@ -355,11 +355,11 @@ mod tests {
 
         // test map (t,n) - (t',t')
         let s = &vec![0, 1, 2, 3, 4];
-        let l0 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 0, &s);
-        let l1 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 1, &s);
-        let l2 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 2, &s);
-        let l3 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 3, &s);
-        let l4 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 4, &s);
+        let l0 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 0, s);
+        let l1 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 1, s);
+        let l2 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 2, s);
+        let l3 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 3, s);
+        let l4 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 4, s);
         let w = l0 * &secret_shares[0]
             + l1 * &secret_shares[1]
             + l2 * &secret_shares[2]
@@ -394,11 +394,11 @@ mod tests {
 
         // test map (t,n) - (t',t')
         let s = &vec![0, 1, 3, 4, 6];
-        let l0 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 0, &s);
-        let l1 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 1, &s);
-        let l3 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 3, &s);
-        let l4 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 4, &s);
-        let l6 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 6, &s);
+        let l0 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 0, s);
+        let l1 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 1, s);
+        let l3 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 3, s);
+        let l4 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 4, s);
+        let l6 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 6, s);
 
         let w = l0 * &secret_shares[0]
             + l1 * &secret_shares[1]
@@ -429,8 +429,8 @@ mod tests {
 
         // test map (t,n) - (t',t')
         let s = &vec![0, 1];
-        let l0 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 0, &s);
-        let l1 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 1, &s);
+        let l0 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 0, s);
+        let l1 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 1, s);
         let w = l0 * &secret_shares[0] + l1 * &secret_shares[1];
         assert_eq!(w, secret_reconstructed);
     }
@@ -469,8 +469,8 @@ mod tests {
 
         // test map (t,n) - (t',t')
         let s = &vec![0, 2];
-        let l0 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 0, &s);
-        let l2 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 2, &s);
+        let l0 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 0, s);
+        let l2 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 2, s);
 
         let w = l0 * &secret_shares[0] + l2 * &secret_shares[2];
         assert_eq!(w, secret_reconstructed);

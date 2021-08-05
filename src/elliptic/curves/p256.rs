@@ -115,7 +115,7 @@ impl ECScalar for Secp256r1Scalar {
     fn from_bigint(n: &BigInt) -> Secp256r1Scalar {
         let curve_order = Secp256r1Scalar::group_order();
         let n_reduced = n
-            .modulus(&curve_order)
+            .modulus(curve_order)
             .to_bytes_array::<32>()
             .expect("n mod curve_order must be equal or less than 32 bytes");
 
