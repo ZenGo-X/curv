@@ -11,6 +11,7 @@ use num_bigint::BigInt as BN;
 use num_bigint::Sign;
 
 mod primes;
+mod ring;
 
 /// Big integer
 ///
@@ -171,7 +172,7 @@ impl Modulo for BigInt {
     }
 
     fn mod_inv(a: &Self, modulus: &Self) -> Option<Self> {
-        ring_algorithm::modulo_inverse(a.clone(), modulus.clone()).map(|inv| inv.modulus(modulus))
+        ring::modulo_inverse(a, modulus).map(|inv| inv.modulus(modulus))
     }
 
     fn modulus(&self, modulus: &Self) -> Self {
@@ -216,7 +217,7 @@ impl NumberTests for BigInt {
 
 impl EGCD for BigInt {
     fn egcd(a: &Self, b: &Self) -> (Self, Self, Self) {
-        ring_algorithm::normalized_extended_euclidian_algorithm(a.clone(), b.clone())
+        ring::normalized_extended_euclidian_algorithm(a, b)
     }
 }
 
@@ -374,19 +375,6 @@ impl num_traits::Zero for BigInt {
 impl num_traits::One for BigInt {
     fn one() -> Self {
         BN::one().wrap()
-    }
-}
-
-impl ring_algorithm::RingNormalize for BigInt {
-    fn leading_unit(&self) -> Self {
-        match self.num.sign() {
-            Sign::Minus => -BigInt::one(),
-            _ => BigInt::one(),
-        }
-    }
-
-    fn normalize_mut(&mut self) {
-        self.num = self.num.abs();
     }
 }
 
