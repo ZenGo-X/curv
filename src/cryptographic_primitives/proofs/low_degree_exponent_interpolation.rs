@@ -145,7 +145,7 @@ impl<E: Curve> LdeiProof<E> {
             .iter()
             .zip(&statement.alpha)
             .zip(&statement.x)
-            .map(|((g, a), x)| g * self.z.evaluate(&a) + x * &e)
+            .map(|((g, a), x)| g * self.z.evaluate(a) + x * &e)
             .collect();
 
         if self.a == expected_a {
@@ -197,7 +197,7 @@ mod tests {
         let poly = Polynomial::<E>::sample_exact(5);
         let witness = LdeiWitness { w: poly };
 
-        let alpha: Vec<Scalar<E>> = (1..=10).map(|i| Scalar::from(i)).collect();
+        let alpha: Vec<Scalar<E>> = (1..=10).map(Scalar::from).collect();
         let g: Vec<Point<E>> = iter::repeat_with(Scalar::random)
             .map(|x| Point::generator() * x)
             .take(10)

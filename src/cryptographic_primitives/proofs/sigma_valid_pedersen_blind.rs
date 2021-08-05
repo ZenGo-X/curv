@@ -47,7 +47,7 @@ impl<E: Curve> PedersenBlindingProof<E> {
         let g = Point::<E>::generator();
         let e = Sha256::new()
             .chain_points([g.as_point(), h, &com, &a])
-            .chain_scalar(&m)
+            .chain_scalar(m)
             .result_scalar();
 
         let er = &e * r;
