@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.8.0-rc3
+* Fix point subtraction. Bug was introduced in `v0.8.0-rc1`. [#127]
+
+[#127]: https://github.com/ZenGo-X/curv/pull/127
+
 ## v0.8.0-rc2
 * Remove dependency on `ring_algorithm` crate [#125], [#124]
 
