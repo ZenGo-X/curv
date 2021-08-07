@@ -170,10 +170,10 @@ matrix! {
         (o_<> Point<E>, Point<E>), (o_<> Point<E>, &Point<E>),
         (o_<> Point<E>, Generator<E>),
 
-        (_o<> &Point<E>, Point<E>), (r_<> &Point<E>, &Point<E>),
+        (r_<> &Point<E>, Point<E>), (r_<> &Point<E>, &Point<E>),
         (r_<> &Point<E>, Generator<E>),
 
-        (_o<> Generator<E>, Point<E>), (r_<> Generator<E>, &Point<E>),
+        (r_<> Generator<E>, Point<E>), (r_<> Generator<E>, &Point<E>),
         (r_<> Generator<E>, Generator<E>),
     }
 }
@@ -222,7 +222,7 @@ matrix! {
     point_assign_fn = sub_assign,
     pairs = {
         (o_<> Scalar<E>, Scalar<E>), (o_<> Scalar<E>, &Scalar<E>),
-        (_o<> &Scalar<E>, Scalar<E>), (r_<> &Scalar<E>, &Scalar<E>),
+        (r_<> &Scalar<E>, Scalar<E>), (r_<> &Scalar<E>, &Scalar<E>),
     }
 }
 
