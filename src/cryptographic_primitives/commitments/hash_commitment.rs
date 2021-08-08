@@ -44,27 +44,28 @@ mod tests {
     use super::HashCommitment;
     use super::SECURITY_BITS;
     use crate::arithmetic::traits::*;
-    use crate::BigInt;
-    use sha3::{Digest, Sha3_256};
+    use crate::{test_for_all_hashes, BigInt};
+    use digest::Digest;
 
-    #[test]
-    fn test_bit_length_create_commitment() {
-        let hex_len = SECURITY_BITS;
+    test_for_all_hashes!(test_bit_length_create_commitment);
+    fn test_bit_length_create_commitment<H: Digest + Clone>() {
+        let hex_len = H::output_size() * 8;
         let mut ctr_commit_len = 0;
         let mut ctr_blind_len = 0;
-        let sample_size = 1000;
+        let sample_size = 10_000;
         for _ in 1..sample_size {
-            let message = BigInt::sample(SECURITY_BITS);
-            let (commitment, blind_factor) = HashCommitment::create_commitment(&message);
+            let message = BigInt::sample(hex_len);
+            let (commitment, blind_factor) = HashCommitment::<H>::create_commitment(&message);
             if commitment.bit_length() == hex_len {
                 ctr_commit_len += 1;
             }
-            if blind_factor.bit_length() == hex_len {
+            // the blinding factor bit length is not related to the hash function.
+            if blind_factor.bit_length() == SECURITY_BITS {
                 ctr_blind_len += 1;
             }
         }
         //test commitment length  - works because SHA256 output length the same as sec_bits
-        // we test that the probability distribuition is according to what is expected. ideally = 0.5
+        // we test that the probability distribution is according to what is expected. ideally = 0.5
         let ctr_commit_len = ctr_commit_len as f32;
         let ctr_blind_len = ctr_blind_len as f32;
         let sample_size = sample_size as f32;
@@ -72,29 +73,36 @@ mod tests {
         assert!(ctr_blind_len / sample_size > 0.3);
     }
 
-    #[test]
-    fn test_bit_length_create_commitment_with_user_defined_randomness() {
-        let message = BigInt::sample(SECURITY_BITS);
-        let (_commitment, blind_factor) = HashCommitment::create_commitment(&message);
-        let commitment2 =
-            HashCommitment::create_commitment_with_user_defined_randomness(&message, &blind_factor);
-        assert!(commitment2.to_hex().len() / 2 <= SECURITY_BITS / 8);
+    test_for_all_hashes!(test_bit_length_create_commitment_with_user_defined_randomness);
+    fn test_bit_length_create_commitment_with_user_defined_randomness<H: Digest + Clone>() {
+        let sec_bits = H::output_size() * 8;
+        let message = BigInt::sample(sec_bits);
+        let (_commitment, blind_factor) = HashCommitment::<H>::create_commitment(&message);
+        let commitment2 = HashCommitment::<H>::create_commitment_with_user_defined_randomness(
+            &message,
+            &blind_factor,
+        );
+        assert!(commitment2.to_hex().len() / 2 <= sec_bits / 8);
     }
 
-    #[test]
-    fn test_random_num_generation_create_commitment_with_user_defined_randomness() {
+    test_for_all_hashes!(test_random_num_generation_create_commitment_with_user_defined_randomness);
+    fn test_random_num_generation_create_commitment_with_user_defined_randomness<
+        H: Digest + Clone,
+    >() {
         let message = BigInt::sample(SECURITY_BITS);
-        let (commitment, blind_factor) = HashCommitment::create_commitment(&message);
-        let commitment2 =
-            HashCommitment::create_commitment_with_user_defined_randomness(&message, &blind_factor);
+        let (commitment, blind_factor) = HashCommitment::<H>::create_commitment(&message);
+        let commitment2 = HashCommitment::<H>::create_commitment_with_user_defined_randomness(
+            &message,
+            &blind_factor,
+        );
         assert_eq!(commitment, commitment2);
     }
 
-    #[test]
-    fn test_hashing_create_commitment_with_user_defined_randomness() {
-        let mut digest = Sha3_256::new();
+    test_for_all_hashes!(test_hashing_create_commitment_with_user_defined_randomness);
+    fn test_hashing_create_commitment_with_user_defined_randomness<H: Digest + Clone>() {
+        let mut digest = H::new();
         let message = BigInt::one();
-        let commitment = HashCommitment::create_commitment_with_user_defined_randomness(
+        let commitment = HashCommitment::<H>::create_commitment_with_user_defined_randomness(
             &message,
             &BigInt::zero(),
         );

@@ -171,6 +171,9 @@ mod test {
     use sha2::{Sha256, Sha512};
 
     use super::*;
+    use digest::generic_array::ArrayLength;
+    use digest::{BlockInput, FixedOutput, Reset, Update};
+    use hmac::Hmac;
 
     // Test Vectors taken from:
     // https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/secure-hashing#shavs
@@ -268,73 +271,57 @@ mod test {
         );
     }
 
-    crate::test_for_all_curves!(create_sha512_from_ge_test);
-    fn create_sha256_from_ge_test<E: Curve>() {
+    crate::test_for_all_curves_and_hashes!(create_hash_from_ge_test);
+    fn create_hash_from_ge_test<E: Curve, H: Digest + Clone>() {
         let generator = Point::<E>::generator();
         let base_point2 = Point::<E>::base_point2();
-        let result1 = Sha256::new()
+        let result1 = H::new()
             .chain_point(&generator)
             .chain_point(base_point2)
             .result_scalar::<E>();
         assert!(result1.to_bigint().bit_length() > 240);
-        let result2 = Sha256::new()
+        let result2 = H::new()
             .chain_point(base_point2)
             .chain_point(&generator)
             .result_scalar::<E>();
         assert_ne!(result1, result2);
-        let result3 = Sha256::new()
+        let result3 = H::new()
             .chain_point(base_point2)
             .chain_point(&generator)
             .result_scalar::<E>();
         assert_eq!(result2, result3);
     }
 
-    crate::test_for_all_curves!(create_sha256_from_ge_test);
-    fn create_sha512_from_ge_test<E: Curve>() {
-        let generator = Point::<E>::generator();
-        let base_point2 = Point::<E>::base_point2();
-        let result1 = Sha512::new()
-            .chain_point(&generator)
-            .chain_point(base_point2)
-            .result_scalar::<E>();
-        assert!(result1.to_bigint().bit_length() > 240);
-        let result2 = Sha512::new()
-            .chain_point(base_point2)
-            .chain_point(&generator)
-            .result_scalar::<E>();
-        assert_ne!(result1, result2);
-        let result3 = Sha512::new()
-            .chain_point(base_point2)
-            .chain_point(&generator)
-            .result_scalar::<E>();
-        assert_eq!(result2, result3);
-    }
-
-    #[test]
-    fn create_hmac_test() {
+    crate::test_for_all_hashes!(create_hmac_test);
+    fn create_hmac_test<H>()
+    where
+        H: Update + BlockInput + FixedOutput + Reset + Default + Clone,
+        H::BlockSize: ArrayLength<u8>,
+        H::OutputSize: ArrayLength<u8>,
+    {
         let key = BigInt::sample(512);
-        let result1 = Hmac::<Sha512>::new_bigint(&key)
+        let result1 = Hmac::<H>::new_bigint(&key)
             .chain_bigint(&BigInt::from(10))
             .result_bigint();
-        assert!(Hmac::<Sha512>::new_bigint(&key)
+        assert!(Hmac::<H>::new_bigint(&key)
             .chain_bigint(&BigInt::from(10))
             .verify_bigint(&result1)
             .is_ok());
 
         let key2 = BigInt::sample(512);
         // same data , different key
-        let result2 = Hmac::<Sha512>::new_bigint(&key2)
+        let result2 = Hmac::<H>::new_bigint(&key2)
             .chain_bigint(&BigInt::from(10))
             .result_bigint();
         assert_ne!(result1, result2);
         // same key , different data
-        let result3 = Hmac::<Sha512>::new_bigint(&key)
+        let result3 = Hmac::<H>::new_bigint(&key)
             .chain_bigint(&BigInt::from(10))
             .chain_bigint(&BigInt::from(11))
             .result_bigint();
         assert_ne!(result1, result3);
         // same key, same data
-        let result4 = Hmac::<Sha512>::new_bigint(&key)
+        let result4 = Hmac::<H>::new_bigint(&key)
             .chain_bigint(&BigInt::from(10))
             .result_bigint();
         assert_eq!(result1, result4)

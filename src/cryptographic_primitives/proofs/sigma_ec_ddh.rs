@@ -92,13 +92,13 @@ impl<E: Curve, H: Digest + Clone> ECDDHProof<E, H> {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_for_all_curves;
+    use crate::test_for_all_curves_and_hashes;
 
     use super::*;
 
-    test_for_all_curves!(test_ecddh_proof);
-    fn test_ecddh_proof<E: Curve>() {
-        let x = Scalar::<E>::random();
+    test_for_all_curves_and_hashes!(test_ecddh_proof);
+    fn test_ecddh_proof<E: Curve, H: Digest + Clone>() {
+        let x = Scalar::random();
         let g1 = Point::generator();
         let g2 = Point::base_point2();
         let h1 = g1 * &x;
@@ -110,16 +110,16 @@ mod tests {
             h2,
         };
         let w = ECDDHWitness { x };
-        let proof = ECDDHProof::prove(&w, &delta);
+        let proof = ECDDHProof::<E, H>::prove(&w, &delta);
         assert!(proof.verify(&delta).is_ok());
     }
 
-    test_for_all_curves!(test_wrong_ecddh_proof);
-    fn test_wrong_ecddh_proof<E: Curve>() {
-        let x = Scalar::<E>::random();
+    test_for_all_curves_and_hashes!(test_wrong_ecddh_proof);
+    fn test_wrong_ecddh_proof<E: Curve, H: Digest + Clone>() {
+        let x = Scalar::random();
         let g1 = Point::generator();
         let g2 = Point::base_point2();
-        let x2 = Scalar::<E>::random();
+        let x2 = Scalar::random();
         let h1 = g1 * &x;
         let h2 = g2 * &x2;
         let delta = ECDDHStatement {
@@ -129,7 +129,7 @@ mod tests {
             h2,
         };
         let w = ECDDHWitness { x };
-        let proof = ECDDHProof::prove(&w, &delta);
+        let proof = ECDDHProof::<E, H>::prove(&w, &delta);
         assert!(!proof.verify(&delta).is_ok());
     }
 }

@@ -83,10 +83,10 @@ impl<E: Curve, H: Digest + Clone> DLogProof<E, H> {
 mod tests {
     use super::*;
 
-    crate::test_for_all_curves!(test_dlog_proof);
-    fn test_dlog_proof<E: Curve>() {
+    crate::test_for_all_curves_and_hashes!(test_dlog_proof);
+    fn test_dlog_proof<E: Curve, H: Digest + Clone>() {
         let witness = Scalar::random();
-        let dlog_proof = DLogProof::<E>::prove(&witness);
+        let dlog_proof = DLogProof::<E, H>::prove(&witness);
         assert!(DLogProof::verify(&dlog_proof).is_ok());
     }
 }

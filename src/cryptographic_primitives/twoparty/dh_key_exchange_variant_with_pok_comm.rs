@@ -248,11 +248,12 @@ pub fn compute_pubkey<E: Curve>(
 mod tests {
     use crate::cryptographic_primitives::twoparty::dh_key_exchange_variant_with_pok_comm::*;
 
-    crate::test_for_all_curves!(test_dh_key_exchange);
-    fn test_dh_key_exchange<E: Curve>() {
+    crate::test_for_all_curves_and_hashes!(test_dh_key_exchange);
+    fn test_dh_key_exchange<E: Curve, H: Digest + Clone>() {
         let (kg_party_one_first_message, kg_comm_witness, kg_ec_key_pair_party1) =
-            Party1FirstMessage::create_commitments::<E>();
-        let (kg_party_two_first_message, kg_ec_key_pair_party2) = Party2FirstMessage::<E>::create();
+            Party1FirstMessage::create_commitments::<E, H>();
+        let (kg_party_two_first_message, kg_ec_key_pair_party2) =
+            Party2FirstMessage::<E, H>::create();
         let kg_party_one_second_message = Party1SecondMessage::verify_and_decommit(
             kg_comm_witness,
             &kg_party_two_first_message.d_log_proof,

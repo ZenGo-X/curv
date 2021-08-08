@@ -83,12 +83,12 @@ pub fn finalize<E: Curve, H: Digest + Clone>(
 mod tests {
     use super::*;
 
-    crate::test_for_all_curves!(test_coin_toss);
-    pub fn test_coin_toss<E: Curve>() {
-        let (party1_first_message, m1, r1) = Party1FirstMessage::<E>::commit();
+    crate::test_for_all_curves_and_hashes!(test_coin_toss);
+    pub fn test_coin_toss<E: Curve, H: Digest + Clone>() {
+        let (party1_first_message, m1, r1) = Party1FirstMessage::<E, H>::commit();
         let party2_first_message = Party2FirstMessage::share(&party1_first_message.proof);
         let (party1_second_message, random1) =
-            Party1SecondMessage::<E>::reveal(&party2_first_message.seed, &m1, &r1);
+            Party1SecondMessage::<E, H>::reveal(&party2_first_message.seed, &m1, &r1);
         let random2 = finalize(
             &party1_second_message.proof,
             &party2_first_message.seed,

@@ -96,13 +96,13 @@ impl<E: Curve, H: Digest + Clone> HomoELGamalDlogProof<E, H> {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_for_all_curves;
+    use crate::test_for_all_curves_and_hashes;
 
     use super::*;
 
-    test_for_all_curves!(test_correct_homo_elgamal);
-    fn test_correct_homo_elgamal<E: Curve>() {
-        let witness = HomoElGamalDlogWitness::<E> {
+    test_for_all_curves_and_hashes!(test_correct_homo_elgamal);
+    fn test_correct_homo_elgamal<E: Curve, H: Digest + Clone>() {
+        let witness = HomoElGamalDlogWitness {
             r: Scalar::random(),
             x: Scalar::random(),
         };
@@ -118,15 +118,15 @@ mod tests {
             D,
             E,
         };
-        let proof = HomoELGamalDlogProof::prove(&witness, &delta);
+        let proof = HomoELGamalDlogProof::<E, H>::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
     }
 
     // TODO: add more fail scenarios
-    test_for_all_curves!(test_wrong_homo_elgamal);
-    fn test_wrong_homo_elgamal<E: Curve>() {
+    test_for_all_curves_and_hashes!(test_wrong_homo_elgamal);
+    fn test_wrong_homo_elgamal<E: Curve, H: Digest + Clone>() {
         // test for Q = (x+1)G
-        let witness = HomoElGamalDlogWitness::<E> {
+        let witness = HomoElGamalDlogWitness {
             r: Scalar::random(),
             x: Scalar::random(),
         };
@@ -142,7 +142,7 @@ mod tests {
             D,
             E,
         };
-        let proof = HomoELGamalDlogProof::prove(&witness, &delta);
+        let proof = HomoELGamalDlogProof::<E, H>::prove(&witness, &delta);
         assert!(!proof.verify(&delta).is_ok());
     }
 }

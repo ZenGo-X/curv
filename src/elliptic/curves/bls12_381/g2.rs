@@ -286,7 +286,11 @@ impl Zeroize for G2Point {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use pairing_plus::{bls12_381::G2Uncompressed, CurveProjective, EncodedPoint, SubgroupCheck};
+
+    use crate::elliptic::curves::ECPoint;
+
+    use super::{ExpandMsgXmd, G2Point, HashToCurve, G2};
 
     #[test]
     fn base_point2_nothing_up_my_sleeve() {
@@ -298,7 +302,6 @@ mod tests {
         assert!(point.in_subgroup());
 
         // Print in uncompressed form
-        use pairing_plus::EncodedPoint;
         let point_uncompressed = G2Uncompressed::from_affine(point);
         println!("Uncompressed base_point2: {:?}", point_uncompressed);
 

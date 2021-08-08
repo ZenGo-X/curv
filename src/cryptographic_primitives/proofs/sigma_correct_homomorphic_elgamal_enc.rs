@@ -104,11 +104,11 @@ impl<E: Curve, H: Digest + Clone> HomoELGamalProof<E, H> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_for_all_curves;
+    use crate::test_for_all_curves_and_hashes;
 
-    test_for_all_curves!(test_correct_general_homo_elgamal);
-    fn test_correct_general_homo_elgamal<E: Curve>() {
-        let witness = HomoElGamalWitness::<E> {
+    test_for_all_curves_and_hashes!(test_correct_general_homo_elgamal);
+    fn test_correct_general_homo_elgamal<E: Curve, H: Digest + Clone>() {
+        let witness = HomoElGamalWitness {
             r: Scalar::random(),
             x: Scalar::random(),
         };
@@ -126,12 +126,12 @@ mod tests {
             D,
             E,
         };
-        let proof = HomoELGamalProof::prove(&witness, &delta);
+        let proof = HomoELGamalProof::<E, H>::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
     }
 
-    test_for_all_curves!(test_correct_homo_elgamal);
-    fn test_correct_homo_elgamal<E: Curve>() {
+    test_for_all_curves_and_hashes!(test_correct_homo_elgamal);
+    fn test_correct_homo_elgamal<E: Curve, H: Digest + Clone>() {
         let witness = HomoElGamalWitness {
             r: Scalar::random(),
             x: Scalar::random(),
@@ -148,14 +148,14 @@ mod tests {
             D,
             E,
         };
-        let proof = HomoELGamalProof::prove(&witness, &delta);
+        let proof = HomoELGamalProof::<E, H>::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
     }
 
-    test_for_all_curves!(test_wrong_homo_elgamal);
-    fn test_wrong_homo_elgamal<E: Curve>() {
+    test_for_all_curves_and_hashes!(test_wrong_homo_elgamal);
+    fn test_wrong_homo_elgamal<E: Curve, H: Digest + Clone>() {
         // test for E = (r+1)G
-        let witness = HomoElGamalWitness::<E> {
+        let witness = HomoElGamalWitness {
             r: Scalar::random(),
             x: Scalar::random(),
         };
@@ -173,7 +173,7 @@ mod tests {
             D,
             E,
         };
-        let proof = HomoELGamalProof::prove(&witness, &delta);
+        let proof = HomoELGamalProof::<E, H>::prove(&witness, &delta);
         assert!(!proof.verify(&delta).is_ok());
     }
 }

@@ -97,11 +97,11 @@ impl<E: Curve, H: Digest + Clone> PedersenProof<E, H> {
 mod tests {
     use super::*;
 
-    crate::test_for_all_curves!(test_pedersen_proof);
-    fn test_pedersen_proof<E: Curve>() {
+    crate::test_for_all_curves_and_hashes!(test_pedersen_proof);
+    fn test_pedersen_proof<E: Curve, H: Digest + Clone>() {
         let m = Scalar::random();
         let r = Scalar::random();
-        let pedersen_proof = PedersenProof::<E>::prove(&m, &r);
+        let pedersen_proof = PedersenProof::<E, H>::prove(&m, &r);
         PedersenProof::verify(&pedersen_proof).expect("error pedersen");
     }
 }

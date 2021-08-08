@@ -90,12 +90,11 @@ impl<E: Curve, H: Digest + Clone> PedersenBlindingProof<E, H> {
 mod tests {
     use super::*;
 
-    crate::test_for_all_curves!(test_pedersen_blind_proof);
-    fn test_pedersen_blind_proof<E: Curve>() {
+    crate::test_for_all_curves_and_hashes!(test_pedersen_blind_proof);
+    fn test_pedersen_blind_proof<E: Curve, H: Digest + Clone>() {
         let m = Scalar::random();
         let r = Scalar::random();
-        let pedersen_proof = PedersenBlindingProof::<E>::prove(&m, &r);
-        let _verified =
-            PedersenBlindingProof::verify(&pedersen_proof).expect("error pedersen blind");
+        let pedersen_proof = PedersenBlindingProof::<E, H>::prove(&m, &r);
+        PedersenBlindingProof::verify(&pedersen_proof).expect("error pedersen blind");
     }
 }

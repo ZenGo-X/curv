@@ -188,15 +188,13 @@ fn ensure_list_is_pairwise_distinct<S: PartialEq>(list: &[S]) -> bool {
 mod tests {
     use std::iter;
 
-    use sha2::Sha256;
-
     use crate::elliptic::curves::{Curve, Scalar};
-    use crate::test_for_all_curves;
+    use crate::test_for_all_curves_and_hashes;
 
     use super::*;
 
-    test_for_all_curves!(correctly_proofs);
-    fn correctly_proofs<E: Curve>() {
+    test_for_all_curves_and_hashes!(correctly_proofs);
+    fn correctly_proofs<E: Curve, H: Digest + Clone>() {
         let d = 5;
         let poly = Polynomial::<E>::sample_exact(5);
         let witness = LdeiWitness { w: poly };
@@ -209,9 +207,9 @@ mod tests {
 
         let statement = LdeiStatement::new(&witness, alpha, g, d).unwrap();
 
-        let proof = LdeiProof::prove::<Sha256>(&witness, &statement).expect("failed to prove");
+        let proof = LdeiProof::prove::<H>(&witness, &statement).expect("failed to prove");
         proof
-            .verify::<Sha256>(&statement)
+            .verify::<H>(&statement)
             .expect("failed to validate proof");
     }
 }
