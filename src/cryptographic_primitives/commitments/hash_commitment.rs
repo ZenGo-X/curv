@@ -8,34 +8,32 @@
 //TODO: (open issue) use this struct to represent the commitment HashCommitment{comm: BigInt, r: BigInt, m: BigInt}
 /// calculate commitment c = H(m,r) using SHA3 CRHF.
 /// r is 256bit blinding factor, m is the commited value
-pub struct HashCommitment;
+pub struct HashCommitment<H: Digest + Clone>(PhantomData<H>);
 
 use crate::BigInt;
 
 use super::traits::Commitment;
 use super::SECURITY_BITS;
 use crate::arithmetic::traits::*;
-use sha3::{Digest, Sha3_256};
+use digest::Digest;
+use std::marker::PhantomData;
+
 //TODO:  using the function with BigInt's as input instead of string's makes it impossible to commit to empty message or use empty randomness
-impl Commitment<BigInt> for HashCommitment {
+impl<H: Digest + Clone> Commitment<BigInt> for HashCommitment<H> {
     fn create_commitment_with_user_defined_randomness(
         message: &BigInt,
         blinding_factor: &BigInt,
     ) -> BigInt {
-        let mut digest = Sha3_256::new();
-        let bytes_message = message.to_bytes();
-        digest.update(&bytes_message);
-        let bytes_blinding_factor = blinding_factor.to_bytes();
-        digest.update(&bytes_blinding_factor);
-        BigInt::from_bytes(digest.finalize().as_ref())
+        let digest_result = H::new()
+            .chain(message.to_bytes())
+            .chain(blinding_factor.to_bytes())
+            .finalize();
+        BigInt::from_bytes(digest_result.as_ref())
     }
 
     fn create_commitment(message: &BigInt) -> (BigInt, BigInt) {
         let blinding_factor = BigInt::sample(SECURITY_BITS);
-        let com = HashCommitment::create_commitment_with_user_defined_randomness(
-            message,
-            &blinding_factor,
-        );
+        let com = Self::create_commitment_with_user_defined_randomness(message, &blinding_factor);
         (com, blinding_factor)
     }
 }

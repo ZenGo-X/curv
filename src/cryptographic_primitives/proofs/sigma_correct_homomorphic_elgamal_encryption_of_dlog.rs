@@ -6,8 +6,9 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
+use std::marker::PhantomData;
+
 use serde::{Deserialize, Serialize};
-use sha2::Sha256;
 
 use super::ProofError;
 use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
@@ -21,12 +22,13 @@ use crate::elliptic::curves::{Curve, Point, Scalar};
 ///
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
-pub struct HomoELGamalDlogProof<E: Curve> {
+pub struct HomoELGamalDlogProof<E: Curve, H: Digest + Clone> {
     pub A1: Point<E>,
     pub A2: Point<E>,
     pub A3: Point<E>,
     pub z1: Scalar<E>,
     pub z2: Scalar<E>,
+    _ph: PhantomData<fn(H)>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -46,26 +48,33 @@ pub struct HomoElGamalDlogStatement<E: Curve> {
     pub E: Point<E>,
 }
 
-impl<E: Curve> HomoELGamalDlogProof<E> {
+impl<E: Curve, H: Digest + Clone> HomoELGamalDlogProof<E, H> {
     pub fn prove(
         w: &HomoElGamalDlogWitness<E>,
         delta: &HomoElGamalDlogStatement<E>,
-    ) -> HomoELGamalDlogProof<E> {
+    ) -> HomoELGamalDlogProof<E, H> {
         let s1 = Scalar::<E>::random();
         let s2 = Scalar::<E>::random();
         let A1 = &delta.G * &s1;
         let A2 = &delta.Y * &s2;
         let A3 = &delta.G * &s2;
-        let e = Sha256::new()
+        let e = H::new()
             .chain_points([&A1, &A2, &A3, &delta.G, &delta.Y, &delta.D, &delta.E])
             .result_scalar();
         let z1 = &s1 + &e * &w.x;
         let z2 = &s2 + e * &w.r;
-        HomoELGamalDlogProof { A1, A2, A3, z1, z2 }
+        HomoELGamalDlogProof {
+            A1,
+            A2,
+            A3,
+            z1,
+            z2,
+            _ph: PhantomData,
+        }
     }
 
     pub fn verify(&self, delta: &HomoElGamalDlogStatement<E>) -> Result<(), ProofError> {
-        let e = Sha256::new()
+        let e = H::new()
             .chain_points([
                 &self.A1, &self.A2, &self.A3, &delta.G, &delta.Y, &delta.D, &delta.E,
             ])

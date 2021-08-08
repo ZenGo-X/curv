@@ -5,8 +5,9 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
+use std::marker::PhantomData;
+
 use serde::{Deserialize, Serialize};
-use sha2::Sha256;
 
 use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
 use crate::elliptic::curves::{Curve, Point, Scalar};
@@ -25,14 +26,15 @@ use super::ProofError;
 /// pages 186–194, 1986.
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
-pub struct DLogProof<E: Curve> {
+pub struct DLogProof<E: Curve, H: Digest + Clone> {
     pub pk: Point<E>,
     pub pk_t_rand_commitment: Point<E>,
     pub challenge_response: Scalar<E>,
+    _ph: PhantomData<fn(H)>,
 }
 
-impl<E: Curve> DLogProof<E> {
-    pub fn prove(sk: &Scalar<E>) -> DLogProof<E> {
+impl<E: Curve, H: Digest + Clone> DLogProof<E, H> {
+    pub fn prove(sk: &Scalar<E>) -> DLogProof<E, H> {
         let generator = Point::<E>::generator();
 
         let sk_t_rand_commitment = Scalar::random();
@@ -40,7 +42,7 @@ impl<E: Curve> DLogProof<E> {
 
         let pk = Point::generator() * sk;
 
-        let challenge = Sha256::new()
+        let challenge = H::new()
             .chain_point(&pk_t_rand_commitment)
             .chain_point(&generator.to_point())
             .chain_point(&pk)
@@ -52,13 +54,14 @@ impl<E: Curve> DLogProof<E> {
             pk,
             pk_t_rand_commitment,
             challenge_response,
+            _ph: PhantomData,
         }
     }
 
-    pub fn verify(proof: &DLogProof<E>) -> Result<(), ProofError> {
+    pub fn verify(proof: &DLogProof<E, H>) -> Result<(), ProofError> {
         let generator = Point::<E>::generator();
 
-        let challenge = Sha256::new()
+        let challenge = H::new()
             .chain_point(&proof.pk_t_rand_commitment)
             .chain_point(&generator.to_point())
             .chain_point(&proof.pk)

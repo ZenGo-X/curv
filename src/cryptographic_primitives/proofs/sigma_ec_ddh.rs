@@ -6,12 +6,12 @@
 */
 
 use serde::{Deserialize, Serialize};
-use sha2::Sha256;
 
 use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
 use crate::elliptic::curves::{Curve, Point, Scalar};
 
 use super::ProofError;
+use std::marker::PhantomData;
 
 /// This protocol is the elliptic curve form of the protocol from :
 ///  D. Chaum, T. P. Pedersen. Transferred cash grows in size. In Advances in Cryptology, EUROCRYPT , volume 658 of Lecture Notes in Computer Science, pages 390 - 407, 1993.
@@ -27,10 +27,11 @@ use super::ProofError;
 /// verifier checks that zG1 = A1 + eH1, zG2 = A2 + eH2
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
-pub struct ECDDHProof<E: Curve> {
+pub struct ECDDHProof<E: Curve, H: Digest + Clone> {
     pub a1: Point<E>,
     pub a2: Point<E>,
     pub z: Scalar<E>,
+    _ph: PhantomData<fn(H)>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -46,12 +47,12 @@ pub struct ECDDHWitness<E: Curve> {
     pub x: Scalar<E>,
 }
 
-impl<E: Curve> ECDDHProof<E> {
-    pub fn prove(w: &ECDDHWitness<E>, delta: &ECDDHStatement<E>) -> ECDDHProof<E> {
+impl<E: Curve, H: Digest + Clone> ECDDHProof<E, H> {
+    pub fn prove(w: &ECDDHWitness<E>, delta: &ECDDHStatement<E>) -> ECDDHProof<E, H> {
         let s = Scalar::random();
         let a1 = &delta.g1 * &s;
         let a2 = &delta.g2 * &s;
-        let e = Sha256::new()
+        let e = H::new()
             .chain_point(&delta.g1)
             .chain_point(&delta.h1)
             .chain_point(&delta.g2)
@@ -60,11 +61,16 @@ impl<E: Curve> ECDDHProof<E> {
             .chain_point(&a2)
             .result_scalar();
         let z = &s + e * &w.x;
-        ECDDHProof { a1, a2, z }
+        ECDDHProof {
+            a1,
+            a2,
+            z,
+            _ph: PhantomData,
+        }
     }
 
     pub fn verify(&self, delta: &ECDDHStatement<E>) -> Result<(), ProofError> {
-        let e = Sha256::new()
+        let e = H::new()
             .chain_point(&delta.g1)
             .chain_point(&delta.h1)
             .chain_point(&delta.g2)

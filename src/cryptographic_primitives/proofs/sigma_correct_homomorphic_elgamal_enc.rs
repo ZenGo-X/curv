@@ -8,13 +8,12 @@
 
 use serde::{Deserialize, Serialize};
 
-use digest::Digest;
-use sha2::Sha256;
-
 use crate::cryptographic_primitives::hashing::DigestExt;
 use crate::elliptic::curves::{Curve, Point, Scalar};
+use digest::Digest;
 
 use super::ProofError;
+use std::marker::PhantomData;
 
 /// This is a proof of knowledge that a pair of group elements {D, E}
 /// form a valid homomorphic ElGamal encryption (”in the exponent”) using public key Y .
@@ -24,11 +23,12 @@ use super::ProofError;
 ///
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
-pub struct HomoELGamalProof<E: Curve> {
+pub struct HomoELGamalProof<E: Curve, H: Digest + Clone> {
     pub T: Point<E>,
     pub A3: Point<E>,
     pub z1: Scalar<E>,
     pub z2: Scalar<E>,
+    _ph: PhantomData<fn(H)>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -48,18 +48,18 @@ pub struct HomoElGamalStatement<E: Curve> {
     pub E: Point<E>,
 }
 
-impl<E: Curve> HomoELGamalProof<E> {
+impl<E: Curve, H: Digest + Clone> HomoELGamalProof<E, H> {
     pub fn prove(
         w: &HomoElGamalWitness<E>,
         delta: &HomoElGamalStatement<E>,
-    ) -> HomoELGamalProof<E> {
+    ) -> HomoELGamalProof<E, H> {
         let s1: Scalar<E> = Scalar::random();
         let s2: Scalar<E> = Scalar::random();
         let A1 = &delta.H * &s1;
         let A2 = &delta.Y * &s2;
         let A3 = &delta.G * &s2;
         let T = A1 + A2;
-        let e = Sha256::new()
+        let e = H::new()
             .chain_point(&T)
             .chain_point(&A3)
             .chain_point(&delta.G)
@@ -71,10 +71,16 @@ impl<E: Curve> HomoELGamalProof<E> {
         // dealing with zero field element
         let z1 = &s1 + &w.x * &e;
         let z2 = s2 + &w.r * e;
-        HomoELGamalProof { T, A3, z1, z2 }
+        HomoELGamalProof {
+            T,
+            A3,
+            z1,
+            z2,
+            _ph: PhantomData,
+        }
     }
     pub fn verify(&self, delta: &HomoElGamalStatement<E>) -> Result<(), ProofError> {
-        let e = Sha256::new()
+        let e = H::new()
             .chain_point(&self.T)
             .chain_point(&self.A3)
             .chain_point(&delta.G)
