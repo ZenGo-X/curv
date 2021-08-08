@@ -96,7 +96,7 @@ impl ECScalar for FieldScalar {
         repr.read_be(bytes.as_ref()).unwrap();
         Ok(FieldScalar {
             purpose: "deserialize",
-            fe: Fr::from_repr(repr).unwrap().into(),
+            fe: Fr::from_repr(repr).or(Err(DeserializationError))?.into(),
         })
     }
 
