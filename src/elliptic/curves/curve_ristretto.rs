@@ -15,6 +15,7 @@ use curve25519_dalek::ristretto::CompressedRistretto;
 use curve25519_dalek::traits::{Identity, IsIdentity};
 use rand::thread_rng;
 use sha2::{Digest, Sha256};
+use static_assertions::const_assert_eq;
 use zeroize::{Zeroize, Zeroizing};
 
 use crate::arithmetic::*;
@@ -80,10 +81,15 @@ impl Curve for Ristretto {
     const CURVE_NAME: &'static str = "ristretto";
 }
 
+const_assert_eq!(
+    core::mem::size_of::<<RistrettoScalar as ECScalar>::ScalarBytes>(),
+    <RistrettoScalar as ECScalar>::SCALAR_LENGTH
+);
 impl ECScalar for RistrettoScalar {
     type Underlying = SK;
 
-    type ScalarBytes = [u8; 32];
+    const SCALAR_LENGTH: usize = 32;
+    type ScalarBytes = [u8; Self::SCALAR_LENGTH];
 
     fn random() -> RistrettoScalar {
         RistrettoScalar {

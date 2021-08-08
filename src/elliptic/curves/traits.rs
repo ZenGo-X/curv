@@ -37,6 +37,10 @@ pub trait ECScalar: Clone + PartialEq + fmt::Debug + 'static {
     /// Underlying scalar type that can be retrieved in case of missing methods in this trait
     type Underlying;
 
+    /// The byte length of the scalar
+    const SCALAR_LENGTH: usize;
+    // We need to make sure that this always matches SCALAR_LENGTH.
+    // TODO: Replace with const generics once https://github.com/rust-lang/rust/issues/60551 is resolved
     /// Serialized scalar
     type ScalarBytes: AsRef<[u8]>;
 

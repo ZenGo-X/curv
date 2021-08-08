@@ -3,6 +3,7 @@ use std::fmt;
 use ff_zeroize::{Field, PrimeField, PrimeFieldRepr, ScalarEngine};
 use pairing_plus::bls12_381::{Fr, FrRepr};
 use rand::rngs::OsRng;
+use static_assertions::const_assert_eq;
 use zeroize::Zeroizing;
 
 use crate::arithmetic::*;
@@ -35,10 +36,15 @@ pub struct FieldScalar {
     fe: Zeroizing<SK>,
 }
 
+const_assert_eq!(
+    core::mem::size_of::<<FieldScalar as ECScalar>::ScalarBytes>(),
+    <FieldScalar as ECScalar>::SCALAR_LENGTH
+);
 impl ECScalar for FieldScalar {
     type Underlying = SK;
 
-    type ScalarBytes = [u8; 32];
+    const SCALAR_LENGTH: usize = 32;
+    type ScalarBytes = [u8; Self::SCALAR_LENGTH];
 
     fn random() -> FieldScalar {
         FieldScalar {

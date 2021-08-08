@@ -26,6 +26,7 @@ use secp256k1::constants::{
 };
 use secp256k1::{PublicKey, SecretKey, SECP256K1};
 use serde::{Deserialize, Serialize};
+use static_assertions::const_assert_eq;
 use zeroize::{Zeroize, Zeroizing};
 
 use crate::arithmetic::*;
@@ -152,10 +153,15 @@ pub struct Secp256k1Point {
 type GE = Secp256k1Point;
 type FE = Secp256k1Scalar;
 
+const_assert_eq!(
+    core::mem::size_of::<<Secp256k1Scalar as ECScalar>::ScalarBytes>(),
+    <Secp256k1Scalar as ECScalar>::SCALAR_LENGTH
+);
 impl ECScalar for Secp256k1Scalar {
     type Underlying = Option<SK>;
 
-    type ScalarBytes = [u8; 32];
+    const SCALAR_LENGTH: usize = 32;
+    type ScalarBytes = [u8; Self::SCALAR_LENGTH];
 
     fn random() -> Secp256k1Scalar {
         let sk = SK(SecretKey::new(&mut rand_legacy::thread_rng()));

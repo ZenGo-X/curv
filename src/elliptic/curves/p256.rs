@@ -6,6 +6,7 @@ use p256::{AffinePoint, EncodedPoint, FieldBytes, ProjectivePoint, Scalar};
 
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
+use static_assertions::const_assert_eq;
 use zeroize::Zeroize;
 
 use super::traits::{ECPoint, ECScalar};
@@ -81,9 +82,14 @@ impl Curve for Secp256r1 {
     const CURVE_NAME: &'static str = "secp256r1";
 }
 
+const_assert_eq!(
+    core::mem::size_of::<<Secp256r1Scalar as ECScalar>::ScalarBytes>(),
+    <Secp256r1Scalar as ECScalar>::SCALAR_LENGTH
+);
 impl ECScalar for Secp256r1Scalar {
     type Underlying = SK;
 
+    const SCALAR_LENGTH: usize = 32;
     type ScalarBytes = FieldBytes;
 
     fn random() -> Secp256r1Scalar {

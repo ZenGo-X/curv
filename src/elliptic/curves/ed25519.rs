@@ -17,6 +17,7 @@ use std::str;
 use std::sync::atomic;
 
 use cryptoxide::curve25519::*;
+use static_assertions::const_assert_eq;
 use zeroize::{Zeroize, Zeroizing};
 
 use crate::arithmetic::traits::*;
@@ -123,10 +124,15 @@ impl Curve for Ed25519 {
     const CURVE_NAME: &'static str = "ed25519";
 }
 
+const_assert_eq!(
+    core::mem::size_of::<<Ed25519Scalar as ECScalar>::ScalarBytes>(),
+    <Ed25519Scalar as ECScalar>::SCALAR_LENGTH
+);
 impl ECScalar for Ed25519Scalar {
     type Underlying = SK;
 
-    type ScalarBytes = [u8; 32];
+    const SCALAR_LENGTH: usize = 32;
+    type ScalarBytes = [u8; Self::SCALAR_LENGTH];
 
     // we chose to multiply by 8 (co-factor) all group elements to work in the prime order sub group.
     // each random fe is having its 3 first bits zeroed
