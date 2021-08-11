@@ -73,7 +73,11 @@ The library includes some basic examples to get you going. To run them:
 for example: `cargo run --example proof_of_knowledge_of_dlog -- secp256k1`
 
 ### Docs 
-To build docs, use `cargo doc --no-deps`.
+To build docs, use:
+```bash
+cargo doc
+RUSTDOCFLAGS="--html-in-header katex-header.html" cargo doc --no-deps --open
+```
 
 ### License
 Curv is released under the terms of the MIT license. See [LICENSE](LICENSE) for more information.

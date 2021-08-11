@@ -57,3 +57,6 @@ proptest-derive = "0.2"
 
 [features]
 default = ["rust-gmp-kzen"]
+
+[package.metadata.docs.rs]
+rustdoc-args = [ "--html-in-header", "katex-header.html" ]

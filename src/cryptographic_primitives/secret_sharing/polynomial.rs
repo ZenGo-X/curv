@@ -3,23 +3,22 @@ use std::{iter, ops};
 
 use crate::elliptic::curves::{Curve, Scalar};
 
-/// Polynomial of some degree `n`
+/// Polynomial of some degree $n$
 ///
-/// Polynomial has a form: `f(x) = a_0 + a_1 * x^1 + ... + a_(n-1) * x^(n-1) + a_n * x^n`.
+/// Polynomial has a form: $f(x) = a_0 + a_1 x^1 + \dots{} + a_{n-1} x^{n-1} + a_n x^n$
 ///
-/// Coefficients `a_i` and indeterminate `x` are scalars in curve prime field,
-/// ie. their type is `ECScalar` implementor.
+/// Coefficients $a_i$ and indeterminate $x$ are in $\Zq$, ie. they are [`Scalar<E>`](Scalar).
 #[derive(Clone, Debug)]
 pub struct Polynomial<E: Curve> {
     coefficients: Vec<Scalar<E>>,
 }
 
 impl<E: Curve> Polynomial<E> {
-    /// Constructs polynomial `f(x)` from list of coefficients `a`
+    /// Constructs polynomial $f(x)$ from list of coefficients $a_0, \dots, a_n$ in $\Zq$
     ///
     /// ## Order
     ///
-    /// `a[i]` should corresponds to coefficient `a_i` of polynomial `f(x) = ... + a_i * x^i + ...`
+    /// $a_i$ should corresponds to polynomial $i^{\text{th}}$ coefficient $f(x) = \dots{} + a_i x^i + \dots$
     ///
     /// ## Polynomial degree
     ///
@@ -60,7 +59,7 @@ impl<E: Curve> Polynomial<E> {
         )
     }
 
-    /// Samples random polynomial of degree `n` with fixed constant term (ie. `a_0 = constant_term`)
+    /// Samples random polynomial of degree $n$ with fixed constant term (ie. $a_0 = \text{constant\\_term}$)
     ///
     /// ## Example
     /// ```rust
@@ -81,7 +80,7 @@ impl<E: Curve> Polynomial<E> {
         }
     }
 
-    /// Returns degree `d` of polynomial `f(x)`: `d = deg(f)`
+    /// Returns degree $d$ of polynomial $f(x)$: $d = \deg f$
     ///
     /// ```rust
     /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
@@ -109,7 +108,7 @@ impl<E: Curve> Polynomial<E> {
         u16::try_from(i).expect("polynomial degree guaranteed to fit into u16")
     }
 
-    /// Takes scalar `x` and evaluates `f(x)`
+    /// Takes scalar $x$ and evaluates $f(x)$
     ///
     /// ## Example
     /// ```rust
@@ -136,7 +135,7 @@ impl<E: Curve> Polynomial<E> {
         })
     }
 
-    /// Takes point `x` that's convertable to BigInt, and evaluates `f(x)`
+    /// Takes point $x$ that's convertable to BigInt, and evaluates $f(x)$
     ///
     /// ## Example
     /// ```rust
@@ -159,7 +158,7 @@ impl<E: Curve> Polynomial<E> {
         self.evaluate(&Scalar::from(point_x))
     }
 
-    /// Takes list of points `xs` and returns iterator over `f(xs[i])`
+    /// Takes list of points $x$ and returns iterator over $f(x_i)$
     ///
     /// ## Example
     /// ```rust
@@ -183,8 +182,8 @@ impl<E: Curve> Polynomial<E> {
         points_x.into_iter().map(move |x| self.evaluate(x))
     }
 
-    /// Takes a list of points `xs` that are convertable to BigInt, and returns iterator over
-    /// `f(xs[i])`.
+    /// Takes a list of points $x$ that are convertable to BigInt, and returns iterator over
+    /// $f(x_i)$.
     ///
     /// ## Example
     /// ```rust
@@ -213,8 +212,8 @@ impl<E: Curve> Polynomial<E> {
         points_x.into_iter().map(move |x| self.evaluate_bigint(x))
     }
 
-    /// Returns list of polynomial coefficients `a`: `a[i]` corresponds to coefficient `a_i` of
-    /// polynomial `f(x) = ... + a_i * x^i + ...`
+    /// Returns list of polynomial coefficients $a$: $a_i$ corresponds to $i^{\text{th}}$ coefficient of
+    /// polynomial $f(x) = \dots{} + a_i x^i + \dots{}$
     ///
     /// ## Example
     ///
@@ -231,20 +230,20 @@ impl<E: Curve> Polynomial<E> {
         &self.coefficients
     }
 
-    /// Evaluates lagrange basis polynomial `l_j(x, xs)`
+    /// Evaluates lagrange basis polynomial
     ///
-    /// Lagrange basis polynomials are mainly used for Lagrange interpolation, ie. calculating `L(x)`
-    /// where polynomial `L` is defined as set of `t+1` distinct points `(x_i, y_i)` (`t = deg(f)`).
-    /// [Example] section shows how Lagrange interpolation can be implemented using this function.
+    /// $$l_{X,j}(x) = \prod_{\substack{0 \leq m \leq t,\\\\m \ne j}} \frac{x - X_m}{X_j - X_m}$$
     ///
-    /// [Example]: Self::lagrange_basis#example
+    /// Lagrange basis polynomials are mainly used for Lagrange interpolation, ie. calculating $L(x)$
+    /// where polynomial $L$ is defined as set of $t+1$ distinct points $(x_i, y_i)$ ($t = \deg f$).
+    /// Example section shows how Lagrange interpolation can be implemented using this function.
     ///
     /// ## Panics
-    /// This function will panic if elements in `xs` are not pairwise distinct, or `j >= xs.len()`
+    /// This function will panic if elements in `xs` are not pairwise distinct, or `j ≥ xs.len()`
     ///
     /// ## Example
-    /// If you have polynomial `f` defined as `t+1` points `(x_0, y_0), ..., (x_t, y_t)` (and polynomial
-    /// degree is `t`), then you can, for instance, calculate `f(15)`:
+    /// If you have polynomial $f$ defined as $t+1$ points $(x_0, y_0), \dots, (x_t, y_t)$ (and polynomial
+    /// degree is $t$), then you can, for instance, calculate $f(15)$ using Lagrange interpolation:
     ///
     /// ```rust
     /// use curv::cryptographic_primitives::secret_sharing::Polynomial;
@@ -262,6 +261,10 @@ impl<E: Curve> Polynomial<E> {
     ///     .sum();
     /// assert_eq!(f_15, f.evaluate(&Scalar::from(15)));
     /// ```
+    ///
+    /// Generally, formula of Lagrange interpolation is:
+    ///
+    /// $$ L_{X,Y}(x) = \sum^t_{j=0} Y\_j \cdot l_{X,j}(x) $$
     pub fn lagrange_basis(x: &Scalar<E>, j: u16, xs: &[Scalar<E>]) -> Scalar<E> {
         let x_j = &xs[usize::from(j)];
         let num: Scalar<E> = (0u16..)
