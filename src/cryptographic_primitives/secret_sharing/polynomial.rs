@@ -1,6 +1,8 @@
 use std::convert::TryFrom;
 use std::{iter, ops};
 
+use serde::{Deserialize, Serialize};
+
 use crate::elliptic::curves::{Curve, Scalar};
 
 /// Polynomial of some degree $n$
@@ -8,7 +10,8 @@ use crate::elliptic::curves::{Curve, Scalar};
 /// Polynomial has a form: $f(x) = a_0 + a_1 x^1 + \dots{} + a_{n-1} x^{n-1} + a_n x^n$
 ///
 /// Coefficients $a_i$ and indeterminate $x$ are in $\Zq$, ie. they are [`Scalar<E>`](Scalar).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct Polynomial<E: Curve> {
     coefficients: Vec<Scalar<E>>,
 }

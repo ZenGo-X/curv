@@ -1,5 +1,6 @@
 use digest::Digest;
 
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::cryptographic_primitives::hashing::DigestExt;
@@ -8,14 +9,16 @@ use crate::cryptographic_primitives::secret_sharing::Polynomial;
 use crate::elliptic::curves::{Curve, Point, Scalar};
 
 /// The prover private polynomial
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct LdeiWitness<E: Curve> {
     pub w: Polynomial<E>,
 }
 
 /// Claims that there's polynomial `w(x)` of degree `deg(w) <= degree`, and
 /// `forall i. x[i] = g[i] * alpha[i]` (and the prover knows `w(x)`)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct LdeiStatement<E: Curve> {
     pub alpha: Vec<Scalar<E>>,
     pub g: Vec<Point<E>>,
@@ -54,7 +57,8 @@ impl<E: Curve> LdeiStatement<E> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct LdeiProof<E: Curve> {
     pub a: Vec<Point<E>>,
     pub e: Scalar<E>,
@@ -157,7 +161,7 @@ impl<E: Curve> LdeiProof<E> {
 }
 
 /// Indicates that statement is not valid or doesn't match a witness
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum InvalidLdeiStatement {
     #[error("`alpha`s are not pairwise distinct")]
     AlphaNotPairwiseDistinct,
