@@ -306,8 +306,8 @@ impl ECPoint for Ed25519Point {
     type Underlying = PK;
     type Scalar = Ed25519Scalar;
 
-    type CompressedPoint = [u8; 32];
-    type UncompressedPoint = [u8; 32];
+    type CompressedPointLength = typenum::U32;
+    type UncompressedPointLength = typenum::U32;
 
     fn zero() -> Ed25519Point {
         *ZERO
@@ -362,12 +362,12 @@ impl ECPoint for Ed25519Point {
         Some(PointCoords { x: xrecover(&y), y })
     }
 
-    fn serialize_compressed(&self) -> Self::CompressedPoint {
-        self.ge.to_bytes()
+    fn serialize_compressed(&self) -> GenericArray<u8, Self::CompressedPointLength> {
+        GenericArray::from(self.ge.to_bytes())
     }
 
-    fn serialize_uncompressed(&self) -> Self::UncompressedPoint {
-        self.ge.to_bytes()
+    fn serialize_uncompressed(&self) -> GenericArray<u8, Self::UncompressedPointLength> {
+        GenericArray::from(self.ge.to_bytes())
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Ed25519Point, DeserializationError> {

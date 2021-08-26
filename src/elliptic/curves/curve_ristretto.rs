@@ -210,8 +210,8 @@ impl ECPoint for RistrettoPoint {
     type Scalar = RistrettoScalar;
     type Underlying = PK;
 
-    type CompressedPoint = [u8; 32];
-    type UncompressedPoint = [u8; 32];
+    type CompressedPointLength = typenum::U32;
+    type UncompressedPointLength = typenum::U32;
 
     fn zero() -> RistrettoPoint {
         RistrettoPoint {
@@ -254,12 +254,12 @@ impl ECPoint for RistrettoPoint {
         None
     }
 
-    fn serialize_compressed(&self) -> Self::CompressedPoint {
-        self.ge.compress().to_bytes()
+    fn serialize_compressed(&self) -> GenericArray<u8, Self::CompressedPointLength> {
+        GenericArray::from(self.ge.compress().to_bytes())
     }
 
-    fn serialize_uncompressed(&self) -> Self::UncompressedPoint {
-        self.ge.compress().to_bytes()
+    fn serialize_uncompressed(&self) -> GenericArray<u8, Self::UncompressedPointLength> {
+        GenericArray::from(self.ge.compress().to_bytes())
     }
 
     fn deserialize(bytes: &[u8]) -> Result<RistrettoPoint, DeserializationError> {

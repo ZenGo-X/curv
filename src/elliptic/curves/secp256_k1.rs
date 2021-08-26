@@ -318,8 +318,8 @@ impl ECPoint for Secp256k1Point {
     type Scalar = Secp256k1Scalar;
     type Underlying = Option<PK>;
 
-    type CompressedPoint = [u8; 33];
-    type UncompressedPoint = [u8; 65];
+    type CompressedPointLength = typenum::U33;
+    type UncompressedPointLength = typenum::U65;
 
     fn zero() -> Secp256k1Point {
         Secp256k1Point {
@@ -397,17 +397,17 @@ impl ECPoint for Secp256k1Point {
         }
     }
 
-    fn serialize_compressed(&self) -> Self::CompressedPoint {
+    fn serialize_compressed(&self) -> GenericArray<u8, Self::CompressedPointLength> {
         match self.ge {
-            None => [0u8; 33],
-            Some(ge) => ge.serialize(),
+            None => *GenericArray::from_slice(&[0u8; 33]),
+            Some(ge) => *GenericArray::from_slice(&ge.serialize()),
         }
     }
 
-    fn serialize_uncompressed(&self) -> Self::UncompressedPoint {
+    fn serialize_uncompressed(&self) -> GenericArray<u8, Self::UncompressedPointLength> {
         match self.ge {
-            None => [0u8; 65],
-            Some(ge) => ge.serialize_uncompressed(),
+            None => *GenericArray::from_slice(&[0u8; 65]),
+            Some(ge) => *GenericArray::from_slice(&ge.serialize_uncompressed()),
         }
     }
 

@@ -223,8 +223,8 @@ impl ECPoint for Secp256r1Point {
     type Scalar = Secp256r1Scalar;
     type Underlying = PK;
 
-    type CompressedPoint = EncodedPoint;
-    type UncompressedPoint = EncodedPoint;
+    type CompressedPointLength = typenum::U33;
+    type UncompressedPointLength = typenum::U65;
 
     fn zero() -> Secp256r1Point {
         Secp256r1Point {
@@ -280,20 +280,35 @@ impl ECPoint for Secp256r1Point {
         Some(PointCoords { x, y })
     }
 
-    fn serialize_compressed(&self) -> Self::CompressedPoint {
-        self.ge.to_encoded_point(true)
+    fn serialize_compressed(&self) -> GenericArray<u8, Self::CompressedPointLength> {
+        if self.is_zero() {
+            *GenericArray::from_slice(&[0u8; 33])
+        } else {
+            *GenericArray::from_slice(self.ge.to_encoded_point(true).as_ref())
+        }
     }
 
-    fn serialize_uncompressed(&self) -> Self::UncompressedPoint {
-        self.ge.to_encoded_point(false)
+    fn serialize_uncompressed(&self) -> GenericArray<u8, Self::UncompressedPointLength> {
+        if self.is_zero() {
+            *GenericArray::from_slice(&[0u8; 65])
+        } else {
+            *GenericArray::from_slice(self.ge.to_encoded_point(false).as_ref())
+        }
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError> {
-        let encoded = EncodedPoint::from_bytes(bytes).map_err(|_| DeserializationError)?;
-        Ok(Secp256r1Point {
-            purpose: "deserialize",
-            ge: AffinePoint::from_encoded_point(&encoded).ok_or(DeserializationError)?,
-        })
+        if bytes == [0; 33] || bytes == [0; 65] {
+            Ok(Secp256r1Point {
+                purpose: "deserialize",
+                ge: Self::zero().ge,
+            })
+        } else {
+            let encoded = EncodedPoint::from_bytes(bytes).map_err(|_| DeserializationError)?;
+            Ok(Secp256r1Point {
+                purpose: "deserialize",
+                ge: AffinePoint::from_encoded_point(&encoded).ok_or(DeserializationError)?,
+            })
+        }
     }
 
     fn check_point_order_equals_group_order(&self) -> bool {
