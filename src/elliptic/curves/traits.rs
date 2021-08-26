@@ -7,7 +7,9 @@
 
 use std::fmt;
 
+use generic_array::{ArrayLength, GenericArray};
 use serde::{Deserialize, Serialize};
+use typenum::Unsigned;
 use zeroize::Zeroize;
 
 use crate::BigInt;
@@ -37,8 +39,9 @@ pub trait ECScalar: Clone + PartialEq + fmt::Debug + 'static {
     /// Underlying scalar type that can be retrieved in case of missing methods in this trait
     type Underlying;
 
-    /// Serialized scalar
-    type ScalarBytes: AsRef<[u8]>;
+    // TODO: Replace with const generics once https://github.com/rust-lang/rust/issues/60551 is resolved
+    /// The byte length of serialized scalar
+    type ScalarLength: ArrayLength<u8> + Unsigned;
 
     /// Samples a random scalar
     fn random() -> Self;
@@ -55,7 +58,7 @@ pub trait ECScalar: Clone + PartialEq + fmt::Debug + 'static {
     /// Converts a scalar to BigInt
     fn to_bigint(&self) -> BigInt;
     /// Serializes scalar into bytes
-    fn serialize(&self) -> Self::ScalarBytes;
+    fn serialize(&self) -> GenericArray<u8, Self::ScalarLength>;
     /// Deserializes scalar from bytes
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError>;
 
@@ -114,14 +117,10 @@ pub trait ECPoint: Zeroize + Clone + PartialEq + fmt::Debug + 'static {
     /// Underlying curve implementation that can be retrieved in case of missing methods in this trait
     type Underlying;
 
-    /// Point serialized in compressed form
-    ///
-    /// Usually represented as byte array `[u8; COMPRESSED_LEN]`
-    type CompressedPoint: AsRef<[u8]>;
-    /// Point serialized in uncompressed form
-    ///
-    /// Usually represented as byte array `[u8; UNCOMPRESSED_LEN]`
-    type UncompressedPoint: AsRef<[u8]>;
+    /// The byte length of point serialized in compressed form
+    type CompressedPointLength: ArrayLength<u8> + Unsigned;
+    /// The byte length of point serialized in uncompressed form
+    type UncompressedPointLength: ArrayLength<u8> + Unsigned;
 
     /// Zero point
     ///
@@ -164,11 +163,11 @@ pub trait ECPoint: Zeroize + Clone + PartialEq + fmt::Debug + 'static {
     /// Serializes point into bytes in compressed
     ///
     /// Serialization must always succeed even if it's point at infinity.
-    fn serialize_compressed(&self) -> Self::CompressedPoint;
+    fn serialize_compressed(&self) -> GenericArray<u8, Self::CompressedPointLength>;
     /// Serializes point into bytes in uncompressed
     ///
     /// Serialization must always succeed even if it's point at infinity.
-    fn serialize_uncompressed(&self) -> Self::UncompressedPoint;
+    fn serialize_uncompressed(&self) -> GenericArray<u8, Self::UncompressedPointLength>;
     /// Deserializes point from bytes
     ///
     /// Whether point in compressed or uncompressed form will be deducted from its size

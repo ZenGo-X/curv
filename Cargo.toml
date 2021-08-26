@@ -19,6 +19,8 @@ blake2b_simd = "0.5.7"
 cryptoxide = "0.1.2"
 curve25519-dalek = "3"
 digest = "0.9"
+generic-array = "0.14"
+typenum = "1.13"
 ff-zeroize = "0.6.3"
 hex = { version = "0.4", features = ["serde"] }
 hmac = "0.11"

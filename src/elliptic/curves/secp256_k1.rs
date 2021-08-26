@@ -21,6 +21,7 @@ use std::ops::Deref;
 use std::ptr;
 use std::sync::atomic;
 
+use generic_array::GenericArray;
 use secp256k1::constants::{
     self, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
@@ -155,7 +156,7 @@ type FE = Secp256k1Scalar;
 impl ECScalar for Secp256k1Scalar {
     type Underlying = Option<SK>;
 
-    type ScalarBytes = [u8; 32];
+    type ScalarLength = typenum::U32;
 
     fn random() -> Secp256k1Scalar {
         let sk = SK(SecretKey::new(&mut rand_legacy::thread_rng()));
@@ -203,10 +204,10 @@ impl ECScalar for Secp256k1Scalar {
         }
     }
 
-    fn serialize(&self) -> Self::ScalarBytes {
+    fn serialize(&self) -> GenericArray<u8, Self::ScalarLength> {
         match &*self.fe {
-            Some(s) => *s.as_ref(),
-            None => [0u8; 32],
+            Some(s) => GenericArray::from(*s.as_ref()),
+            None => GenericArray::from([0u8; 32]),
         }
     }
 
@@ -317,8 +318,8 @@ impl ECPoint for Secp256k1Point {
     type Scalar = Secp256k1Scalar;
     type Underlying = Option<PK>;
 
-    type CompressedPoint = [u8; 33];
-    type UncompressedPoint = [u8; 65];
+    type CompressedPointLength = typenum::U33;
+    type UncompressedPointLength = typenum::U65;
 
     fn zero() -> Secp256k1Point {
         Secp256k1Point {
@@ -396,17 +397,17 @@ impl ECPoint for Secp256k1Point {
         }
     }
 
-    fn serialize_compressed(&self) -> Self::CompressedPoint {
+    fn serialize_compressed(&self) -> GenericArray<u8, Self::CompressedPointLength> {
         match self.ge {
-            None => [0u8; 33],
-            Some(ge) => ge.serialize(),
+            None => *GenericArray::from_slice(&[0u8; 33]),
+            Some(ge) => *GenericArray::from_slice(&ge.serialize()),
         }
     }
 
-    fn serialize_uncompressed(&self) -> Self::UncompressedPoint {
+    fn serialize_uncompressed(&self) -> GenericArray<u8, Self::UncompressedPointLength> {
         match self.ge {
-            None => [0u8; 65],
-            Some(ge) => ge.serialize_uncompressed(),
+            None => *GenericArray::from_slice(&[0u8; 65]),
+            Some(ge) => *GenericArray::from_slice(&ge.serialize_uncompressed()),
         }
     }
 

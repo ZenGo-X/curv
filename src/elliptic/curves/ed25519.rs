@@ -9,14 +9,11 @@
 // based on https://docs.rs/cryptoxide/0.1.0/cryptoxide/curve25519/index.html
 // https://cr.yp.to/ecdh/curve25519-20060209.pdf
 
-use std::fmt;
-use std::fmt::Debug;
-use std::ops;
-use std::ptr;
-use std::str;
 use std::sync::atomic;
+use std::{fmt, ops, ptr, str};
 
 use cryptoxide::curve25519::*;
+use generic_array::GenericArray;
 use zeroize::{Zeroize, Zeroizing};
 
 use crate::arithmetic::traits::*;
@@ -126,7 +123,7 @@ impl Curve for Ed25519 {
 impl ECScalar for Ed25519Scalar {
     type Underlying = SK;
 
-    type ScalarBytes = [u8; 32];
+    type ScalarLength = typenum::U32;
 
     // we chose to multiply by 8 (co-factor) all group elements to work in the prime order sub group.
     // each random fe is having its 3 first bits zeroed
@@ -173,8 +170,8 @@ impl ECScalar for Ed25519Scalar {
         BigInt::from_bytes(&t)
     }
 
-    fn serialize(&self) -> Self::ScalarBytes {
-        self.fe.to_bytes()
+    fn serialize(&self) -> GenericArray<u8, Self::ScalarLength> {
+        GenericArray::from(self.fe.to_bytes())
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError> {
@@ -264,7 +261,7 @@ impl ECScalar for Ed25519Scalar {
     }
 }
 
-impl Debug for Ed25519Scalar {
+impl fmt::Debug for Ed25519Scalar {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -281,7 +278,7 @@ impl PartialEq for Ed25519Scalar {
     }
 }
 
-impl Debug for Ed25519Point {
+impl fmt::Debug for Ed25519Point {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -309,8 +306,8 @@ impl ECPoint for Ed25519Point {
     type Underlying = PK;
     type Scalar = Ed25519Scalar;
 
-    type CompressedPoint = [u8; 32];
-    type UncompressedPoint = [u8; 32];
+    type CompressedPointLength = typenum::U32;
+    type UncompressedPointLength = typenum::U32;
 
     fn zero() -> Ed25519Point {
         *ZERO
@@ -365,12 +362,12 @@ impl ECPoint for Ed25519Point {
         Some(PointCoords { x: xrecover(&y), y })
     }
 
-    fn serialize_compressed(&self) -> Self::CompressedPoint {
-        self.ge.to_bytes()
+    fn serialize_compressed(&self) -> GenericArray<u8, Self::CompressedPointLength> {
+        GenericArray::from(self.ge.to_bytes())
     }
 
-    fn serialize_uncompressed(&self) -> Self::UncompressedPoint {
-        self.ge.to_bytes()
+    fn serialize_uncompressed(&self) -> GenericArray<u8, Self::UncompressedPointLength> {
+        GenericArray::from(self.ge.to_bytes())
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Ed25519Point, DeserializationError> {

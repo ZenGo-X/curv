@@ -4,10 +4,12 @@
     (https://github.com/KZen-networks/curv)
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
+
 use blake2b_simd::{Params, State};
+use typenum::Unsigned;
 
 use crate::arithmetic::traits::*;
-use crate::elliptic::curves::{Curve, Point, Scalar};
+use crate::elliptic::curves::{Curve, ECScalar, Point, Scalar};
 use crate::BigInt;
 
 /// Wrapper over [blake2b_simd](blake2b_simd::State) exposing facilities to hash bigints, elliptic points,
@@ -17,9 +19,13 @@ pub struct Blake {
 }
 
 impl Blake {
+    const HASH_LENGTH: usize = 64;
     pub fn with_personal(persona: &[u8]) -> Self {
         Self {
-            state: Params::new().hash_length(64).personal(persona).to_state(),
+            state: Params::new()
+                .hash_length(Self::HASH_LENGTH)
+                .personal(persona)
+                .to_state(),
         }
     }
 
@@ -38,8 +44,22 @@ impl Blake {
     }
 
     pub fn result_scalar<E: Curve>(&self) -> Scalar<E> {
-        let n = self.result_bigint();
-        Scalar::from_bigint(&n)
+        let scalar_len = <<E::Scalar as ECScalar>::ScalarLength as Unsigned>::to_usize();
+        assert!(
+            Self::HASH_LENGTH >= scalar_len,
+            "Output size of the hash({}) is smaller than the scalar length({})",
+            Self::HASH_LENGTH,
+            scalar_len
+        );
+        // Try and increment.
+        for i in 0u32.. {
+            let mut starting_state = self.state.clone();
+            let hash = starting_state.update(&i.to_be_bytes()).finalize();
+            if let Ok(scalar) = Scalar::from_bytes(&hash.as_bytes()[..scalar_len]) {
+                return scalar;
+            }
+        }
+        unreachable!("The probably of this reaching is extremely small ((2^n-q)/(2^n))^(2^32)")
     }
 
     #[deprecated(

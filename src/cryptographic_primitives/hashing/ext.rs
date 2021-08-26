@@ -1,9 +1,10 @@
 use digest::Digest;
 use hmac::crypto_mac::MacError;
 use hmac::{Hmac, Mac, NewMac};
+use typenum::Unsigned;
 
 use crate::arithmetic::*;
-use crate::elliptic::curves::{Curve, Point, Scalar};
+use crate::elliptic::curves::{Curve, ECScalar, Point, Scalar};
 
 /// [Digest] extension allowing to hash elliptic points, scalars, and bigints
 ///
@@ -82,7 +83,7 @@ pub trait DigestExt {
 
 impl<D> DigestExt for D
 where
-    D: Digest,
+    D: Digest + Clone,
 {
     fn input_bigint(&mut self, n: &BigInt) {
         self.update(&n.to_bytes())
@@ -102,8 +103,22 @@ where
     }
 
     fn result_scalar<E: Curve>(self) -> Scalar<E> {
-        let n = self.result_bigint();
-        Scalar::from_bigint(&n)
+        let scalar_len = <<E::Scalar as ECScalar>::ScalarLength as Unsigned>::to_usize();
+        assert!(
+            Self::output_size() >= scalar_len,
+            "Output size of the hash({}) is smaller than the scalar length({})",
+            Self::output_size(),
+            scalar_len
+        );
+        // Try and increment.
+        for i in 0u32.. {
+            let starting_state = self.clone();
+            let hash = starting_state.chain(i.to_be_bytes()).finalize();
+            if let Ok(scalar) = Scalar::from_bytes(&hash[..scalar_len]) {
+                return scalar;
+            }
+        }
+        unreachable!("The probably of this reaching is extremely small ((2^n-q)/(2^n))^(2^32)")
     }
 
     fn digest_bigint(bytes: &[u8]) -> BigInt {

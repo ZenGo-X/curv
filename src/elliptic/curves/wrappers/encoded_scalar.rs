@@ -1,10 +1,12 @@
 use std::ops::Deref;
 
+use generic_array::GenericArray;
+
 use crate::elliptic::curves::{Curve, ECScalar, Scalar};
 
 /// Encoded scalar
 pub struct EncodedScalar<E: Curve> {
-    bytes: <E::Scalar as ECScalar>::ScalarBytes,
+    bytes: GenericArray<u8, <E::Scalar as ECScalar>::ScalarLength>,
 }
 
 impl<E: Curve> Deref for EncodedScalar<E> {

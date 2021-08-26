@@ -1,6 +1,7 @@
 use std::fmt;
 
 use ff_zeroize::{Field, PrimeField, PrimeFieldRepr, ScalarEngine};
+use generic_array::GenericArray;
 use pairing_plus::bls12_381::{Fr, FrRepr};
 use rand::rngs::OsRng;
 use zeroize::Zeroizing;
@@ -38,7 +39,7 @@ pub struct FieldScalar {
 impl ECScalar for FieldScalar {
     type Underlying = SK;
 
-    type ScalarBytes = [u8; 32];
+    type ScalarLength = typenum::U32;
 
     fn random() -> FieldScalar {
         FieldScalar {
@@ -75,11 +76,11 @@ impl ECScalar for FieldScalar {
         BigInt::from_bytes(&bytes)
     }
 
-    fn serialize(&self) -> Self::ScalarBytes {
+    fn serialize(&self) -> GenericArray<u8, Self::ScalarLength> {
         let repr = self.fe.into_repr();
         let mut bytes = [0u8; SECRET_KEY_SIZE];
         repr.write_be(&mut bytes[..]).unwrap();
-        bytes
+        GenericArray::from(bytes)
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError> {
@@ -90,7 +91,7 @@ impl ECScalar for FieldScalar {
         repr.read_be(bytes.as_ref()).unwrap();
         Ok(FieldScalar {
             purpose: "deserialize",
-            fe: Fr::from_repr(repr).unwrap().into(),
+            fe: Fr::from_repr(repr).or(Err(DeserializationError))?.into(),
         })
     }
 

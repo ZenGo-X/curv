@@ -1,13 +1,15 @@
 use std::ops::Deref;
 
+use generic_array::GenericArray;
+
 use crate::elliptic::curves::{Curve, ECPoint};
 
 /// Point encoded in (un)compressed form
 pub struct EncodedPoint<E: Curve>(pub(super) EncodedPointChoice<E>);
 
 pub(super) enum EncodedPointChoice<E: Curve> {
-    Compressed(<E::Point as ECPoint>::CompressedPoint),
-    Uncompressed(<E::Point as ECPoint>::UncompressedPoint),
+    Compressed(GenericArray<u8, <E::Point as ECPoint>::CompressedPointLength>),
+    Uncompressed(GenericArray<u8, <E::Point as ECPoint>::UncompressedPointLength>),
 }
 
 impl<E: Curve> Deref for EncodedPoint<E> {

@@ -8,6 +8,7 @@
 use std::fmt;
 
 use ff_zeroize::{PrimeField, ScalarEngine};
+use generic_array::GenericArray;
 use pairing_plus::bls12_381::{G2Compressed, G2Uncompressed, G2};
 use pairing_plus::hash_to_curve::HashToCurve;
 use pairing_plus::hash_to_field::ExpandMsgXmd;
@@ -79,8 +80,8 @@ impl ECPoint for G2Point {
     type Scalar = FieldScalar;
     type Underlying = PK;
 
-    type CompressedPoint = G2Compressed;
-    type UncompressedPoint = G2Uncompressed;
+    type CompressedPointLength = typenum::U96;
+    type UncompressedPointLength = typenum::U192;
 
     fn zero() -> G2Point {
         G2Point {
@@ -157,12 +158,12 @@ impl ECPoint for G2Point {
         }
     }
 
-    fn serialize_compressed(&self) -> Self::CompressedPoint {
-        G2Compressed::from_affine(self.ge)
+    fn serialize_compressed(&self) -> GenericArray<u8, Self::CompressedPointLength> {
+        *GenericArray::from_slice(G2Compressed::from_affine(self.ge).as_ref())
     }
 
-    fn serialize_uncompressed(&self) -> Self::UncompressedPoint {
-        G2Uncompressed::from_affine(self.ge)
+    fn serialize_uncompressed(&self) -> GenericArray<u8, Self::UncompressedPointLength> {
+        *GenericArray::from_slice(G2Uncompressed::from_affine(self.ge).as_ref())
     }
 
     fn deserialize(bytes: &[u8]) -> Result<G2Point, DeserializationError> {
@@ -292,7 +293,8 @@ mod tests {
         // Generate base_point2
         let cs = &[1u8];
         let msg = &[1u8];
-        let point = <G2 as HashToCurve<ExpandMsgXmd<old_sha2::Sha256>>>::hash_to_curve(msg, cs).into_affine();
+        let point = <G2 as HashToCurve<ExpandMsgXmd<old_sha2::Sha256>>>::hash_to_curve(msg, cs)
+            .into_affine();
         assert!(point.in_subgroup());
 
         // Print in uncompressed form

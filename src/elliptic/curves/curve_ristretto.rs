@@ -13,6 +13,7 @@ use std::sync::atomic;
 use curve25519_dalek::constants::{BASEPOINT_ORDER, RISTRETTO_BASEPOINT_POINT};
 use curve25519_dalek::ristretto::CompressedRistretto;
 use curve25519_dalek::traits::{Identity, IsIdentity};
+use generic_array::GenericArray;
 use rand::thread_rng;
 use sha2::{Digest, Sha256};
 use zeroize::{Zeroize, Zeroizing};
@@ -83,7 +84,7 @@ impl Curve for Ristretto {
 impl ECScalar for RistrettoScalar {
     type Underlying = SK;
 
-    type ScalarBytes = [u8; 32];
+    type ScalarLength = typenum::U32;
 
     fn random() -> RistrettoScalar {
         RistrettoScalar {
@@ -118,8 +119,8 @@ impl ECScalar for RistrettoScalar {
         BigInt::from_bytes(&t)
     }
 
-    fn serialize(&self) -> Self::ScalarBytes {
-        self.fe.to_bytes()
+    fn serialize(&self) -> GenericArray<u8, Self::ScalarLength> {
+        GenericArray::from(self.fe.to_bytes())
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError> {
@@ -209,8 +210,8 @@ impl ECPoint for RistrettoPoint {
     type Scalar = RistrettoScalar;
     type Underlying = PK;
 
-    type CompressedPoint = [u8; 32];
-    type UncompressedPoint = [u8; 32];
+    type CompressedPointLength = typenum::U32;
+    type UncompressedPointLength = typenum::U32;
 
     fn zero() -> RistrettoPoint {
         RistrettoPoint {
@@ -253,12 +254,12 @@ impl ECPoint for RistrettoPoint {
         None
     }
 
-    fn serialize_compressed(&self) -> Self::CompressedPoint {
-        self.ge.compress().to_bytes()
+    fn serialize_compressed(&self) -> GenericArray<u8, Self::CompressedPointLength> {
+        GenericArray::from(self.ge.compress().to_bytes())
     }
 
-    fn serialize_uncompressed(&self) -> Self::UncompressedPoint {
-        self.ge.compress().to_bytes()
+    fn serialize_uncompressed(&self) -> GenericArray<u8, Self::UncompressedPointLength> {
+        GenericArray::from(self.ge.compress().to_bytes())
     }
 
     fn deserialize(bytes: &[u8]) -> Result<RistrettoPoint, DeserializationError> {
