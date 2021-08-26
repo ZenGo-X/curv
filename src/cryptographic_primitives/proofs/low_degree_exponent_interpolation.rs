@@ -79,7 +79,7 @@ impl<E: Curve> LdeiProof<E> {
         statement: &LdeiStatement<E>,
     ) -> Result<LdeiProof<E>, InvalidLdeiStatement>
     where
-        H: Digest,
+        H: Digest + Clone,
     {
         if statement.alpha.len() != statement.g.len() {
             return Err(InvalidLdeiStatement::AlphaLengthDoesntMatchG);
@@ -129,7 +129,7 @@ impl<E: Curve> LdeiProof<E> {
     /// true, otherwise rejects.
     pub fn verify<H>(&self, statement: &LdeiStatement<E>) -> Result<(), ProofError>
     where
-        H: Digest,
+        H: Digest + Clone,
     {
         let e = H::new()
             .chain_points(&statement.g)
