@@ -180,12 +180,15 @@ impl ECScalar for Secp256r1Scalar {
     }
 
     fn add_assign(&mut self, other: &Self) {
+        self.purpose = "add_assign";
         *self.fe += &*other.fe
     }
     fn mul_assign(&mut self, other: &Self) {
+        self.purpose = "mul_assign";
         *self.fe *= &*other.fe
     }
     fn sub_assign(&mut self, other: &Self) {
+        self.purpose = "sub_assign";
         *self.fe -= &*other.fe
     }
 

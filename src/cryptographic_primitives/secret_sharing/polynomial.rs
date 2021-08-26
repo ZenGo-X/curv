@@ -230,6 +230,55 @@ impl<E: Curve> Polynomial<E> {
     pub fn coefficients(&self) -> &[Scalar<E>] {
         &self.coefficients
     }
+
+    /// Evaluates lagrange basis polynomial `l_j(x, xs)`
+    ///
+    /// Lagrange basis polynomials are mainly used for Lagrange interpolation, ie. calculating `L(x)`
+    /// where polynomial `L` is defined as set of `t+1` distinct points `(x_i, y_i)` (`t = deg(f)`).
+    /// [Example] section shows how Lagrange interpolation can be implemented using this function.
+    ///
+    /// [Example]: Self::lagrange_basis#example
+    ///
+    /// ## Panics
+    /// This function will panic if elements in `xs` are not pairwise distinct, or `j >= xs.len()`
+    ///
+    /// ## Example
+    /// If you have polynomial `f` defined as `t+1` points `(x_0, y_0), ..., (x_t, y_t)` (and polynomial
+    /// degree is `t`), then you can, for instance, calculate `f(15)`:
+    ///
+    /// ```rust
+    /// use curv::cryptographic_primitives::secret_sharing::Polynomial;
+    /// # use curv::elliptic::curves::*;
+    ///
+    /// # let t = 3;
+    /// # let f = Polynomial::<Secp256r1>::sample_exact(t);
+    /// # let (x_0, x_1, x_2, x_3) = (Scalar::from(1), Scalar::from(2), Scalar::from(3), Scalar::from(4));
+    /// # let (y_0, y_1, y_2, y_3) = (f.evaluate(&x_0), f.evaluate(&x_1), f.evaluate(&x_2), f.evaluate(&x_3));
+    /// let xs = &[x_0, x_1, x_2, x_3];
+    /// let ys = &[y_0, y_1, y_2, y_3];
+    ///
+    /// let f_15: Scalar<_> = (0..).zip(ys)
+    ///     .map(|(j, y_j)| y_j * Polynomial::lagrange_basis(&Scalar::from(15), j, xs))
+    ///     .sum();
+    /// assert_eq!(f_15, f.evaluate(&Scalar::from(15)));
+    /// ```
+    pub fn lagrange_basis(x: &Scalar<E>, j: u16, xs: &[Scalar<E>]) -> Scalar<E> {
+        let x_j = &xs[usize::from(j)];
+        let num: Scalar<E> = (0u16..)
+            .zip(xs)
+            .filter(|(m, _)| *m != j)
+            .map(|(_, x_m)| x - x_m)
+            .product();
+        let denum: Scalar<E> = (0u16..)
+            .zip(xs)
+            .filter(|(m, _)| *m != j)
+            .map(|(_, x_m)| x_j - x_m)
+            .product();
+        let denum = denum
+            .invert()
+            .expect("elements in xs are not pairwise distinct");
+        num * denum
+    }
 }
 
 /// Multiplies polynomial `f(x)` at scalar `s`, returning resulting polynomial `g(x) = s * f(x)`

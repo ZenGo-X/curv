@@ -242,37 +242,16 @@ impl<E: Curve> VerifiableSS<E> {
     //compute \lambda_{index,S}, a lagrangian coefficient that change the (t,n) scheme to (|S|,|S|)
     // used in http://stevengoldfeder.com/papers/GG18.pdf
     pub fn map_share_to_new_params(
-        params: &ShamirSecretSharing,
+        _params: &ShamirSecretSharing,
         index: u16,
         s: &[u16],
     ) -> Scalar<E> {
-        let s_len = s.len();
-        //     assert!(s_len > self.reconstruct_limit());
-        // add one to indices to get points
-        let points: Vec<Scalar<E>> = (0..params.share_count)
-            .map(|i| Scalar::from(i + 1))
-            .collect();
-
-        let xi = &points[usize::from(index)];
-        let num = Scalar::from(1);
-        let denum = Scalar::from(1);
-        let num = (0..s_len).fold(num, |acc, i| {
-            if s[i] != index {
-                acc * &points[usize::from(s[i])]
-            } else {
-                acc
-            }
-        });
-        let denum = (0..s_len).fold(denum, |acc, i| {
-            if s[i] != index {
-                let xj_sub_xi = &points[usize::from(s[i])] - xi;
-                acc * xj_sub_xi
-            } else {
-                acc
-            }
-        });
-        let denum = denum.invert().unwrap();
-        num * denum
+        let j = (0u16..)
+            .zip(s)
+            .find_map(|(j, s_j)| if *s_j == index { Some(j) } else { None })
+            .expect("`s` doesn't include `index`");
+        let xs = s.iter().map(|x| Scalar::from(*x + 1)).collect::<Vec<_>>();
+        Polynomial::lagrange_basis(&Scalar::zero(), j, &xs)
     }
 }
 
