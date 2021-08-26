@@ -21,12 +21,12 @@ use std::ops::Deref;
 use std::ptr;
 use std::sync::atomic;
 
+use generic_array::GenericArray;
 use secp256k1::constants::{
     self, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
 use secp256k1::{PublicKey, SecretKey, SECP256K1};
 use serde::{Deserialize, Serialize};
-use static_assertions::const_assert_eq;
 use zeroize::{Zeroize, Zeroizing};
 
 use crate::arithmetic::*;
@@ -153,15 +153,10 @@ pub struct Secp256k1Point {
 type GE = Secp256k1Point;
 type FE = Secp256k1Scalar;
 
-const_assert_eq!(
-    core::mem::size_of::<<Secp256k1Scalar as ECScalar>::ScalarBytes>(),
-    <Secp256k1Scalar as ECScalar>::SCALAR_LENGTH
-);
 impl ECScalar for Secp256k1Scalar {
     type Underlying = Option<SK>;
 
-    const SCALAR_LENGTH: usize = 32;
-    type ScalarBytes = [u8; Self::SCALAR_LENGTH];
+    type ScalarLength = typenum::U32;
 
     fn random() -> Secp256k1Scalar {
         let sk = SK(SecretKey::new(&mut rand_legacy::thread_rng()));
@@ -209,10 +204,10 @@ impl ECScalar for Secp256k1Scalar {
         }
     }
 
-    fn serialize(&self) -> Self::ScalarBytes {
+    fn serialize(&self) -> GenericArray<u8, Self::ScalarLength> {
         match &*self.fe {
-            Some(s) => *s.as_ref(),
-            None => [0u8; 32],
+            Some(s) => GenericArray::from(*s.as_ref()),
+            None => GenericArray::from([0u8; 32]),
         }
     }
 

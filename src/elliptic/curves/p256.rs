@@ -1,19 +1,21 @@
 // NIST P-256 elliptic curve utility functions.
 
+use std::convert::TryFrom;
+
+use p256::elliptic_curve::group::ff::PrimeField;
 use p256::elliptic_curve::group::prime::PrimeCurveAffine;
 use p256::elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint};
 use p256::{AffinePoint, EncodedPoint, FieldBytes, ProjectivePoint, Scalar};
 
+use generic_array::GenericArray;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
-use static_assertions::const_assert_eq;
 use zeroize::Zeroize;
 
 use super::traits::{ECPoint, ECScalar};
 use crate::arithmetic::traits::*;
 use crate::elliptic::curves::{Curve, DeserializationError, NotOnCurve, PointCoords};
 use crate::BigInt;
-use p256::elliptic_curve::group::ff::PrimeField;
 
 lazy_static::lazy_static! {
     static ref GROUP_ORDER: BigInt = BigInt::from_bytes(&GROUP_ORDER_BYTES);
@@ -82,15 +84,10 @@ impl Curve for Secp256r1 {
     const CURVE_NAME: &'static str = "secp256r1";
 }
 
-const_assert_eq!(
-    core::mem::size_of::<<Secp256r1Scalar as ECScalar>::ScalarBytes>(),
-    <Secp256r1Scalar as ECScalar>::SCALAR_LENGTH
-);
 impl ECScalar for Secp256r1Scalar {
     type Underlying = SK;
 
-    const SCALAR_LENGTH: usize = 32;
-    type ScalarBytes = FieldBytes;
+    type ScalarLength = typenum::U32;
 
     fn random() -> Secp256r1Scalar {
         let mut rng = thread_rng();
@@ -135,15 +132,13 @@ impl ECScalar for Secp256r1Scalar {
         BigInt::from_bytes(self.fe.to_bytes().as_slice())
     }
 
-    fn serialize(&self) -> Self::ScalarBytes {
+    fn serialize(&self) -> GenericArray<u8, Self::ScalarLength> {
         self.fe.to_bytes()
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError> {
-        if bytes.len() != 32 {
-            return Err(DeserializationError);
-        }
-        let bytes = *FieldBytes::from_slice(bytes);
+        let bytes = <[u8; 32]>::try_from(bytes).or(Err(DeserializationError))?;
+        let bytes = FieldBytes::from(bytes);
         Ok(Secp256r1Scalar {
             purpose: "deserialize",
             fe: Scalar::from_repr(bytes).ok_or(DeserializationError)?.into(),

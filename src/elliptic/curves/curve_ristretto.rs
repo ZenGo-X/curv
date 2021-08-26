@@ -13,9 +13,9 @@ use std::sync::atomic;
 use curve25519_dalek::constants::{BASEPOINT_ORDER, RISTRETTO_BASEPOINT_POINT};
 use curve25519_dalek::ristretto::CompressedRistretto;
 use curve25519_dalek::traits::{Identity, IsIdentity};
+use generic_array::GenericArray;
 use rand::thread_rng;
 use sha2::{Digest, Sha256};
-use static_assertions::const_assert_eq;
 use zeroize::{Zeroize, Zeroizing};
 
 use crate::arithmetic::*;
@@ -81,15 +81,10 @@ impl Curve for Ristretto {
     const CURVE_NAME: &'static str = "ristretto";
 }
 
-const_assert_eq!(
-    core::mem::size_of::<<RistrettoScalar as ECScalar>::ScalarBytes>(),
-    <RistrettoScalar as ECScalar>::SCALAR_LENGTH
-);
 impl ECScalar for RistrettoScalar {
     type Underlying = SK;
 
-    const SCALAR_LENGTH: usize = 32;
-    type ScalarBytes = [u8; Self::SCALAR_LENGTH];
+    type ScalarLength = typenum::U32;
 
     fn random() -> RistrettoScalar {
         RistrettoScalar {
@@ -124,8 +119,8 @@ impl ECScalar for RistrettoScalar {
         BigInt::from_bytes(&t)
     }
 
-    fn serialize(&self) -> Self::ScalarBytes {
-        self.fe.to_bytes()
+    fn serialize(&self) -> GenericArray<u8, Self::ScalarLength> {
+        GenericArray::from(self.fe.to_bytes())
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError> {

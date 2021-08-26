@@ -19,6 +19,8 @@ blake2b_simd = "0.5.7"
 cryptoxide = "0.1.2"
 curve25519-dalek = "3"
 digest = "0.9"
+generic-array = "0.14"
+typenum = "1.13"
 ff-zeroize = "0.6.3"
 hex = { version = "0.4", features = ["serde"] }
 hmac = "0.11"
@@ -38,7 +40,6 @@ sha2 = "0.9"
 sha3 = "0.9"
 old_sha2 = { package = "sha2", version = "0.8" }
 zeroize = "1"
-static_assertions = "1"
 
 rust-gmp-kzen = { version = "0.5", features = ["serde_support"], optional = true }
 num-bigint = { version = "0.4", features = ["serde"], optional = true }

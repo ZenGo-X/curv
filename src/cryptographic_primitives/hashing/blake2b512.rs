@@ -4,7 +4,9 @@
     (https://github.com/KZen-networks/curv)
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
+
 use blake2b_simd::{Params, State};
+use typenum::Unsigned;
 
 use crate::arithmetic::traits::*;
 use crate::elliptic::curves::{Curve, ECScalar, Point, Scalar};
@@ -42,7 +44,7 @@ impl Blake {
     }
 
     pub fn result_scalar<E: Curve>(&self) -> Scalar<E> {
-        let scalar_len = E::Scalar::SCALAR_LENGTH;
+        let scalar_len = <<E::Scalar as ECScalar>::ScalarLength as Unsigned>::to_usize();
         assert!(
             Self::HASH_LENGTH >= scalar_len,
             "Output size of the hash({}) is smaller than the scalar length({})",

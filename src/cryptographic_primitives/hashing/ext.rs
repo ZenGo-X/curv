@@ -1,6 +1,7 @@
 use digest::Digest;
 use hmac::crypto_mac::MacError;
 use hmac::{Hmac, Mac, NewMac};
+use typenum::Unsigned;
 
 use crate::arithmetic::*;
 use crate::elliptic::curves::{Curve, ECScalar, Point, Scalar};
@@ -102,7 +103,7 @@ where
     }
 
     fn result_scalar<E: Curve>(self) -> Scalar<E> {
-        let scalar_len = E::Scalar::SCALAR_LENGTH;
+        let scalar_len = <<E::Scalar as ECScalar>::ScalarLength as Unsigned>::to_usize();
         assert!(
             Self::output_size() >= scalar_len,
             "Output size of the hash({}) is smaller than the scalar length({})",

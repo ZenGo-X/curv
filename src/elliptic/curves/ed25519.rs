@@ -9,15 +9,11 @@
 // based on https://docs.rs/cryptoxide/0.1.0/cryptoxide/curve25519/index.html
 // https://cr.yp.to/ecdh/curve25519-20060209.pdf
 
-use std::fmt;
-use std::fmt::Debug;
-use std::ops;
-use std::ptr;
-use std::str;
 use std::sync::atomic;
+use std::{fmt, ops, ptr, str};
 
 use cryptoxide::curve25519::*;
-use static_assertions::const_assert_eq;
+use generic_array::GenericArray;
 use zeroize::{Zeroize, Zeroizing};
 
 use crate::arithmetic::traits::*;
@@ -124,15 +120,10 @@ impl Curve for Ed25519 {
     const CURVE_NAME: &'static str = "ed25519";
 }
 
-const_assert_eq!(
-    core::mem::size_of::<<Ed25519Scalar as ECScalar>::ScalarBytes>(),
-    <Ed25519Scalar as ECScalar>::SCALAR_LENGTH
-);
 impl ECScalar for Ed25519Scalar {
     type Underlying = SK;
 
-    const SCALAR_LENGTH: usize = 32;
-    type ScalarBytes = [u8; Self::SCALAR_LENGTH];
+    type ScalarLength = typenum::U32;
 
     // we chose to multiply by 8 (co-factor) all group elements to work in the prime order sub group.
     // each random fe is having its 3 first bits zeroed
@@ -179,8 +170,8 @@ impl ECScalar for Ed25519Scalar {
         BigInt::from_bytes(&t)
     }
 
-    fn serialize(&self) -> Self::ScalarBytes {
-        self.fe.to_bytes()
+    fn serialize(&self) -> GenericArray<u8, Self::ScalarLength> {
+        GenericArray::from(self.fe.to_bytes())
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError> {
@@ -270,7 +261,7 @@ impl ECScalar for Ed25519Scalar {
     }
 }
 
-impl Debug for Ed25519Scalar {
+impl fmt::Debug for Ed25519Scalar {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -287,7 +278,7 @@ impl PartialEq for Ed25519Scalar {
     }
 }
 
-impl Debug for Ed25519Point {
+impl fmt::Debug for Ed25519Point {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,

@@ -7,7 +7,9 @@
 
 use std::fmt;
 
+use generic_array::{ArrayLength, GenericArray};
 use serde::{Deserialize, Serialize};
+use typenum::Unsigned;
 use zeroize::Zeroize;
 
 use crate::BigInt;
@@ -37,12 +39,9 @@ pub trait ECScalar: Clone + PartialEq + fmt::Debug + 'static {
     /// Underlying scalar type that can be retrieved in case of missing methods in this trait
     type Underlying;
 
-    /// The byte length of the scalar
-    const SCALAR_LENGTH: usize;
-    // We need to make sure that this always matches SCALAR_LENGTH.
     // TODO: Replace with const generics once https://github.com/rust-lang/rust/issues/60551 is resolved
-    /// Serialized scalar
-    type ScalarBytes: AsRef<[u8]>;
+    /// The byte length of the serialized scalar
+    type ScalarLength: ArrayLength<u8> + Unsigned;
 
     /// Samples a random scalar
     fn random() -> Self;
@@ -59,7 +58,7 @@ pub trait ECScalar: Clone + PartialEq + fmt::Debug + 'static {
     /// Converts a scalar to BigInt
     fn to_bigint(&self) -> BigInt;
     /// Serializes scalar into bytes
-    fn serialize(&self) -> Self::ScalarBytes;
+    fn serialize(&self) -> GenericArray<u8, Self::ScalarLength>;
     /// Deserializes scalar from bytes
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError>;
 
