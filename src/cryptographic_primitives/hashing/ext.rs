@@ -1,6 +1,6 @@
 use digest::Digest;
 use hmac::crypto_mac::MacError;
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, Mac, NewMac};
 
 use crate::arithmetic::*;
 use crate::elliptic::curves::{Curve, Point, Scalar};
@@ -85,19 +85,19 @@ where
     D: Digest,
 {
     fn input_bigint(&mut self, n: &BigInt) {
-        self.input(&n.to_bytes())
+        self.update(&n.to_bytes())
     }
 
     fn input_point<E: Curve>(&mut self, point: &Point<E>) {
-        self.input(&point.to_bytes(false)[..])
+        self.update(&point.to_bytes(false)[..])
     }
 
     fn input_scalar<E: Curve>(&mut self, scalar: &Scalar<E>) {
-        self.input(&scalar.to_bigint().to_bytes())
+        self.update(&scalar.to_bigint().to_bytes())
     }
 
     fn result_bigint(self) -> BigInt {
-        let result = self.result();
+        let result = self.finalize();
         BigInt::from_bytes(&result)
     }
 
@@ -131,19 +131,19 @@ pub trait HmacExt: Sized {
 
 impl<D> HmacExt for Hmac<D>
 where
-    D: digest::Input + digest::BlockInput + digest::FixedOutput + digest::Reset + Default + Clone,
+    D: digest::Update + digest::BlockInput + digest::FixedOutput + digest::Reset + Default + Clone,
 {
     fn new_bigint(key: &BigInt) -> Self {
         let bytes = key.to_bytes();
-        Self::new_varkey(&bytes).expect("HMAC must take a key of any length")
+        Self::new_from_slice(&bytes).expect("HMAC must take a key of any length")
     }
 
     fn input_bigint(&mut self, n: &BigInt) {
-        self.input(&n.to_bytes())
+        self.update(&n.to_bytes())
     }
 
     fn result_bigint(self) -> BigInt {
-        BigInt::from_bytes(&self.result().code())
+        BigInt::from_bytes(&self.finalize().into_bytes())
     }
 
     fn verify_bigint(self, code: &BigInt) -> Result<(), MacError> {

@@ -12,7 +12,7 @@ use crate::BigInt;
 use super::traits::KeyedHash;
 use crate::arithmetic::traits::*;
 
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, Mac, NewMac};
 use sha2::Sha512;
 use zeroize::Zeroize;
 type HmacSha256type = Hmac<Sha512>;
@@ -24,24 +24,24 @@ impl KeyedHash for HMacSha512 {
     fn create_hmac(key: &BigInt, data: &[&BigInt]) -> BigInt {
         let mut key_bytes = key.to_bytes();
 
-        let mut hmac = HmacSha256type::new_varkey(&key_bytes).expect("");
+        let mut hmac = HmacSha256type::new_from_slice(&key_bytes).expect("");
 
         for value in data {
-            hmac.input(&BigInt::to_bytes(value));
+            hmac.update(&BigInt::to_bytes(value));
         }
         key_bytes.zeroize();
-        let result = hmac.result();
-        let code = result.code();
+        let result = hmac.finalize();
+        let code = result.into_bytes();
 
         BigInt::from_bytes(code.as_slice())
     }
     fn verify(key: &BigInt, data: &[&BigInt], code_bytes: [u8; 64]) -> Result<(), ()> {
         let key_bytes = key.to_bytes();
 
-        let mut hmac = HmacSha256type::new_varkey(&key_bytes).expect("");
+        let mut hmac = HmacSha256type::new_from_slice(&key_bytes).expect("");
 
         for value in data {
-            hmac.input(&BigInt::to_bytes(value));
+            hmac.update(&BigInt::to_bytes(value));
         }
         match hmac.verify(&code_bytes) {
             Ok(_) => Ok(()),
