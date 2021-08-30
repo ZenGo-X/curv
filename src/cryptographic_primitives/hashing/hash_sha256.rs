@@ -20,28 +20,28 @@ impl Hash for HSha256 {
         let mut hasher = Sha256::new();
 
         for value in big_ints {
-            hasher.input(&BigInt::to_bytes(value));
+            hasher.update(&BigInt::to_bytes(value));
         }
 
-        let result_hex = hasher.result();
+        let result_hex = hasher.finalize();
         BigInt::from_bytes(&result_hex[..])
     }
 
     fn create_hash_from_ge<P: ECPoint>(ge_vec: &[&P]) -> P::Scalar {
         let mut hasher = Sha256::new();
         for value in ge_vec {
-            hasher.input(&value.pk_to_key_slice());
+            hasher.update(&value.pk_to_key_slice());
         }
 
-        let result_hex = hasher.result();
+        let result_hex = hasher.finalize();
         let result = BigInt::from_bytes(&result_hex[..]);
         ECScalar::from(&result)
     }
 
     fn create_hash_from_slice(byte_slice: &[u8]) -> BigInt {
         let mut hasher = Sha256::new();
-        hasher.input(byte_slice);
-        let result_hex = hasher.result();
+        hasher.update(byte_slice);
+        let result_hex = hasher.finalize();
         BigInt::from_bytes(&result_hex[..])
     }
 }
@@ -65,8 +65,8 @@ mod tests {
 
         let result = HSha256::create_hash(&[&big_int0, &big_int1]).to_hex();
         let mut hasher = Sha256::new();
-        hasher.input(&message);
-        let result2 = hex::encode(hasher.result());
+        hasher.update(&message);
+        let result2 = hex::encode(hasher.finalize());
         assert_eq!(result, result2);
     }
 

@@ -21,28 +21,28 @@ impl Hash for HSha512 {
         let mut hasher = Sha512::new();
 
         for value in big_ints {
-            hasher.input(&BigInt::to_bytes(value));
+            hasher.update(&BigInt::to_bytes(value));
         }
 
-        let result_hex = hasher.result();
+        let result_hex = hasher.finalize();
         BigInt::from_bytes(&result_hex[..])
     }
 
     fn create_hash_from_ge<P: ECPoint>(ge_vec: &[&P]) -> P::Scalar {
         let mut hasher = Sha512::new();
         for value in ge_vec {
-            hasher.input(&value.pk_to_key_slice());
+            hasher.update(&value.pk_to_key_slice());
         }
 
-        let result_hex = hasher.result();
+        let result_hex = hasher.finalize();
         let result = BigInt::from_bytes(&result_hex[..]);
         ECScalar::from(&result)
     }
 
     fn create_hash_from_slice(byte_slice: &[u8]) -> BigInt {
         let mut hasher = Sha512::new();
-        hasher.input(byte_slice);
-        let result_hex = hasher.result();
+        hasher.update(byte_slice);
+        let result_hex = hasher.finalize();
         BigInt::from_bytes(&result_hex[..])
     }
 }

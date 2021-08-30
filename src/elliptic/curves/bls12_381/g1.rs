@@ -20,7 +20,6 @@ use pairing_plus::hash_to_field::ExpandMsgXmd;
 use pairing_plus::serdes::SerDes;
 use pairing_plus::EncodedPoint;
 use pairing_plus::{CurveAffine, CurveProjective, Engine};
-use sha2::Sha256;
 
 use serde::de::{self, Error, MapAccess, SeqAccess, Visitor};
 use serde::ser::SerializeStruct;
@@ -541,7 +540,7 @@ impl G1Point {
     /// [xmd]: https://www.ietf.org/id/draft-irtf-cfrg-hash-to-curve-10.html#name-expand_message_xmd-2
     pub fn hash_to_curve(message: &[u8]) -> Self {
         let cs = &[1u8];
-        let point = <G1 as HashToCurve<ExpandMsgXmd<Sha256>>>::hash_to_curve(message, cs);
+        let point = <G1 as HashToCurve<ExpandMsgXmd<old_sha2::Sha256>>>::hash_to_curve(message, cs);
         G1Point {
             purpose: "hash_to_curve",
             ge: point.into_affine(),
@@ -555,7 +554,6 @@ mod tests {
     use pairing_plus::hash_to_curve::HashToCurve;
     use pairing_plus::hash_to_field::ExpandMsgXmd;
     use pairing_plus::{CurveProjective, SubgroupCheck};
-    use sha2::Sha256;
 
     use super::G1Point;
     use crate::arithmetic::traits::*;
@@ -712,7 +710,8 @@ mod tests {
         // Generate base_point2
         let cs = &[1u8];
         let msg = &[1u8];
-        let point = <G1 as HashToCurve<ExpandMsgXmd<Sha256>>>::hash_to_curve(msg, cs).into_affine();
+        let point = <G1 as HashToCurve<ExpandMsgXmd<old_sha2::Sha256>>>::hash_to_curve(msg, cs)
+            .into_affine();
         assert!(point.in_subgroup());
 
         // Print in uncompressed form
