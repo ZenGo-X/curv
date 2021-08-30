@@ -279,7 +279,7 @@ impl ECPoint for Secp256r1Point {
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Secp256r1Point, ErrorKey> {
-        let result = PK::new(&bytes);
+        let result = PK::new(bytes);
         let test = result.map(|pk| Secp256r1Point {
             purpose: "random",
             ge: pk,

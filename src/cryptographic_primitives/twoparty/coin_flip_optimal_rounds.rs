@@ -55,7 +55,7 @@ where
     P::Scalar: Zeroize + Clone,
 {
     pub fn share(proof: &PedersenProof<P>) -> Party2FirstMessage<P> {
-        PedersenProof::verify(&proof).expect("{(m,r),c} proof failed");
+        PedersenProof::verify(proof).expect("{(m,r),c} proof failed");
         let seed: P::Scalar = ECScalar::new_random();
         Party2FirstMessage { seed }
     }
@@ -70,7 +70,7 @@ where
         party1seed: &P::Scalar,
         party1blinding: &P::Scalar,
     ) -> (Party1SecondMessage<P>, P::Scalar) {
-        let proof = PedersenBlindingProof::<P>::prove(&party1seed, &party1blinding);
+        let proof = PedersenBlindingProof::<P>::prove(party1seed, party1blinding);
         let coin_flip_result = &party1seed.to_big_int() ^ &party2seed.to_big_int();
         (
             Party1SecondMessage {
@@ -92,7 +92,7 @@ where
     P: ECPoint + Clone + Debug,
     P::Scalar: Zeroize + Clone,
 {
-    PedersenBlindingProof::<P>::verify(&proof).expect("{r,(m,c)} proof failed");
+    PedersenBlindingProof::<P>::verify(proof).expect("{r,(m,c)} proof failed");
     assert_eq!(&proof.com, party1comm);
     let coin_flip_result = &proof.m.to_big_int() ^ &party2seed.to_big_int();
     ECScalar::from(&coin_flip_result)

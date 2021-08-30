@@ -106,7 +106,7 @@ impl ECScalar for RistrettoScalar {
         if v.len() == SECRET_KEY_SIZE {
             bytes_array_32 = [0; SECRET_KEY_SIZE];
             let bytes = &v[..];
-            bytes_array_32.copy_from_slice(&bytes);
+            bytes_array_32.copy_from_slice(bytes);
             bytes_array_32.reverse();
             RistrettoScalar {
                 purpose: "from_big_int",
@@ -115,7 +115,7 @@ impl ECScalar for RistrettoScalar {
         } else {
             bytes_array_64 = [0; 2 * SECRET_KEY_SIZE];
             let bytes = &v[..];
-            bytes_array_64.copy_from_slice(&bytes);
+            bytes_array_64.copy_from_slice(bytes);
             bytes_array_64.reverse();
             RistrettoScalar {
                 purpose: "from_big_int",
@@ -301,10 +301,10 @@ impl ECPoint for RistrettoCurvPoint {
         match byte_len {
             0..=32 => {
                 let mut template = vec![0; 32 - bytes_vec.len()];
-                template.extend_from_slice(&bytes);
+                template.extend_from_slice(bytes);
                 let bytes_vec = template;
                 let bytes_slice = &bytes_vec[0..32];
-                bytes_array_32.copy_from_slice(&bytes_slice);
+                bytes_array_32.copy_from_slice(bytes_slice);
                 let r_point: PK = CompressedRistretto::from_slice(&bytes_array_32);
                 let r_point_compress = r_point.decompress();
                 match r_point_compress {
@@ -321,7 +321,7 @@ impl ECPoint for RistrettoCurvPoint {
 
             _ => {
                 let bytes_slice = &bytes_vec[0..32];
-                bytes_array_32.copy_from_slice(&bytes_slice);
+                bytes_array_32.copy_from_slice(bytes_slice);
                 let r_point: PK = CompressedRistretto::from_slice(&bytes_array_32);
                 let r_point_compress = r_point.decompress();
                 match r_point_compress {

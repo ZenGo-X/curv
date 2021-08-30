@@ -332,7 +332,7 @@ impl ECPoint for Secp256k1Point {
         match byte_len {
             33..=63 => {
                 let mut template = vec![0; 64 - bytes_vec.len()];
-                template.extend_from_slice(&bytes);
+                template.extend_from_slice(bytes);
                 let mut bytes_vec = template;
                 let mut template: Vec<u8> = vec![4];
                 template.append(&mut bytes_vec);
@@ -349,7 +349,7 @@ impl ECPoint for Secp256k1Point {
 
             0..=32 => {
                 let mut template = vec![0; 32 - bytes_vec.len()];
-                template.extend_from_slice(&bytes);
+                template.extend_from_slice(bytes);
                 let mut bytes_vec = template;
                 let mut template: Vec<u8> = vec![2];
                 template.append(&mut bytes_vec);

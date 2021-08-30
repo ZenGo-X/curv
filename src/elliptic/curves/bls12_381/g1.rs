@@ -101,7 +101,7 @@ impl ECScalar for FieldScalar {
         }
         bytes_array = [0; SECRET_KEY_SIZE];
         let bytes = &v[..SECRET_KEY_SIZE];
-        bytes_array.copy_from_slice(&bytes);
+        bytes_array.copy_from_slice(bytes);
 
         // bytes_array.reverse();
 

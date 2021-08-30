@@ -83,7 +83,7 @@ impl ECScalar for Ed25519Scalar {
     }
 
     fn from(n: &BigInt) -> Ed25519Scalar {
-        let mut v = BigInt::to_bytes(&n);
+        let mut v = BigInt::to_bytes(n);
         if v.len() > TWO_TIMES_SECRET_KEY_SIZE {
             v = v[0..TWO_TIMES_SECRET_KEY_SIZE].to_vec();
         }
@@ -332,10 +332,10 @@ impl ECPoint for Ed25519Point {
         match byte_len {
             0..=32 => {
                 let mut template = vec![0; 32 - byte_len];
-                template.extend_from_slice(&bytes);
+                template.extend_from_slice(bytes);
                 let bytes_vec = template;
                 let bytes_slice = &bytes_vec[0..32];
-                bytes_array_32.copy_from_slice(&bytes_slice);
+                bytes_array_32.copy_from_slice(bytes_slice);
                 let ge_from_bytes = PK::from_bytes_negate_vartime(&bytes_array_32);
                 match ge_from_bytes {
                     Some(_x) => {
@@ -358,7 +358,7 @@ impl ECPoint for Ed25519Point {
             }
             _ => {
                 let bytes_slice = &bytes_vec[0..32];
-                bytes_array_32.copy_from_slice(&bytes_slice);
+                bytes_array_32.copy_from_slice(bytes_slice);
                 let ge_from_bytes = PK::from_bytes_negate_vartime(bytes);
                 match ge_from_bytes {
                     Some(_x) => {
@@ -590,7 +590,7 @@ pub fn expmod(b: &BigInt, e: &BigInt, m: &BigInt) -> BigInt {
     let t_temp = expmod(b, &(e.clone() / BigInt::from(2u32)), m);
     let mut t = BigInt::mod_pow(&t_temp, &BigInt::from(2u32), m);
 
-    if BigInt::modulus(&e, &BigInt::from(2)) != BigInt::zero() {
+    if BigInt::modulus(e, &BigInt::from(2)) != BigInt::zero() {
         t = BigInt::mod_mul(&t, b, m);
     }
     t
