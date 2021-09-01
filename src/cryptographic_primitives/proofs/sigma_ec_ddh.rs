@@ -5,13 +5,14 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
+use std::marker::PhantomData;
+
 use serde::{Deserialize, Serialize};
 
 use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
 use crate::elliptic::curves::{Curve, Point, Scalar};
 
 use super::ProofError;
-use std::marker::PhantomData;
 
 /// This protocol is the elliptic curve form of the protocol from :
 ///  D. Chaum, T. P. Pedersen. Transferred cash grows in size. In Advances in Cryptology, EUROCRYPT , volume 658 of Lecture Notes in Computer Science, pages 390 - 407, 1993.

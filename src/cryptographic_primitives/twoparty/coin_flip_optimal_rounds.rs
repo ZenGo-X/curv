@@ -7,12 +7,12 @@
 
 use std::fmt::Debug;
 
+use digest::Digest;
 use serde::{Deserialize, Serialize};
 
 use crate::cryptographic_primitives::proofs::sigma_valid_pedersen::PedersenProof;
 use crate::cryptographic_primitives::proofs::sigma_valid_pedersen_blind::PedersenBlindingProof;
 use crate::elliptic::curves::{Curve, Point, Scalar};
-use digest::Digest;
 
 /// based on How To Simulate It – A Tutorial on the Simulation
 /// Proof Technique. protocol 7.3: Multiple coin tossing. which provide simulatble constant round

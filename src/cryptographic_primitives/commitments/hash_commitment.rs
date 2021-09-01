@@ -5,18 +5,20 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
-//TODO: (open issue) use this struct to represent the commitment HashCommitment{comm: BigInt, r: BigInt, m: BigInt}
-/// calculate commitment c = H(m,r) using SHA3 CRHF.
-/// r is 256bit blinding factor, m is the commited value
-pub struct HashCommitment<H: Digest + Clone>(PhantomData<H>);
+use std::marker::PhantomData;
 
+use digest::Digest;
+
+use crate::arithmetic::traits::*;
 use crate::BigInt;
 
 use super::traits::Commitment;
 use super::SECURITY_BITS;
-use crate::arithmetic::traits::*;
-use digest::Digest;
-use std::marker::PhantomData;
+
+//TODO: (open issue) use this struct to represent the commitment HashCommitment{comm: BigInt, r: BigInt, m: BigInt}
+/// calculate commitment c = H(m,r) using SHA3 CRHF.
+/// r is 256bit blinding factor, m is the commited value
+pub struct HashCommitment<H: Digest + Clone>(PhantomData<H>);
 
 //TODO:  using the function with BigInt's as input instead of string's makes it impossible to commit to empty message or use empty randomness
 impl<H: Digest + Clone> Commitment<BigInt> for HashCommitment<H> {

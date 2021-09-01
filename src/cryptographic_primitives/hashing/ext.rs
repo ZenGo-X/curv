@@ -168,12 +168,12 @@ where
 
 #[cfg(test)]
 mod test {
-    use sha2::{Sha256, Sha512};
-
-    use super::*;
     use digest::generic_array::ArrayLength;
     use digest::{BlockInput, FixedOutput, Reset, Update};
     use hmac::Hmac;
+    use sha2::{Sha256, Sha512};
+
+    use super::*;
 
     // Test Vectors taken from:
     // https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/secure-hashing#shavs

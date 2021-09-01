@@ -15,6 +15,7 @@
 /// https://eprint.iacr.org/2017/552.pdf protocol 3.1 first 3 steps.
 use std::fmt::Debug;
 
+use digest::Digest;
 use serde::{Deserialize, Serialize};
 
 use crate::arithmetic::traits::*;
@@ -24,7 +25,6 @@ use crate::cryptographic_primitives::proofs::sigma_dlog::*;
 use crate::cryptographic_primitives::proofs::ProofError;
 use crate::elliptic::curves::{Curve, Point, Scalar};
 use crate::BigInt;
-use digest::Digest;
 
 const SECURITY_BITS: usize = 256;
 

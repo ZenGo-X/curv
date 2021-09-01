@@ -5,6 +5,8 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
+use std::marker::PhantomData;
+
 use serde::{Deserialize, Serialize};
 
 use crate::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
@@ -13,7 +15,6 @@ use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
 use crate::elliptic::curves::{Curve, Point, Scalar};
 
 use super::ProofError;
-use std::marker::PhantomData;
 
 /// protocol for proving that Pedersen commitment c was constructed correctly which is the same as
 /// proof of knowledge of (m,r) such that c = mG + rH.

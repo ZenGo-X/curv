@@ -6,14 +6,15 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
+use std::marker::PhantomData;
+
+use digest::Digest;
 use serde::{Deserialize, Serialize};
 
 use crate::cryptographic_primitives::hashing::DigestExt;
 use crate::elliptic::curves::{Curve, Point, Scalar};
-use digest::Digest;
 
 use super::ProofError;
-use std::marker::PhantomData;
 
 /// This is a proof of knowledge that a pair of group elements {D, E}
 /// form a valid homomorphic ElGamal encryption (”in the exponent”) using public key Y .
