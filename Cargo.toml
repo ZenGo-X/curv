@@ -46,10 +46,6 @@ num-bigint = { version = "0.4", features = ["serde"], optional = true }
 
 secp256k1 = { package = "libsecp256k1", git = "https://github.com/Gauthamastro/libsecp256k1.git" }
 
-#[dependencies.secp256k1]
-#version = "0.20"
-#features = ["serde", "rand-std", "global-context"]
-
 [dependencies.p256]
 version = "0.9"
 features = ["ecdsa", "ecdsa-core", "zeroize"]
