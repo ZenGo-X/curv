@@ -12,6 +12,11 @@ The library has a built in support for some useful operations/primitives such as
 schemes, zero knowledge proofs, and simple two party protocols such as ECDH and coin flip. The library comes with 
 serialize/deserialize support to be used in higher level code to implement networking. 
 
+cryptographic_primitives::proofs::sigma_correct_homomorphic_elgamal_encryption_of_dlog::tests::test_correct_homo_elgamal_secp256k1
+elliptic::curves::test::point_negation_secp256k1
+elliptic::curves::test::test_point_subtraction_secp256k1
+elliptic::curves::test::zero_point_arithmetic_secp256k1
+
 ### Usage
 
 To use `curv` crate, add the following to your Cargo.toml:

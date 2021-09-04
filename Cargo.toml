@@ -44,9 +44,11 @@ zeroize = "1"
 rust-gmp-kzen = { version = "0.5", features = ["serde_support"], optional = true }
 num-bigint = { version = "0.4", features = ["serde"], optional = true }
 
-[dependencies.secp256k1]
-version = "0.20"
-features = ["serde", "rand-std", "global-context"]
+secp256k1 = { package = "libsecp256k1", git = "https://github.com/Gauthamastro/libsecp256k1.git" }
+
+#[dependencies.secp256k1]
+#version = "0.20"
+#features = ["serde", "rand-std", "global-context"]
 
 [dependencies.p256]
 version = "0.9"
@@ -62,4 +64,4 @@ proptest-derive = "0.2"
 default = ["rust-gmp-kzen"]
 
 [package.metadata.docs.rs]
-rustdoc-args = [ "--html-in-header", "katex-header.html" ]
+rustdoc-args = ["--html-in-header", "katex-header.html"]
