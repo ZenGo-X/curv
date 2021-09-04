@@ -434,27 +434,25 @@ impl ECPoint for Secp256k1Point {
                 purpose: "from_bytes",
                 ge: None,
             })
+        } else if bytes.len() == 33 {
+            let pk = PublicKey::parse_compressed(<&[u8; 33]>::try_from(bytes).unwrap())
+                .map_err(|_| DeserializationError)?;
+            Ok(Secp256k1Point {
+                purpose: "from_bytes",
+                ge: Some(PK(pk)),
+            })
+        } else if bytes.len() == 65 {
+            let pk = PublicKey::parse(<&[u8; 65]>::try_from(bytes).unwrap())
+                .map_err(|_| DeserializationError)?;
+            Ok(Secp256k1Point {
+                purpose: "from_bytes",
+                ge: Some(PK(pk)),
+            })
         } else {
-            if bytes.len() == 33 {
-                let pk = PublicKey::parse_compressed(<&[u8; 33]>::try_from(bytes).unwrap())
-                    .map_err(|_| DeserializationError)?;
-                Ok(Secp256k1Point {
-                    purpose: "from_bytes",
-                    ge: Some(PK(pk)),
-                })
-            } else if bytes.len() == 65 {
-                let pk = PublicKey::parse(<&[u8; 65]>::try_from(bytes).unwrap())
-                    .map_err(|_| DeserializationError)?;
-                Ok(Secp256k1Point {
-                    purpose: "from_bytes",
-                    ge: Some(PK(pk)),
-                })
-            } else {
-                Ok(Secp256k1Point {
-                    purpose: "from_bytes",
-                    ge: None,
-                })
-            }
+            Ok(Secp256k1Point {
+                purpose: "from_bytes",
+                ge: None,
+            })
         }
     }
 
