@@ -20,8 +20,8 @@ use std::ops;
 use std::ops::Deref;
 
 use generic_array::GenericArray;
-use secp256k1::util::{SECRET_KEY_SIZE, FULL_PUBLIC_KEY_SIZE};
 use secp256k1::curve::AFFINE_G;
+use secp256k1::util::{FULL_PUBLIC_KEY_SIZE, SECRET_KEY_SIZE};
 use secp256k1::{PublicKey, SecretKey};
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, Zeroizing};
@@ -29,16 +29,14 @@ use zeroize::{Zeroize, Zeroizing};
 use crate::arithmetic::*;
 
 use super::traits::*;
-use secp256k1::curve::{Scalar, Affine};
 use p256::elliptic_curve::subtle::Choice;
+use secp256k1::curve::{Affine, Scalar};
 use std::convert::TryFrom;
 
 /// The order of the secp256k1 curve
 pub const CURVE_ORDER_CONSTANT: [u8; 32] = [
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe,
-    0xba, 0xae, 0xdc, 0xe6, 0xaf, 0x48, 0xa0, 0x3b,
-    0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x41
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe,
+    0xba, 0xae, 0xdc, 0xe6, 0xaf, 0x48, 0xa0, 0x3b, 0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x41,
 ];
 
 lazy_static::lazy_static! {
@@ -280,25 +278,21 @@ impl ECScalar for Secp256k1Scalar {
             scalar.cond_neg_assign(Choice::from(1));
             scalar
         });
-        if scalar_option.is_none(){
+        if scalar_option.is_none() {
             return Secp256k1Scalar {
                 purpose: "neg",
                 fe: Zeroizing::new(None),
-            }
+            };
         }
         match SecretKey::try_from(scalar_option.unwrap()).ok() {
-            None => {
-                Secp256k1Scalar {
-                    purpose: "neg",
-                    fe: Zeroizing::new(None),
-                }
-            }
-            Some(sk) => {
-                Secp256k1Scalar {
-                    purpose: "neg",
-                    fe: Zeroizing::new(Some(SK(sk))),
-                }
-            }
+            None => Secp256k1Scalar {
+                purpose: "neg",
+                fe: Zeroizing::new(None),
+            },
+            Some(sk) => Secp256k1Scalar {
+                purpose: "neg",
+                fe: Zeroizing::new(Some(SK(sk))),
+            },
         }
     }
 
@@ -442,18 +436,20 @@ impl ECPoint for Secp256k1Point {
             })
         } else {
             if bytes.len() == 33 {
-                let pk = PublicKey::parse_compressed(<&[u8; 33]>::try_from(bytes).unwrap()).map_err(|_| DeserializationError)?;
+                let pk = PublicKey::parse_compressed(<&[u8; 33]>::try_from(bytes).unwrap())
+                    .map_err(|_| DeserializationError)?;
                 Ok(Secp256k1Point {
                     purpose: "from_bytes",
                     ge: Some(PK(pk)),
                 })
-            }else if bytes.len() == 65 {
-                let pk = PublicKey::parse(<&[u8; 65]>::try_from(bytes).unwrap()).map_err(|_| DeserializationError)?;
+            } else if bytes.len() == 65 {
+                let pk = PublicKey::parse(<&[u8; 65]>::try_from(bytes).unwrap())
+                    .map_err(|_| DeserializationError)?;
                 Ok(Secp256k1Point {
                     purpose: "from_bytes",
                     ge: Some(PK(pk)),
                 })
-            }else{
+            } else {
                 Ok(Secp256k1Point {
                     purpose: "from_bytes",
                     ge: None,
@@ -480,7 +476,7 @@ impl ECPoint for Secp256k1Point {
         let ge = scalar
             .fe
             .as_ref()
-            .map(|sk| PK(PublicKey::from_secret_key( sk)));
+            .map(|sk| PK(PublicKey::from_secret_key(sk)));
         Secp256k1Point {
             purpose: "generator_mul",
             ge,
