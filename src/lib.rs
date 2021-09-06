@@ -67,3 +67,23 @@ macro_rules! test_for_all_curves {
         }
     };
 }
+
+#[cfg(test)]
+#[macro_export]
+macro_rules! test_for_ed25519 {
+    (#[should_panic] $fn: ident) => {
+        crate::test_for_ed25519!([#[should_panic]] $fn);
+    };
+    ($fn: ident) => {
+        crate::test_for_ed25519!([] $fn);
+    };
+    ([$($attrs:tt)*] $fn: ident) => {
+        paste::paste!{
+            #[test]
+            $($attrs)*
+            fn [<$fn _ed25519>]() {
+                $fn::<crate::elliptic::curves::Ed25519>()
+            }
+        }
+    };
+}
