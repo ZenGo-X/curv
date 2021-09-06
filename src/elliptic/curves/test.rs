@@ -5,7 +5,8 @@ use std::iter;
 use rand::{rngs::OsRng, Rng};
 
 use crate::arithmetic::*;
-use crate::test_for_all_curves;
+use crate::elliptic::curves::ed25519::{Ed25519Point, Ed25519Scalar};
+use crate::{test_for_all_curves, test_for_ed25519};
 
 use super::traits::*;
 
@@ -23,6 +24,109 @@ fn valid_zero_point<E: Curve>() {
     let zero = E::Scalar::zero();
     assert!(zero.is_zero());
     assert_eq!(zero, E::Scalar::zero());
+}
+
+pub fn check_torsion_safety<E: Curve<Scalar = Ed25519Scalar>>(a: &BigInt, a_torsion_safe: &BigInt) {
+    let ec_point: &E::Point = ECPoint::generator();
+    let mut torsion_point: Vec<Ed25519Point> = Vec::with_capacity(8);
+
+    // vector points are compressed Y format of curve-dalek's extended torsion point co-ordinates.
+    // using deserialize is sufficeint here since no multiplication by 8 are taking place internally to make it an element of subgroup of prime order.
+    torsion_point.push(
+        ECPoint::deserialize(&[
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ])
+        .unwrap(),
+    );
+    torsion_point.push(
+        Ed25519Point::deserialize(&[
+            199, 23, 106, 112, 61, 77, 216, 79, 186, 60, 11, 118, 13, 16, 103, 15, 42, 32, 83, 250,
+            44, 57, 204, 198, 78, 199, 253, 119, 146, 172, 3, 122,
+        ])
+        .unwrap(),
+    );
+    torsion_point.push(
+        Ed25519Point::deserialize(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 128,
+        ])
+        .unwrap(),
+    );
+    torsion_point.push(
+        Ed25519Point::deserialize(&[
+            38, 232, 149, 143, 194, 178, 39, 176, 69, 195, 244, 137, 242, 239, 152, 240, 213, 223,
+            172, 5, 211, 198, 51, 57, 177, 56, 2, 136, 109, 83, 252, 5,
+        ])
+        .unwrap(),
+    );
+    torsion_point.push(
+        Ed25519Point::deserialize(&[
+            236, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 127,
+        ])
+        .unwrap(),
+    );
+    torsion_point.push(
+        Ed25519Point::deserialize(&[
+            38, 232, 149, 143, 194, 178, 39, 176, 69, 195, 244, 137, 242, 239, 152, 240, 213, 223,
+            172, 5, 211, 198, 51, 57, 177, 56, 2, 136, 109, 83, 252, 133,
+        ])
+        .unwrap(),
+    );
+    torsion_point.push(
+        Ed25519Point::deserialize(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ])
+        .unwrap(),
+    );
+    torsion_point.push(
+        Ed25519Point::deserialize(&[
+            199, 23, 106, 112, 61, 77, 216, 79, 186, 60, 11, 118, 13, 16, 103, 15, 42, 32, 83, 250,
+            44, 57, 204, 198, 78, 199, 253, 119, 146, 172, 3, 250,
+        ])
+        .unwrap(),
+    );
+
+    // a is congruent to a_torsion_safe modulo FE:q()
+    assert_eq!(
+        a % E::Scalar::group_order(),
+        a_torsion_safe % E::Scalar::group_order()
+    );
+
+    // a_torsion_safe results to idnetity mod 8.
+    let id1: E::Scalar =
+        Ed25519Scalar::from_big_int_to_small_torsion_safe(&(a_torsion_safe % BigInt::from(8)));
+    assert_eq!(E::Scalar::zero(), id1);
+
+    // Should result in identity when a_torsion_safe is multiplied to a given small torsion point.
+    let a_fe_torsion_safe = Ed25519Scalar::from_big_int_to_small_torsion_safe(&a_torsion_safe);
+    for i in 0..8 {
+        let id = torsion_point[i].scalar_mul(&a_fe_torsion_safe);
+        assert_eq!(true, id.is_zero());
+    }
+
+    // Should result same value when multiplied to base point in prime order subgroup.
+    let a_fe: E::Scalar = E::Scalar::from_bigint(&a);
+
+    assert_eq!(
+        ec_point.scalar_mul(&a_fe),
+        ec_point.scalar_mul(&a_fe_torsion_safe)
+    );
+}
+
+test_for_ed25519!(test_torsion_safety);
+pub fn test_torsion_safety<E: Curve<Scalar = Ed25519Scalar>>() {
+    let a_scalar: [u8; 32] = [
+        0x1a, 0x0e, 0x97, 0x8a, 0x90, 0xf6, 0x62, 0x2d, 0x37, 0x47, 0x02, 0x3f, 0x8a, 0xd8, 0x26,
+        0x4d, 0xa7, 0x58, 0xaa, 0x1b, 0x88, 0xe0, 0x40, 0xd1, 0x58, 0x9e, 0x7b, 0x7f, 0x23, 0x76,
+        0xef, 0x09,
+    ];
+    let a_big = BigInt::from_bytes(&a_scalar[..]);
+    // calculate a_fe_torsion_safe
+    let a_fe_torsion_safe: E::Scalar = Ed25519Scalar::from_big_int_to_small_torsion_safe(&a_big);
+    check_torsion_safety::<E>(&a_big, &a_fe_torsion_safe.to_bigint());
 }
 
 test_for_all_curves!(zero_point_arithmetic);

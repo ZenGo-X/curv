@@ -120,6 +120,32 @@ impl Curve for Ed25519 {
     const CURVE_NAME: &'static str = "ed25519";
 }
 
+impl Ed25519Scalar {
+    pub fn from_big_int_to_small_torsion_safe(x: &BigInt) -> Self {
+        // convert a given x to small torsion safe representative :
+        // torsion_safe_x = ((x / h) mod l ) * h, h : cofactor (8), l = prime subgroup order.
+        // from: https://moderncrypto.org/mail-archive/curves/2017/000869.html
+        let h = BigInt::from(8);
+        let h_inv = BigInt::mod_inv(&h, Self::group_order()).unwrap(); // h.invert(&Self::group_order()).unwrap();
+        let mut torsion_safe_x = BigInt::mod_mul(x, &h_inv, Self::group_order());
+        torsion_safe_x *= h;
+        let mut v = (BigInt::to_bytes(&torsion_safe_x)).to_vec();
+        if v.len() > TWO_TIMES_SECRET_KEY_SIZE {
+            v = v[0..TWO_TIMES_SECRET_KEY_SIZE].to_vec();
+        }
+
+        let mut template = vec![0; TWO_TIMES_SECRET_KEY_SIZE - v.len()];
+        template.extend_from_slice(&v);
+        v = template;
+        v.reverse();
+        // return without reducing mod FE::q()
+        Ed25519Scalar {
+            purpose: "from_bigint",
+            fe: SK(Fe::from_bytes(&v[..])).into(),
+        }
+    }
+}
+
 impl ECScalar for Ed25519Scalar {
     type Underlying = SK;
 
