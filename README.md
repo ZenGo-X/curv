@@ -2,6 +2,7 @@
 [![Latest version](https://img.shields.io/crates/v/curv-kzen.svg)](https://crates.io/crates/curv-kzen)
 [![Docs](https://docs.rs/curv-kzen/badge.svg)](https://docs.rs/curv-kzen)
 [![License](https://img.shields.io/crates/l/curv-kzen)](LICENSE)
+[![dependency status](https://deps.rs/repo/github/ZenGo-X/curv/status.svg)](https://deps.rs/repo/github/ZenGo-X/curv)
 
 Curv
 =====================================

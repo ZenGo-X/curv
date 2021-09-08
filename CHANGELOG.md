@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.8.0-rc4
+* Implement Try and Increment when converting hash to scalar [#128] \
+  Improves performance and security of conversion 🔥
+* Get rid of deprecated `rust-crypto` dependency [#137]
+  * Changed the crate providing merkle trees support: `merkle-sha3 v0.1` → `merkle-cbt v0.3`
+  * Merkle trees API has been slightly changed
+  * Merkle trees are generic over hash function (it used to work with keccak256 only)
+  * Merkle proofs built by previous versions of `curv` are incompatible with latest `curv`
+
+[#128]: https://github.com/ZenGo-X/curv/pull/128
+[#137]: https://github.com/ZenGo-X/curv/pull/137
+
 ## v0.8.0-rc3
 * Fix point subtraction. Bug was introduced in `v0.8.0-rc1`. [#127]
 * Add `Polynomial::lagrange_basis` function [#130]
