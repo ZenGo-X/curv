@@ -5,12 +5,11 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
-use std::marker::PhantomData;
-
 use serde::{Deserialize, Serialize};
 
 use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
 use crate::elliptic::curves::{Curve, Point, Scalar};
+use crate::marker::HashChoice;
 
 use super::ProofError;
 
@@ -32,7 +31,8 @@ pub struct ECDDHProof<E: Curve, H: Digest + Clone> {
     pub a1: Point<E>,
     pub a2: Point<E>,
     pub z: Scalar<E>,
-    _ph: PhantomData<fn(H)>,
+    #[serde(skip)]
+    pub hash_choice: HashChoice<H>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -66,7 +66,7 @@ impl<E: Curve, H: Digest + Clone> ECDDHProof<E, H> {
             a1,
             a2,
             z,
-            _ph: PhantomData,
+            hash_choice: HashChoice::new(),
         }
     }
 

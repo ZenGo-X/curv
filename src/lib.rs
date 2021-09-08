@@ -11,6 +11,9 @@ pub use crate::arithmetic::BigInt;
 
 pub mod cryptographic_primitives;
 
+mod marker;
+pub use marker::HashChoice;
+
 mod test_utils;
 
 #[derive(Copy, PartialEq, Eq, Clone, Debug)]

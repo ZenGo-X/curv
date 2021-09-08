@@ -6,13 +6,12 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
-use std::marker::PhantomData;
-
 use digest::Digest;
 use serde::{Deserialize, Serialize};
 
 use crate::cryptographic_primitives::hashing::DigestExt;
 use crate::elliptic::curves::{Curve, Point, Scalar};
+use crate::marker::HashChoice;
 
 use super::ProofError;
 
@@ -29,7 +28,8 @@ pub struct HomoELGamalProof<E: Curve, H: Digest + Clone> {
     pub A3: Point<E>,
     pub z1: Scalar<E>,
     pub z2: Scalar<E>,
-    _ph: PhantomData<fn(H)>,
+    #[serde(skip)]
+    pub hash_choice: HashChoice<H>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -77,7 +77,7 @@ impl<E: Curve, H: Digest + Clone> HomoELGamalProof<E, H> {
             A3,
             z1,
             z2,
-            _ph: PhantomData,
+            hash_choice: HashChoice::new(),
         }
     }
     pub fn verify(&self, delta: &HomoElGamalStatement<E>) -> Result<(), ProofError> {

@@ -5,12 +5,11 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
-use std::marker::PhantomData;
-
 use serde::{Deserialize, Serialize};
 
 use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
 use crate::elliptic::curves::{Curve, Point, Scalar};
+use crate::marker::HashChoice;
 
 use super::ProofError;
 
@@ -30,7 +29,8 @@ pub struct DLogProof<E: Curve, H: Digest + Clone> {
     pub pk: Point<E>,
     pub pk_t_rand_commitment: Point<E>,
     pub challenge_response: Scalar<E>,
-    _ph: PhantomData<fn(H)>,
+    #[serde(skip)]
+    pub hash_choice: HashChoice<H>,
 }
 
 impl<E: Curve, H: Digest + Clone> DLogProof<E, H> {
@@ -54,7 +54,7 @@ impl<E: Curve, H: Digest + Clone> DLogProof<E, H> {
             pk,
             pk_t_rand_commitment,
             challenge_response,
-            _ph: PhantomData,
+            hash_choice: HashChoice::new(),
         }
     }
 

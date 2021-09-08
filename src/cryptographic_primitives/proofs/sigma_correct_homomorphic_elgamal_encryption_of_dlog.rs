@@ -6,13 +6,13 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
-use std::marker::PhantomData;
-
 use serde::{Deserialize, Serialize};
 
-use super::ProofError;
 use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
 use crate::elliptic::curves::{Curve, Point, Scalar};
+use crate::marker::HashChoice;
+
+use super::ProofError;
 
 /// This is a proof of knowledge that a pair of group elements {D, E}
 /// form a valid homomorphic ElGamal encryption (”in the exponent”) using public key Y .
@@ -28,7 +28,8 @@ pub struct HomoELGamalDlogProof<E: Curve, H: Digest + Clone> {
     pub A3: Point<E>,
     pub z1: Scalar<E>,
     pub z2: Scalar<E>,
-    _ph: PhantomData<fn(H)>,
+    #[serde(skip)]
+    pub hash_choice: HashChoice<H>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -69,7 +70,7 @@ impl<E: Curve, H: Digest + Clone> HomoELGamalDlogProof<E, H> {
             A3,
             z1,
             z2,
-            _ph: PhantomData,
+            hash_choice: HashChoice::new(),
         }
     }
 

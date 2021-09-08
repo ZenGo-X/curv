@@ -5,14 +5,13 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
-use std::marker::PhantomData;
-
 use serde::{Deserialize, Serialize};
 
 use crate::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
 use crate::cryptographic_primitives::commitments::traits::Commitment;
 use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
 use crate::elliptic::curves::{Curve, Point, Scalar};
+use crate::marker::HashChoice;
 
 use super::ProofError;
 
@@ -32,7 +31,8 @@ pub struct PedersenBlindingProof<E: Curve, H: Digest + Clone> {
     a: Point<E>,
     pub com: Point<E>,
     z: Scalar<E>,
-    _ph: PhantomData<fn(H)>,
+    #[serde(skip)]
+    hash_choice: HashChoice<H>,
 }
 
 impl<E: Curve, H: Digest + Clone> PedersenBlindingProof<E, H> {
@@ -60,7 +60,7 @@ impl<E: Curve, H: Digest + Clone> PedersenBlindingProof<E, H> {
             a,
             com,
             z,
-            _ph: PhantomData,
+            hash_choice: HashChoice::new(),
         }
     }
 
