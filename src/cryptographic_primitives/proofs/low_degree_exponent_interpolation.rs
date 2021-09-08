@@ -7,6 +7,7 @@ use crate::cryptographic_primitives::hashing::DigestExt;
 use crate::cryptographic_primitives::proofs::ProofError;
 use crate::cryptographic_primitives::secret_sharing::Polynomial;
 use crate::elliptic::curves::{Curve, Point, Scalar};
+use crate::HashChoice;
 
 /// The prover private polynomial
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -59,13 +60,15 @@ impl<E: Curve> LdeiStatement<E> {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
-pub struct LdeiProof<E: Curve> {
+pub struct LdeiProof<E: Curve, H: Digest + Clone> {
     pub a: Vec<Point<E>>,
     pub e: Scalar<E>,
     pub z: Polynomial<E>,
+    #[serde(skip)]
+    pub hash_choice: HashChoice<H>,
 }
 
-impl<E: Curve> LdeiProof<E> {
+impl<E: Curve, H: Digest + Clone> LdeiProof<E, H> {
     /// Proves correctness of [LdeiStatement]
     ///
     /// ## Protocol
@@ -74,13 +77,10 @@ impl<E: Curve> LdeiProof<E> {
     /// for all `i ∈ [m]`, in addition to `e = H(g_1,...,g_m,x_1,...,x_m,a_1,...,a_m)`, and
     /// `z(X) = u(X) − e · w(X)`. The proof is `(a_1,...,a_m,e,z)`.
     #[allow(clippy::many_single_char_names)]
-    pub fn prove<H>(
+    pub fn prove(
         witness: &LdeiWitness<E>,
         statement: &LdeiStatement<E>,
-    ) -> Result<LdeiProof<E>, InvalidLdeiStatement>
-    where
-        H: Digest + Clone,
-    {
+    ) -> Result<LdeiProof<E, H>, InvalidLdeiStatement> {
         if statement.alpha.len() != statement.g.len() {
             return Err(InvalidLdeiStatement::AlphaLengthDoesntMatchG);
         }
@@ -117,7 +117,12 @@ impl<E: Curve> LdeiProof<E> {
 
         let z = &u - &(&witness.w * &e);
 
-        Ok(LdeiProof { a, e, z })
+        Ok(LdeiProof {
+            a,
+            e,
+            z,
+            hash_choice: HashChoice::new(),
+        })
     }
 
     /// Verifies correctness of a statement
@@ -127,7 +132,7 @@ impl<E: Curve> LdeiProof<E> {
     /// The verifier checks that `e = H(g1,...,gm,x1,...,xm,a1,...,am)`, that
     /// `deg(z) ≤ d`, and that `a_i = g_i^z(αlpha_i) * x_i^e` for all i, and accepts if all of this is
     /// true, otherwise rejects.
-    pub fn verify<H>(&self, statement: &LdeiStatement<E>) -> Result<(), ProofError>
+    pub fn verify(&self, statement: &LdeiStatement<E>) -> Result<(), ProofError>
     where
         H: Digest + Clone,
     {
@@ -207,9 +212,7 @@ mod tests {
 
         let statement = LdeiStatement::new(&witness, alpha, g, d).unwrap();
 
-        let proof = LdeiProof::prove::<H>(&witness, &statement).expect("failed to prove");
-        proof
-            .verify::<H>(&statement)
-            .expect("failed to validate proof");
+        let proof = LdeiProof::<_, H>::prove(&witness, &statement).expect("failed to prove");
+        proof.verify(&statement).expect("failed to validate proof");
     }
 }
