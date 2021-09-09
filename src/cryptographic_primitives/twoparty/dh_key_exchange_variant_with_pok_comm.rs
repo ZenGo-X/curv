@@ -15,6 +15,7 @@
 /// https://eprint.iacr.org/2017/552.pdf protocol 3.1 first 3 steps.
 use std::fmt::Debug;
 
+use digest::Digest;
 use serde::{Deserialize, Serialize};
 
 use crate::arithmetic::traits::*;
@@ -36,11 +37,11 @@ pub struct EcKeyPair<E: Curve> {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
-pub struct CommWitness<E: Curve> {
+pub struct CommWitness<E: Curve, H: Digest + Clone> {
     pub pk_commitment_blind_factor: BigInt,
     pub zk_pok_blind_factor: BigInt,
     pub public_share: Point<E>,
-    pub d_log_proof: DLogProof<E>,
+    pub d_log_proof: DLogProof<E, H>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -51,38 +52,39 @@ pub struct Party1FirstMessage {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
-pub struct Party2FirstMessage<E: Curve> {
-    pub d_log_proof: DLogProof<E>,
+pub struct Party2FirstMessage<E: Curve, H: Digest + Clone> {
+    pub d_log_proof: DLogProof<E, H>,
     pub public_share: Point<E>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
-pub struct Party1SecondMessage<E: Curve> {
-    pub comm_witness: CommWitness<E>,
+pub struct Party1SecondMessage<E: Curve, H: Digest + Clone> {
+    pub comm_witness: CommWitness<E, H>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Party2SecondMessage {}
 
 impl Party1FirstMessage {
-    pub fn create_commitments<E: Curve>() -> (Party1FirstMessage, CommWitness<E>, EcKeyPair<E>) {
+    pub fn create_commitments<E: Curve, H: Digest + Clone>(
+    ) -> (Party1FirstMessage, CommWitness<E, H>, EcKeyPair<E>) {
         let base = Point::<E>::generator();
 
         let secret_share = Scalar::random();
 
         let public_share = base * &secret_share;
 
-        let d_log_proof = DLogProof::<E>::prove(&secret_share);
+        let d_log_proof = DLogProof::prove(&secret_share);
         // we use hash based commitment
         let pk_commitment_blind_factor = BigInt::sample(SECURITY_BITS);
-        let pk_commitment = HashCommitment::create_commitment_with_user_defined_randomness(
+        let pk_commitment = HashCommitment::<H>::create_commitment_with_user_defined_randomness(
             &BigInt::from_bytes(&public_share.to_bytes(true)),
             &pk_commitment_blind_factor,
         );
 
         let zk_pok_blind_factor = BigInt::sample(SECURITY_BITS);
-        let zk_pok_commitment = HashCommitment::create_commitment_with_user_defined_randomness(
+        let zk_pok_commitment = HashCommitment::<H>::create_commitment_with_user_defined_randomness(
             &BigInt::from_bytes(&d_log_proof.pk_t_rand_commitment.to_bytes(true)),
             &zk_pok_blind_factor,
         );
@@ -105,22 +107,22 @@ impl Party1FirstMessage {
         )
     }
 
-    pub fn create_commitments_with_fixed_secret_share<E: Curve>(
+    pub fn create_commitments_with_fixed_secret_share<E: Curve, H: Digest + Clone>(
         secret_share: Scalar<E>,
-    ) -> (Party1FirstMessage, CommWitness<E>, EcKeyPair<E>) {
+    ) -> (Party1FirstMessage, CommWitness<E, H>, EcKeyPair<E>) {
         let base = Point::<E>::generator();
         let public_share = base * &secret_share;
 
-        let d_log_proof = DLogProof::<E>::prove(&secret_share);
+        let d_log_proof = DLogProof::prove(&secret_share);
 
         let pk_commitment_blind_factor = BigInt::sample(SECURITY_BITS);
-        let pk_commitment = HashCommitment::create_commitment_with_user_defined_randomness(
+        let pk_commitment = HashCommitment::<H>::create_commitment_with_user_defined_randomness(
             &BigInt::from_bytes(&public_share.to_bytes(true)),
             &pk_commitment_blind_factor,
         );
 
         let zk_pok_blind_factor = BigInt::sample(SECURITY_BITS);
-        let zk_pok_commitment = HashCommitment::create_commitment_with_user_defined_randomness(
+        let zk_pok_commitment = HashCommitment::<H>::create_commitment_with_user_defined_randomness(
             &BigInt::from_bytes(&d_log_proof.pk_t_rand_commitment.to_bytes(true)),
             &zk_pok_blind_factor,
         );
@@ -145,18 +147,18 @@ impl Party1FirstMessage {
     }
 }
 
-impl<E: Curve> Party1SecondMessage<E> {
+impl<E: Curve, H: Digest + Clone> Party1SecondMessage<E, H> {
     pub fn verify_and_decommit(
-        comm_witness: CommWitness<E>,
-        proof: &DLogProof<E>,
-    ) -> Result<Party1SecondMessage<E>, ProofError> {
+        comm_witness: CommWitness<E, H>,
+        proof: &DLogProof<E, H>,
+    ) -> Result<Party1SecondMessage<E, H>, ProofError> {
         DLogProof::verify(proof)?;
         Ok(Party1SecondMessage { comm_witness })
     }
 }
-impl<E: Curve> Party2FirstMessage<E> {
-    pub fn create() -> (Party2FirstMessage<E>, EcKeyPair<E>) {
-        let base = Point::<E>::generator();
+impl<E: Curve, H: Digest + Clone> Party2FirstMessage<E, H> {
+    pub fn create() -> (Party2FirstMessage<E, H>, EcKeyPair<E>) {
+        let base = Point::generator();
         let secret_share = Scalar::random();
         let public_share = base * &secret_share;
         let d_log_proof = DLogProof::prove(&secret_share);
@@ -175,7 +177,7 @@ impl<E: Curve> Party2FirstMessage<E> {
 
     pub fn create_with_fixed_secret_share(
         secret_share: Scalar<E>,
-    ) -> (Party2FirstMessage<E>, EcKeyPair<E>) {
+    ) -> (Party2FirstMessage<E, H>, EcKeyPair<E>) {
         let base = Point::generator();
         let public_share = base * &secret_share;
         let d_log_proof = DLogProof::prove(&secret_share);
@@ -194,9 +196,9 @@ impl<E: Curve> Party2FirstMessage<E> {
 }
 
 impl Party2SecondMessage {
-    pub fn verify_commitments_and_dlog_proof<E: Curve>(
+    pub fn verify_commitments_and_dlog_proof<E: Curve, H: Digest + Clone>(
         party_one_first_message: &Party1FirstMessage,
-        party_one_second_message: &Party1SecondMessage<E>,
+        party_one_second_message: &Party1SecondMessage<E, H>,
     ) -> Result<Party2SecondMessage, ProofError> {
         let party_one_pk_commitment = &party_one_first_message.pk_commitment;
         let party_one_zk_pok_commitment = &party_one_first_message.zk_pok_commitment;
@@ -213,7 +215,7 @@ impl Party2SecondMessage {
 
         let mut flag = true;
         if party_one_pk_commitment
-            != &HashCommitment::create_commitment_with_user_defined_randomness(
+            != &HashCommitment::<H>::create_commitment_with_user_defined_randomness(
                 &BigInt::from_bytes(&party_one_public_share.to_bytes(true)),
                 party_one_pk_commitment_blind_factor,
             )
@@ -222,7 +224,7 @@ impl Party2SecondMessage {
         };
 
         if party_one_zk_pok_commitment
-            != &HashCommitment::create_commitment_with_user_defined_randomness(
+            != &HashCommitment::<H>::create_commitment_with_user_defined_randomness(
                 &BigInt::from_bytes(&party_one_d_log_proof.pk_t_rand_commitment.to_bytes(true)),
                 party_one_zk_pok_blind_factor,
             )
@@ -246,11 +248,12 @@ pub fn compute_pubkey<E: Curve>(
 mod tests {
     use crate::cryptographic_primitives::twoparty::dh_key_exchange_variant_with_pok_comm::*;
 
-    crate::test_for_all_curves!(test_dh_key_exchange);
-    fn test_dh_key_exchange<E: Curve>() {
+    crate::test_for_all_curves_and_hashes!(test_dh_key_exchange);
+    fn test_dh_key_exchange<E: Curve, H: Digest + Clone>() {
         let (kg_party_one_first_message, kg_comm_witness, kg_ec_key_pair_party1) =
-            Party1FirstMessage::create_commitments::<E>();
-        let (kg_party_two_first_message, kg_ec_key_pair_party2) = Party2FirstMessage::<E>::create();
+            Party1FirstMessage::create_commitments::<E, H>();
+        let (kg_party_two_first_message, kg_ec_key_pair_party2) =
+            Party2FirstMessage::<E, H>::create();
         let kg_party_one_second_message = Party1SecondMessage::verify_and_decommit(
             kg_comm_witness,
             &kg_party_two_first_message.d_log_proof,

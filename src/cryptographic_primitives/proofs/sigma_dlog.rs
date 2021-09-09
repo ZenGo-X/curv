@@ -6,10 +6,10 @@
 */
 
 use serde::{Deserialize, Serialize};
-use sha2::Sha256;
 
 use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
 use crate::elliptic::curves::{Curve, Point, Scalar};
+use crate::marker::HashChoice;
 
 use super::ProofError;
 
@@ -25,14 +25,16 @@ use super::ProofError;
 /// pages 186–194, 1986.
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
-pub struct DLogProof<E: Curve> {
+pub struct DLogProof<E: Curve, H: Digest + Clone> {
     pub pk: Point<E>,
     pub pk_t_rand_commitment: Point<E>,
     pub challenge_response: Scalar<E>,
+    #[serde(skip)]
+    pub hash_choice: HashChoice<H>,
 }
 
-impl<E: Curve> DLogProof<E> {
-    pub fn prove(sk: &Scalar<E>) -> DLogProof<E> {
+impl<E: Curve, H: Digest + Clone> DLogProof<E, H> {
+    pub fn prove(sk: &Scalar<E>) -> DLogProof<E, H> {
         let generator = Point::<E>::generator();
 
         let sk_t_rand_commitment = Scalar::random();
@@ -40,7 +42,7 @@ impl<E: Curve> DLogProof<E> {
 
         let pk = Point::generator() * sk;
 
-        let challenge = Sha256::new()
+        let challenge = H::new()
             .chain_point(&pk_t_rand_commitment)
             .chain_point(&generator.to_point())
             .chain_point(&pk)
@@ -52,13 +54,14 @@ impl<E: Curve> DLogProof<E> {
             pk,
             pk_t_rand_commitment,
             challenge_response,
+            hash_choice: HashChoice::new(),
         }
     }
 
-    pub fn verify(proof: &DLogProof<E>) -> Result<(), ProofError> {
+    pub fn verify(proof: &DLogProof<E, H>) -> Result<(), ProofError> {
         let generator = Point::<E>::generator();
 
-        let challenge = Sha256::new()
+        let challenge = H::new()
             .chain_point(&proof.pk_t_rand_commitment)
             .chain_point(&generator.to_point())
             .chain_point(&proof.pk)
@@ -80,10 +83,10 @@ impl<E: Curve> DLogProof<E> {
 mod tests {
     use super::*;
 
-    crate::test_for_all_curves!(test_dlog_proof);
-    fn test_dlog_proof<E: Curve>() {
+    crate::test_for_all_curves_and_hashes!(test_dlog_proof);
+    fn test_dlog_proof<E: Curve, H: Digest + Clone>() {
         let witness = Scalar::random();
-        let dlog_proof = DLogProof::<E>::prove(&witness);
+        let dlog_proof = DLogProof::<E, H>::prove(&witness);
         assert!(DLogProof::verify(&dlog_proof).is_ok());
     }
 }

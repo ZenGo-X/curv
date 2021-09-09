@@ -6,12 +6,12 @@
 */
 
 use serde::{Deserialize, Serialize};
-use sha2::Sha256;
 
 use crate::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
 use crate::cryptographic_primitives::commitments::traits::Commitment;
 use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
 use crate::elliptic::curves::{Curve, Point, Scalar};
+use crate::marker::HashChoice;
 
 use super::ProofError;
 
@@ -26,18 +26,20 @@ use super::ProofError;
 /// verifier checks that z1*G + z2*H  = A1 + A2 + ec
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
-pub struct PedersenProof<E: Curve> {
+pub struct PedersenProof<E: Curve, H: Digest + Clone> {
     e: Scalar<E>,
     a1: Point<E>,
     a2: Point<E>,
     pub com: Point<E>,
     z1: Scalar<E>,
     z2: Scalar<E>,
+    #[serde(skip)]
+    hash_choice: HashChoice<H>,
 }
 
-impl<E: Curve> PedersenProof<E> {
+impl<E: Curve, H: Digest + Clone> PedersenProof<E, H> {
     #[allow(clippy::many_single_char_names)]
-    pub fn prove(m: &Scalar<E>, r: &Scalar<E>) -> PedersenProof<E> {
+    pub fn prove(m: &Scalar<E>, r: &Scalar<E>) -> PedersenProof<E, H> {
         let g = Point::<E>::generator();
         let h = Point::<E>::base_point2();
         let s1 = Scalar::random();
@@ -49,7 +51,7 @@ impl<E: Curve> PedersenProof<E> {
             &r.to_bigint(),
         );
 
-        let e = Sha256::new()
+        let e = H::new()
             .chain_points([&g.to_point(), h, &com, &a1, &a2])
             .result_scalar();
 
@@ -65,14 +67,15 @@ impl<E: Curve> PedersenProof<E> {
             com,
             z1,
             z2,
+            hash_choice: HashChoice::new(),
         }
     }
 
-    pub fn verify(proof: &PedersenProof<E>) -> Result<(), ProofError> {
+    pub fn verify(proof: &PedersenProof<E, H>) -> Result<(), ProofError> {
         let g = Point::<E>::generator();
         let h = Point::<E>::base_point2();
 
-        let e = Sha256::new()
+        let e = H::new()
             .chain_points([&g.to_point(), h, &proof.com, &proof.a1, &proof.a2])
             .result_scalar();
 
@@ -95,11 +98,11 @@ impl<E: Curve> PedersenProof<E> {
 mod tests {
     use super::*;
 
-    crate::test_for_all_curves!(test_pedersen_proof);
-    fn test_pedersen_proof<E: Curve>() {
+    crate::test_for_all_curves_and_hashes!(test_pedersen_proof);
+    fn test_pedersen_proof<E: Curve, H: Digest + Clone>() {
         let m = Scalar::random();
         let r = Scalar::random();
-        let pedersen_proof = PedersenProof::<E>::prove(&m, &r);
+        let pedersen_proof = PedersenProof::<E, H>::prove(&m, &r);
         PedersenProof::verify(&pedersen_proof).expect("error pedersen");
     }
 }

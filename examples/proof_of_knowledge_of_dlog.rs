@@ -1,4 +1,5 @@
 use curv::elliptic::curves::*;
+use sha2::Sha256;
 
 /// Sigma protocol for proof of knowledge of discrete log
 /// TO RUN:
@@ -13,7 +14,7 @@ pub fn dlog_proof<E: Curve>() {
     use curv::cryptographic_primitives::proofs::sigma_dlog::*;
 
     let witness = Scalar::random();
-    let dlog_proof = DLogProof::<E>::prove(&witness);
+    let dlog_proof = DLogProof::<E, Sha256>::prove(&witness);
     assert!(DLogProof::verify(&dlog_proof).is_ok());
 }
 

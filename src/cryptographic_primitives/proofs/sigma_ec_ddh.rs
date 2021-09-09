@@ -6,10 +6,10 @@
 */
 
 use serde::{Deserialize, Serialize};
-use sha2::Sha256;
 
 use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
 use crate::elliptic::curves::{Curve, Point, Scalar};
+use crate::marker::HashChoice;
 
 use super::ProofError;
 
@@ -27,10 +27,12 @@ use super::ProofError;
 /// verifier checks that zG1 = A1 + eH1, zG2 = A2 + eH2
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
-pub struct ECDDHProof<E: Curve> {
+pub struct ECDDHProof<E: Curve, H: Digest + Clone> {
     pub a1: Point<E>,
     pub a2: Point<E>,
     pub z: Scalar<E>,
+    #[serde(skip)]
+    pub hash_choice: HashChoice<H>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -46,12 +48,12 @@ pub struct ECDDHWitness<E: Curve> {
     pub x: Scalar<E>,
 }
 
-impl<E: Curve> ECDDHProof<E> {
-    pub fn prove(w: &ECDDHWitness<E>, delta: &ECDDHStatement<E>) -> ECDDHProof<E> {
+impl<E: Curve, H: Digest + Clone> ECDDHProof<E, H> {
+    pub fn prove(w: &ECDDHWitness<E>, delta: &ECDDHStatement<E>) -> ECDDHProof<E, H> {
         let s = Scalar::random();
         let a1 = &delta.g1 * &s;
         let a2 = &delta.g2 * &s;
-        let e = Sha256::new()
+        let e = H::new()
             .chain_point(&delta.g1)
             .chain_point(&delta.h1)
             .chain_point(&delta.g2)
@@ -60,11 +62,16 @@ impl<E: Curve> ECDDHProof<E> {
             .chain_point(&a2)
             .result_scalar();
         let z = &s + e * &w.x;
-        ECDDHProof { a1, a2, z }
+        ECDDHProof {
+            a1,
+            a2,
+            z,
+            hash_choice: HashChoice::new(),
+        }
     }
 
     pub fn verify(&self, delta: &ECDDHStatement<E>) -> Result<(), ProofError> {
-        let e = Sha256::new()
+        let e = H::new()
             .chain_point(&delta.g1)
             .chain_point(&delta.h1)
             .chain_point(&delta.g2)
@@ -86,13 +93,13 @@ impl<E: Curve> ECDDHProof<E> {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_for_all_curves;
+    use crate::test_for_all_curves_and_hashes;
 
     use super::*;
 
-    test_for_all_curves!(test_ecddh_proof);
-    fn test_ecddh_proof<E: Curve>() {
-        let x = Scalar::<E>::random();
+    test_for_all_curves_and_hashes!(test_ecddh_proof);
+    fn test_ecddh_proof<E: Curve, H: Digest + Clone>() {
+        let x = Scalar::random();
         let g1 = Point::generator();
         let g2 = Point::base_point2();
         let h1 = g1 * &x;
@@ -104,16 +111,16 @@ mod tests {
             h2,
         };
         let w = ECDDHWitness { x };
-        let proof = ECDDHProof::prove(&w, &delta);
+        let proof = ECDDHProof::<E, H>::prove(&w, &delta);
         assert!(proof.verify(&delta).is_ok());
     }
 
-    test_for_all_curves!(test_wrong_ecddh_proof);
-    fn test_wrong_ecddh_proof<E: Curve>() {
-        let x = Scalar::<E>::random();
+    test_for_all_curves_and_hashes!(test_wrong_ecddh_proof);
+    fn test_wrong_ecddh_proof<E: Curve, H: Digest + Clone>() {
+        let x = Scalar::random();
         let g1 = Point::generator();
         let g2 = Point::base_point2();
-        let x2 = Scalar::<E>::random();
+        let x2 = Scalar::random();
         let h1 = g1 * &x;
         let h2 = g2 * &x2;
         let delta = ECDDHStatement {
@@ -123,7 +130,7 @@ mod tests {
             h2,
         };
         let w = ECDDHWitness { x };
-        let proof = ECDDHProof::prove(&w, &delta);
+        let proof = ECDDHProof::<E, H>::prove(&w, &delta);
         assert!(!proof.verify(&delta).is_ok());
     }
 }

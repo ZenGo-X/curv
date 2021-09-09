@@ -7,6 +7,7 @@
 
 use std::fmt::Debug;
 
+use digest::Digest;
 use serde::{Deserialize, Serialize};
 
 use crate::cryptographic_primitives::proofs::sigma_valid_pedersen::PedersenProof;
@@ -18,8 +19,8 @@ use crate::elliptic::curves::{Curve, Point, Scalar};
 /// coin toss
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(bound = "")]
-pub struct Party1FirstMessage<E: Curve> {
-    pub proof: PedersenProof<E>,
+pub struct Party1FirstMessage<E: Curve, H: Digest + Clone> {
+    pub proof: PedersenProof<E, H>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -29,12 +30,12 @@ pub struct Party2FirstMessage<E: Curve> {
 }
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
-pub struct Party1SecondMessage<E: Curve> {
-    pub proof: PedersenBlindingProof<E>,
+pub struct Party1SecondMessage<E: Curve, H: Digest + Clone> {
+    pub proof: PedersenBlindingProof<E, H>,
     pub seed: Scalar<E>,
 }
-impl<E: Curve> Party1FirstMessage<E> {
-    pub fn commit() -> (Party1FirstMessage<E>, Scalar<E>, Scalar<E>) {
+impl<E: Curve, H: Digest + Clone> Party1FirstMessage<E, H> {
+    pub fn commit() -> (Party1FirstMessage<E, H>, Scalar<E>, Scalar<E>) {
         let seed = Scalar::random();
         let blinding = Scalar::random();
         let proof = PedersenProof::prove(&seed, &blinding);
@@ -42,19 +43,19 @@ impl<E: Curve> Party1FirstMessage<E> {
     }
 }
 impl<E: Curve> Party2FirstMessage<E> {
-    pub fn share(proof: &PedersenProof<E>) -> Party2FirstMessage<E> {
+    pub fn share<H: Digest + Clone>(proof: &PedersenProof<E, H>) -> Party2FirstMessage<E> {
         PedersenProof::verify(proof).expect("{(m,r),c} proof failed");
         let seed = Scalar::random();
         Party2FirstMessage { seed }
     }
 }
-impl<E: Curve> Party1SecondMessage<E> {
+impl<E: Curve, H: Digest + Clone> Party1SecondMessage<E, H> {
     pub fn reveal(
         party2seed: &Scalar<E>,
         party1seed: &Scalar<E>,
         party1blinding: &Scalar<E>,
-    ) -> (Party1SecondMessage<E>, Scalar<E>) {
-        let proof = PedersenBlindingProof::<E>::prove(party1seed, party1blinding);
+    ) -> (Party1SecondMessage<E, H>, Scalar<E>) {
+        let proof = PedersenBlindingProof::<E, H>::prove(party1seed, party1blinding);
         let coin_flip_result = &party1seed.to_bigint() ^ &party2seed.to_bigint();
         (
             Party1SecondMessage {
@@ -67,12 +68,12 @@ impl<E: Curve> Party1SecondMessage<E> {
 }
 
 // party2 finalize
-pub fn finalize<E: Curve>(
-    proof: &PedersenBlindingProof<E>,
+pub fn finalize<E: Curve, H: Digest + Clone>(
+    proof: &PedersenBlindingProof<E, H>,
     party2seed: &Scalar<E>,
     party1comm: &Point<E>,
 ) -> Scalar<E> {
-    PedersenBlindingProof::<E>::verify(proof).expect("{r,(m,c)} proof failed");
+    PedersenBlindingProof::<E, H>::verify(proof).expect("{r,(m,c)} proof failed");
     assert_eq!(&proof.com, party1comm);
     let coin_flip_result = &proof.m.to_bigint() ^ &party2seed.to_bigint();
     Scalar::from(&coin_flip_result)
@@ -82,12 +83,12 @@ pub fn finalize<E: Curve>(
 mod tests {
     use super::*;
 
-    crate::test_for_all_curves!(test_coin_toss);
-    pub fn test_coin_toss<E: Curve>() {
-        let (party1_first_message, m1, r1) = Party1FirstMessage::<E>::commit();
+    crate::test_for_all_curves_and_hashes!(test_coin_toss);
+    pub fn test_coin_toss<E: Curve, H: Digest + Clone>() {
+        let (party1_first_message, m1, r1) = Party1FirstMessage::<E, H>::commit();
         let party2_first_message = Party2FirstMessage::share(&party1_first_message.proof);
         let (party1_second_message, random1) =
-            Party1SecondMessage::<E>::reveal(&party2_first_message.seed, &m1, &r1);
+            Party1SecondMessage::<E, H>::reveal(&party2_first_message.seed, &m1, &r1);
         let random2 = finalize(
             &party1_second_message.proof,
             &party2_first_message.seed,

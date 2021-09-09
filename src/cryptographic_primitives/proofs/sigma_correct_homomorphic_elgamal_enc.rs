@@ -6,13 +6,12 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
-use serde::{Deserialize, Serialize};
-
 use digest::Digest;
-use sha2::Sha256;
+use serde::{Deserialize, Serialize};
 
 use crate::cryptographic_primitives::hashing::DigestExt;
 use crate::elliptic::curves::{Curve, Point, Scalar};
+use crate::marker::HashChoice;
 
 use super::ProofError;
 
@@ -24,11 +23,13 @@ use super::ProofError;
 ///
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
-pub struct HomoELGamalProof<E: Curve> {
+pub struct HomoELGamalProof<E: Curve, H: Digest + Clone> {
     pub T: Point<E>,
     pub A3: Point<E>,
     pub z1: Scalar<E>,
     pub z2: Scalar<E>,
+    #[serde(skip)]
+    pub hash_choice: HashChoice<H>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -48,18 +49,18 @@ pub struct HomoElGamalStatement<E: Curve> {
     pub E: Point<E>,
 }
 
-impl<E: Curve> HomoELGamalProof<E> {
+impl<E: Curve, H: Digest + Clone> HomoELGamalProof<E, H> {
     pub fn prove(
         w: &HomoElGamalWitness<E>,
         delta: &HomoElGamalStatement<E>,
-    ) -> HomoELGamalProof<E> {
+    ) -> HomoELGamalProof<E, H> {
         let s1: Scalar<E> = Scalar::random();
         let s2: Scalar<E> = Scalar::random();
         let A1 = &delta.H * &s1;
         let A2 = &delta.Y * &s2;
         let A3 = &delta.G * &s2;
         let T = A1 + A2;
-        let e = Sha256::new()
+        let e = H::new()
             .chain_point(&T)
             .chain_point(&A3)
             .chain_point(&delta.G)
@@ -71,10 +72,16 @@ impl<E: Curve> HomoELGamalProof<E> {
         // dealing with zero field element
         let z1 = &s1 + &w.x * &e;
         let z2 = s2 + &w.r * e;
-        HomoELGamalProof { T, A3, z1, z2 }
+        HomoELGamalProof {
+            T,
+            A3,
+            z1,
+            z2,
+            hash_choice: HashChoice::new(),
+        }
     }
     pub fn verify(&self, delta: &HomoElGamalStatement<E>) -> Result<(), ProofError> {
-        let e = Sha256::new()
+        let e = H::new()
             .chain_point(&self.T)
             .chain_point(&self.A3)
             .chain_point(&delta.G)
@@ -98,11 +105,11 @@ impl<E: Curve> HomoELGamalProof<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_for_all_curves;
+    use crate::test_for_all_curves_and_hashes;
 
-    test_for_all_curves!(test_correct_general_homo_elgamal);
-    fn test_correct_general_homo_elgamal<E: Curve>() {
-        let witness = HomoElGamalWitness::<E> {
+    test_for_all_curves_and_hashes!(test_correct_general_homo_elgamal);
+    fn test_correct_general_homo_elgamal<E: Curve, H: Digest + Clone>() {
+        let witness = HomoElGamalWitness {
             r: Scalar::random(),
             x: Scalar::random(),
         };
@@ -120,12 +127,12 @@ mod tests {
             D,
             E,
         };
-        let proof = HomoELGamalProof::prove(&witness, &delta);
+        let proof = HomoELGamalProof::<E, H>::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
     }
 
-    test_for_all_curves!(test_correct_homo_elgamal);
-    fn test_correct_homo_elgamal<E: Curve>() {
+    test_for_all_curves_and_hashes!(test_correct_homo_elgamal);
+    fn test_correct_homo_elgamal<E: Curve, H: Digest + Clone>() {
         let witness = HomoElGamalWitness {
             r: Scalar::random(),
             x: Scalar::random(),
@@ -142,14 +149,14 @@ mod tests {
             D,
             E,
         };
-        let proof = HomoELGamalProof::prove(&witness, &delta);
+        let proof = HomoELGamalProof::<E, H>::prove(&witness, &delta);
         assert!(proof.verify(&delta).is_ok());
     }
 
-    test_for_all_curves!(test_wrong_homo_elgamal);
-    fn test_wrong_homo_elgamal<E: Curve>() {
+    test_for_all_curves_and_hashes!(test_wrong_homo_elgamal);
+    fn test_wrong_homo_elgamal<E: Curve, H: Digest + Clone>() {
         // test for E = (r+1)G
-        let witness = HomoElGamalWitness::<E> {
+        let witness = HomoElGamalWitness {
             r: Scalar::random(),
             x: Scalar::random(),
         };
@@ -167,7 +174,7 @@ mod tests {
             D,
             E,
         };
-        let proof = HomoELGamalProof::prove(&witness, &delta);
+        let proof = HomoELGamalProof::<E, H>::prove(&witness, &delta);
         assert!(!proof.verify(&delta).is_ok());
     }
 }

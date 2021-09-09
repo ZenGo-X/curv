@@ -21,7 +21,7 @@ pub struct MT256<'a> {
 */
 pub struct MT256<E: Curve> {
     tree: MerkleTree<[u8; 32]>,
-    _ph: PhantomData<E>,
+    _ph: PhantomData<fn(E)>,
 }
 
 //impl <'a> MT256<'a>{
