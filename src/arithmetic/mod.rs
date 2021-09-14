@@ -17,6 +17,7 @@
 mod errors;
 mod macros;
 mod samplable;
+mod serde_support;
 pub mod traits;
 
 #[cfg(not(any(feature = "rust-gmp-kzen", feature = "num-bigint")))]
@@ -31,6 +32,7 @@ pub use big_gmp::BigInt;
 
 #[cfg(feature = "num-bigint")]
 mod big_native;
+
 #[cfg(feature = "num-bigint")]
 pub use big_native::BigInt;
 
@@ -44,6 +46,16 @@ mod test {
     use proptest_derive::Arbitrary;
 
     use super::*;
+
+    #[test]
+    fn serde() {
+        use serde_test::{assert_tokens, Token::*};
+        for bigint in [BigInt::zero(), BigInt::sample(1024)] {
+            let bytes = bigint.to_bytes();
+            let tokens = vec![Bytes(bytes.leak())];
+            assert_tokens(&bigint, &tokens)
+        }
+    }
 
     #[test]
     fn serializing_to_hex() {
