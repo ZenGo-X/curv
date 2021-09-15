@@ -48,6 +48,7 @@ version = "0.5"
 features = ["ecdsa"]
 
 [dev-dependencies]
+serde_test = "1.0"
 bincode = "1.1"
 serde_json = "1.0"
 paste = "1.0.2"
