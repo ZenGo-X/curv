@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.8.0-rc4
+## v0.8.0
 * Implement Try and Increment when converting hash to scalar [#128] \
   Improves performance and security of conversion 🔥
 * Get rid of deprecated `rust-crypto` dependency [#137]
@@ -8,9 +8,20 @@
   * Merkle trees API has been slightly changed
   * Merkle trees are generic over hash function (it used to work with keccak256 only)
   * Merkle proofs built by previous versions of `curv` are incompatible with latest `curv`
+* Make the commitments generic over the hash function [#129] \
+  Allows the user to choose their own hash function when using our hash and related commitments
+* Unify and optimise bigint serialization [#139]
+  * Bigints are serialized as bytes (instead of converting to hex/decimal format), that should save communication size 
+    (depends on serialization backend)
+  * Different backends serialize bigints in the same way, ie. number serialized via `rust-gmp` backend will be properly
+    deserialized via `num-bigint` backend and vice-versa
+  * Compatibility notes: bigints serialization format is changed, so numbers serialized with older curv are not compatible
+    with the newest version
 
 [#128]: https://github.com/ZenGo-X/curv/pull/128
+[#129]: https://github.com/ZenGo-X/curv/pull/129
 [#137]: https://github.com/ZenGo-X/curv/pull/137
+[#139]: https://github.com/ZenGo-X/curv/pull/139
 
 ## v0.8.0-rc3
 * Fix point subtraction. Bug was introduced in `v0.8.0-rc1`. [#127]
