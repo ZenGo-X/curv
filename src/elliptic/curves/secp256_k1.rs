@@ -32,8 +32,7 @@ use secp256k1::constants::{
     CURVE_ORDER, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
 use secp256k1::{PublicKey, Secp256k1, SecretKey, VerifyOnly};
-use serde::de::{self, Error, MapAccess, SeqAccess, Visitor};
-use serde::ser::SerializeStruct;
+use serde::de::{self, Visitor};
 use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
 use std::fmt;
@@ -543,10 +542,7 @@ impl Serialize for Secp256k1Point {
     where
         S: Serializer,
     {
-        let mut state = serializer.serialize_struct("Secp256k1Point", 2)?;
-        state.serialize_field("x", &self.x_coor().unwrap().to_hex())?;
-        state.serialize_field("y", &self.y_coor().unwrap().to_hex())?;
-        state.end()
+        serializer.serialize_str(&self.bytes_compressed_to_big_int().to_hex())
     }
 }
 
@@ -555,8 +551,7 @@ impl<'de> Deserialize<'de> for Secp256k1Point {
     where
         D: Deserializer<'de>,
     {
-        let fields = &["x", "y"];
-        deserializer.deserialize_struct("Secp256k1Point", fields, Secp256k1PointVisitor)
+        deserializer.deserialize_str(Secp256k1PointVisitor)
     }
 }
 
@@ -569,42 +564,16 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
         formatter.write_str("Secp256k1Point")
     }
 
-    fn visit_seq<V>(self, mut seq: V) -> Result<Secp256k1Point, V::Error>
+    fn visit_str<E>(self, p: &str) -> Result<Secp256k1Point, E>
     where
-        V: SeqAccess<'de>,
+        E: serde::de::Error,
     {
-        let x = seq
-            .next_element()?
-            .ok_or_else(|| V::Error::invalid_length(0, &"a single element"))?;
-        let y = seq
-            .next_element()?
-            .ok_or_else(|| V::Error::invalid_length(0, &"a single element"))?;
-
-        let bx = BigInt::from_hex(x).map_err(V::Error::custom)?;
-        let by = BigInt::from_hex(y).map_err(V::Error::custom)?;
-
-        Ok(Secp256k1Point::from_coor(&bx, &by))
-    }
-
-    fn visit_map<E: MapAccess<'de>>(self, mut map: E) -> Result<Secp256k1Point, E::Error> {
-        let mut x = String::new();
-        let mut y = String::new();
-
-        while let Some(ref key) = map.next_key::<String>()? {
-            let v = map.next_value::<String>()?;
-            if key == "x" {
-                x = v
-            } else if key == "y" {
-                y = v
-            } else {
-                return Err(E::Error::unknown_field(key, &["x", "y"]));
-            }
+        let bp = BigInt::from_hex(p).map_err(E::custom)?;
+        let bp = bp.to_bytes();
+        if bp.len() < 33 {
+            return Err(E::invalid_length(bp.len(), &"33 bytes"));
         }
-
-        let bx = BigInt::from_hex(&x).map_err(E::Error::custom)?;
-        let by = BigInt::from_hex(&y).map_err(E::Error::custom)?;
-
-        Ok(Secp256k1Point::from_coor(&bx, &by))
+        Secp256k1Point::from_bytes(&bp[1..33]).map_err(|_e| E::custom("invalid point"))
     }
 }
 
@@ -673,13 +642,12 @@ mod tests {
     fn serialize_pk() {
         let pk = Secp256k1Point::generator();
         let x = pk.x_coor().unwrap();
-        let y = pk.y_coor().unwrap();
         let s = serde_json::to_string(&pk).expect("Failed in serialization");
 
-        let expected = format!("{{\"x\":\"{}\",\"y\":\"{}\"}}", x.to_hex(), y.to_hex());
+        let expected = format!("\"{}{}\"", 2, x.to_hex());
         assert_eq!(s, expected);
 
-        let des_pk: Secp256k1Point = serde_json::from_str(&s).expect("Failed in serialization");
+        let des_pk: Secp256k1Point = serde_json::from_str(&s).expect("Failed in deserialization");
         assert_eq!(des_pk.ge, pk.ge);
     }
 
