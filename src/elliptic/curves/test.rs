@@ -362,23 +362,29 @@ fn scalar_assign_negation<E: Curve>() {
 
 test_for_all_curves!(bigint_conversion);
 fn bigint_conversion<E: Curve>() {
-    if E::CURVE_NAME == "ed25519" {
+    if E::CURVE_NAME == "ristretto" {
+        println!("ristretto is different!\n");
         let hex_bn = "48ab347b2846f96b7bcd00bf985c52b83b92415c5c914bc1f3b09e186cf2b14f";
         let bytes_bn = decode(hex_bn).unwrap();
         let bn = BigInt::from_bytes(&bytes_bn[..]);
 
-        let point: E::Scalar = ECScalar::from_bigint(&bn);
+        let curve_scalar: E::Scalar = ECScalar::from_bigint(&bn);
 
-        let bn_back = point.to_bigint();
-
-        let mut bytes_back = bn_back.to_bytes();
-        bytes_back.reverse();
+        let bn_back = curve_scalar.to_bigint();
 
         let hex_back = bn_back.to_hex();
+        assert_eq!(hex_bn, hex_back);
+    }
+    else {
+        let hex_bn = "48ab347b2846f96b7bcd00bf985c52b83b92415c5c914bc1f3b09e186cf2b14f";
+        let bytes_bn = decode(hex_bn).unwrap();
+        let bn = BigInt::from_bytes(&bytes_bn[..]);
 
-        if hex_back == hex_bn {
-            println!("SUCCESS!\n");
-        }
+        let curve_scalar: E::Scalar = ECScalar::from_bigint(&bn);
+
+        let bn_back = curve_scalar.to_bigint();
+
+        let hex_back = bn_back.to_hex();
         assert_eq!(hex_bn, hex_back);
     }
     return;
