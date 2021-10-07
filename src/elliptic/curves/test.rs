@@ -8,6 +8,7 @@ use crate::arithmetic::*;
 use crate::test_for_all_curves;
 
 use super::traits::*;
+use hex::decode;
 
 fn random_nonzero_scalar<S: ECScalar>() -> S {
     loop {
@@ -357,4 +358,28 @@ fn scalar_assign_negation<E: Curve>() {
         s
     };
     assert_eq!(s_neg_1, s_neg_2);
+}
+
+test_for_all_curves!(bigint_conversion);
+fn bigint_conversion<E: Curve>() {
+    if E::CURVE_NAME == "ed25519" {
+        let hex_bn = "48ab347b2846f96b7bcd00bf985c52b83b92415c5c914bc1f3b09e186cf2b14f";
+        let bytes_bn = decode(hex_bn).unwrap();
+        let bn = BigInt::from_bytes(&bytes_bn[..]);
+
+        let point: E::Scalar = ECScalar::from_bigint(&bn);
+
+        let bn_back = point.to_bigint();
+
+        let mut bytes_back = bn_back.to_bytes();
+        bytes_back.reverse();
+
+        let hex_back = bn_back.to_hex();
+
+        if hex_back == hex_bn {
+            println!("SUCCESS!\n");
+        }
+        assert_eq!(hex_bn, hex_back);
+    }
+    return;
 }

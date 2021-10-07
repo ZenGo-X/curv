@@ -157,7 +157,6 @@ impl ECScalar for Ed25519Scalar {
         template.extend_from_slice(&v);
         v = template;
         v.reverse();
-        sc_reduce(&mut v[..]);
         Ed25519Scalar {
             purpose: "from_bigint",
             fe: SK(Fe::from_bytes(&v[..])).into(),
