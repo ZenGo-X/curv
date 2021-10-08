@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.8.1
+* Bugfix for points/scalars deserialization via serde_json [#143]
+
+[#143]: https://github.com/ZenGo-X/curv/pull/143
+
 ## v0.8.0
 * Implement Try and Increment when converting hash to scalar [#128] \
   Improves performance and security of conversion 🔥
