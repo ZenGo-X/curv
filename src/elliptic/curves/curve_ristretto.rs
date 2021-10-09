@@ -101,15 +101,13 @@ impl ECScalar for RistrettoScalar {
     }
 
     fn from_bigint(n: &BigInt) -> RistrettoScalar {
-        let curve_order = RistrettoScalar::group_order();
-        println!("risris!!!\n"); //TODO: figure out what's going on
         let mut bytes = n
             .to_bytes_array::<32>()
             .expect("n mod curve_order must be equal or less than 32 bytes");
         bytes.reverse();
         RistrettoScalar {
             purpose: "from_bigint",
-            fe: SK::from_bytes_mod_order(bytes).into(),
+            fe: SK::from_bits(bytes).into()
         }
     }
 
