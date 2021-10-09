@@ -362,5 +362,4 @@ fn bigint_conversion<E: Curve>() {
 
     let hex_back = bn_back.to_hex();
     assert_eq!(hex_bn, hex_back);
-    return;
 }

@@ -107,7 +107,7 @@ impl ECScalar for RistrettoScalar {
         bytes.reverse();
         RistrettoScalar {
             purpose: "from_bigint",
-            fe: SK::from_bits(bytes).into()
+            fe: SK::from_bits(bytes).into(),
         }
     }
 
