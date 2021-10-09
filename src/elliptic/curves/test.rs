@@ -44,16 +44,6 @@ fn zero_point_arithmetic<E: Curve>() {
     assert!(zero_point.scalar_mul(&scalar).is_zero(), "O * s = O")
 }
 
-test_for_all_curves!(scalar_modulo_curve_order);
-fn scalar_modulo_curve_order<E: Curve>() {
-    let n = E::Scalar::group_order();
-    let s = E::Scalar::from_bigint(n);
-    assert!(s.is_zero());
-
-    let s = E::Scalar::from_bigint(&(n + 1));
-    assert_eq!(s, E::Scalar::from_bigint(&BigInt::from(1)));
-}
-
 test_for_all_curves!(zero_scalar_arithmetic);
 fn zero_scalar_arithmetic<E: Curve>() {
     let s: E::Scalar = random_nonzero_scalar();
