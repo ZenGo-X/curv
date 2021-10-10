@@ -41,7 +41,7 @@ pub use traits::*;
 
 #[cfg(test)]
 mod test {
-    use std::{fmt, ops::*};
+    use std::{fmt, iter, ops::*};
 
     use proptest_derive::Arbitrary;
 
@@ -54,6 +54,24 @@ mod test {
             let bytes = bigint.to_bytes();
             let tokens = vec![Bytes(bytes.leak())];
             assert_tokens(&bigint, &tokens)
+        }
+    }
+
+    #[test]
+    fn deserialize_from_seq() {
+        use serde_test::{
+            assert_de_tokens,
+            Token::{Seq, SeqEnd, U8},
+        };
+        for bigint in [BigInt::zero(), BigInt::sample(1024)] {
+            let bytes = bigint.to_bytes();
+            let tokens = iter::once(Seq {
+                len: Some(bytes.len()),
+            })
+            .chain(bytes.into_iter().map(U8))
+            .chain(iter::once(SeqEnd))
+            .collect::<Vec<_>>();
+            assert_de_tokens(&bigint, &tokens)
         }
     }
 
