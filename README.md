@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/ZenGo-X/curv.svg?branch=master)](https://travis-ci.com/ZenGo-X/curv)
+[![Build Status](https://app.travis-ci.com/ZenGo-X/curv.svg?branch=master)](https://app.travis-ci.com/ZenGo-X/curv)
 [![Latest version](https://img.shields.io/crates/v/curv-kzen.svg)](https://crates.io/crates/curv-kzen)
 [![Docs](https://docs.rs/curv-kzen/badge.svg)](https://docs.rs/curv-kzen)
 [![License](https://img.shields.io/crates/l/curv-kzen)](LICENSE)
