@@ -1,6 +1,6 @@
 use std::fmt;
 
-use serde::de::Visitor;
+use serde::de::{SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::traits::Converter;
@@ -35,6 +35,17 @@ impl<'de> Deserialize<'de> for BigInt {
                 E: serde::de::Error,
             {
                 Ok(BigInt::from_bytes(v))
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                let mut bytes = vec![];
+                while let Some(byte) = seq.next_element::<u8>()? {
+                    bytes.push(byte)
+                }
+                Ok(BigInt::from_bytes(&bytes))
             }
         }
 

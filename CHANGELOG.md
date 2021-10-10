@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.8.2
+* Bugfix for BigInt deserialization via serde_json [#145]
+
+[#145]: https://github.com/ZenGo-X/curv/pull/145
+
 ## v0.8.1
 * Bugfix for points/scalars deserialization via serde_json [#143]
 
