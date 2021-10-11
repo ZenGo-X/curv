@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::convert::TryFrom;
 use std::{iter, ops};
 
@@ -10,9 +11,9 @@ use crate::elliptic::curves::{Curve, Scalar};
 ///
 /// The degree of $f(x)$ is defined as the smallest $i$ such that $a_i \neq 0$.
 /// If $f(x) = 0$ it's degree is defined as $\infty$.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum PolynomialDegree {
-    Infinity(),
+    Infinity,
     Finite(u16),
 }
 
@@ -24,26 +25,18 @@ impl From<u16> for PolynomialDegree {
 
 impl PartialOrd for PolynomialDegree {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        match self {
-            PolynomialDegree::Finite(deg) => {
-                if let PolynomialDegree::Finite(other_deg) = other {
-                    return u16::partial_cmp(deg, other_deg);
-                }
-                Some(std::cmp::Ordering::Less)
-            }
-            PolynomialDegree::Infinity() => {
-                if let PolynomialDegree::Infinity() = other {
-                    return Some(std::cmp::Ordering::Equal);
-                }
-                Some(std::cmp::Ordering::Greater)
-            }
-        }
+        Some(self.cmp(other))
     }
 }
 
 impl Ord for PolynomialDegree {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.partial_cmp(other).unwrap()
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (Self::Infinity, Self::Infinity) => Ordering::Equal,
+            (Self::Infinity, Self::Finite(_)) => Ordering::Greater,
+            (Self::Finite(_), Self::Infinity) => Ordering::Less,
+            (Self::Finite(a), Self::Finite(b)) => a.cmp(&b),
+        }
     }
 }
 
@@ -97,17 +90,17 @@ impl<E: Curve> Polynomial<E> {
     /// let polynomial = Polynomial::<Secp256k1>::sample_exact(3.into());
     /// assert_eq!(polynomial.degree(), 3.into());
     ///
-    /// let zero_polynomial = Polynomial::<Secp256k1>::sample_exact(PolynomialDegree::Infinity());
-    /// assert_eq!(zero_polynomial.degree(), PolynomialDegree::Infinity());
+    /// let zero_polynomial = Polynomial::<Secp256k1>::sample_exact(PolynomialDegree::Infinity);
+    /// assert_eq!(zero_polynomial.degree(), PolynomialDegree::Infinity);
     /// ```
     pub fn sample_exact(degree: PolynomialDegree) -> Self {
         match degree {
             PolynomialDegree::Finite(degree) => Self::from_coefficients(
                 iter::repeat_with(Scalar::random)
-                    .take(usize::from(degree + 1))
+                    .take(usize::from(degree) + 1)
                     .collect(),
             ),
-            PolynomialDegree::Infinity() => Self::from_coefficients(vec![]),
+            PolynomialDegree::Infinity => Self::from_coefficients(vec![]),
         }
     }
 
@@ -151,11 +144,11 @@ impl<E: Curve> Polynomial<E> {
     /// let polynomial = Polynomial::<Secp256k1>::from_coefficients(vec![
     ///     Scalar::zero()
     /// ]);
-    /// assert_eq!(polynomial.degree(), PolynomialDegree::Infinity());
+    /// assert_eq!(polynomial.degree(), PolynomialDegree::Infinity);
     ///
     /// let polynomial = Polynomial::<Secp256k1>::from_coefficients(vec![
     /// ]);
-    /// assert_eq!(polynomial.degree(), PolynomialDegree::Infinity());
+    /// assert_eq!(polynomial.degree(), PolynomialDegree::Infinity);
     /// ```
     pub fn degree(&self) -> PolynomialDegree {
         self.coefficients()
@@ -168,7 +161,7 @@ impl<E: Curve> Polynomial<E> {
                     u16::try_from(i).expect("polynomial degree guaranteed to fit into u16"),
                 )
             })
-            .unwrap_or(PolynomialDegree::Infinity())
+            .unwrap_or(PolynomialDegree::Infinity)
     }
 
     /// Takes scalar $x$ and evaluates $f(x)$
