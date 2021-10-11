@@ -4,7 +4,7 @@ use std::{iter, ops};
 
 use serde::{Deserialize, Serialize};
 
-use crate::elliptic::curves::{Curve, Scalar};
+use crate::elliptic::curves::{Curve, Scalar, Secp256k1};
 
 /// Degree of a [polynomial](Polynomial).
 ///
@@ -278,6 +278,10 @@ impl<E: Curve> Polynomial<E> {
         &self.coefficients
     }
 
+    pub fn into_coefficients(self) -> Vec<Scalar<E>> {
+        self.coefficients
+    }
+
     /// Evaluates lagrange basis polynomial
     ///
     /// $$l_{X,j}(x) = \prod_{\substack{0 \leq m \leq t,\\\\m \ne j}} \frac{x - X_m}{X_j - X_m}$$
@@ -330,6 +334,10 @@ impl<E: Curve> Polynomial<E> {
             .expect("elements in xs are not pairwise distinct");
         num * denum
     }
+
+    // Compute the inverse FFT of a set of points.
+    // An inverse FFT takes a polynomial $ P(x) = \sum_{i=0}^{n-1} a_ix^i $ and computes and computes a set of $ n $ points
+    // $ (x_1,y_1),\ldots,(x_n,y_n) $ such that  $ P(x_i) = y_i $.
 }
 
 /// Multiplies polynomial `f(x)` at scalar `s`, returning resulting polynomial `g(x) = s * f(x)`
