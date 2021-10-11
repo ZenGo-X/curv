@@ -101,7 +101,7 @@ impl<E: Curve, H: Digest + Clone> LdeiProof<E, H> {
             return Err(InvalidLdeiStatement::ListOfXDoesntMatchExpectedValue);
         }
 
-        let u = Polynomial::<E>::sample_exact(statement.d.into());
+        let u = Polynomial::<E>::sample_exact(statement.d);
         let a: Vec<Point<E>> = statement
             .g
             .iter()
@@ -201,7 +201,7 @@ mod tests {
     test_for_all_curves_and_hashes!(correctly_proofs);
     fn correctly_proofs<E: Curve, H: Digest + Clone>() {
         let d = 5;
-        let poly = Polynomial::<E>::sample_exact(5.into());
+        let poly = Polynomial::<E>::sample_exact(5);
         let witness = LdeiWitness { w: poly };
 
         let alpha: Vec<Scalar<E>> = (1..=10).map(Scalar::from).collect();
