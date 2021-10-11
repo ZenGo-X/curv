@@ -35,7 +35,7 @@ impl Ord for PolynomialDegree {
             (Self::Infinity, Self::Infinity) => Ordering::Equal,
             (Self::Infinity, Self::Finite(_)) => Ordering::Greater,
             (Self::Finite(_), Self::Infinity) => Ordering::Less,
-            (Self::Finite(a), Self::Finite(b)) => a.cmp(&b),
+            (Self::Finite(a), Self::Finite(b)) => a.cmp(b),
         }
     }
 }
