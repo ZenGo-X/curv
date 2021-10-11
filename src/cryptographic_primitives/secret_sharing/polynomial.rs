@@ -29,13 +29,13 @@ impl PartialOrd for PolynomialDegree {
                 if let PolynomialDegree::Finite(other_deg) = other {
                     return u16::partial_cmp(deg, other_deg);
                 }
-                return Some(std::cmp::Ordering::Less);
+                Some(std::cmp::Ordering::Less)
             }
             PolynomialDegree::Infinity() => {
                 if let PolynomialDegree::Infinity() = other {
                     return Some(std::cmp::Ordering::Equal);
                 }
-                return Some(std::cmp::Ordering::Greater);
+                Some(std::cmp::Ordering::Greater)
             }
         }
     }
