@@ -9,7 +9,7 @@ use crate::elliptic::curves::{Curve, Scalar};
 /// Degree of a polynomial.
 /// For a polynomial of the form: $f(x) = a_0 + a_1 x^1 + \dots{} + a_{n-1} x^{n-1} + a_n x^n$
 ///
-/// The degree of $f(x)$ is defined as the smallest $i$ such that $a_i \neq 0$.
+/// The degree of $f(x)$ is defined as the biggest $i$ such that $a_i \neq 0$.
 /// If $f(x) = 0$ it's degree is defined as $\infty$.
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum PolynomialDegree {
