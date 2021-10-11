@@ -40,7 +40,7 @@ impl<E: Curve> LdeiStatement<E> {
         if g.len() != alpha.len() {
             return Err(InvalidLdeiStatement::AlphaLengthDoesntMatchG);
         }
-        if witness.w.degree() > d {
+        if witness.w.degree() > d.into() {
             return Err(InvalidLdeiStatement::PolynomialDegreeMoreThanD);
         }
         if !ensure_list_is_pairwise_distinct(&alpha) {
@@ -84,7 +84,7 @@ impl<E: Curve, H: Digest + Clone> LdeiProof<E, H> {
         if statement.alpha.len() != statement.g.len() {
             return Err(InvalidLdeiStatement::AlphaLengthDoesntMatchG);
         }
-        if witness.w.degree() > statement.d {
+        if witness.w.degree() > statement.d.into() {
             return Err(InvalidLdeiStatement::PolynomialDegreeMoreThanD);
         }
         if !ensure_list_is_pairwise_distinct(&statement.alpha) {
@@ -101,7 +101,7 @@ impl<E: Curve, H: Digest + Clone> LdeiProof<E, H> {
             return Err(InvalidLdeiStatement::ListOfXDoesntMatchExpectedValue);
         }
 
-        let u = Polynomial::<E>::sample_exact(statement.d);
+        let u = Polynomial::<E>::sample_exact(statement.d.into());
         let a: Vec<Point<E>> = statement
             .g
             .iter()
@@ -145,7 +145,7 @@ impl<E: Curve, H: Digest + Clone> LdeiProof<E, H> {
         if e != self.e {
             return Err(ProofError);
         }
-        if self.z.degree() > statement.d {
+        if self.z.degree() > statement.d.into() {
             return Err(ProofError);
         }
 
@@ -201,7 +201,7 @@ mod tests {
     test_for_all_curves_and_hashes!(correctly_proofs);
     fn correctly_proofs<E: Curve, H: Digest + Clone>() {
         let d = 5;
-        let poly = Polynomial::<E>::sample_exact(5);
+        let poly = Polynomial::<E>::sample_exact(5.into());
         let witness = LdeiWitness { w: poly };
 
         let alpha: Vec<Scalar<E>> = (1..=10).map(Scalar::from).collect();

@@ -5,6 +5,48 @@ use serde::{Deserialize, Serialize};
 
 use crate::elliptic::curves::{Curve, Scalar};
 
+/// Degree of a polynomial.
+/// For a polynomial of the form: $f(x) = a_0 + a_1 x^1 + \dots{} + a_{n-1} x^{n-1} + a_n x^n$
+///
+/// The degree of $f(x)$ is defined as the smallest $i$ such that $a_i \neq 0$.
+/// If $f(x) = 0$ it's degree is defined as $\infty$.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum PolynomialDegree {
+    Infinity(),
+    Finite(u16),
+}
+
+impl From<u16> for PolynomialDegree {
+    fn from(deg: u16) -> Self {
+        PolynomialDegree::Finite(deg)
+    }
+}
+
+impl PartialOrd for PolynomialDegree {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match self {
+            PolynomialDegree::Finite(deg) => {
+                if let PolynomialDegree::Finite(other_deg) = other {
+                    return u16::partial_cmp(deg, other_deg);
+                }
+                return Some(std::cmp::Ordering::Less);
+            }
+            PolynomialDegree::Infinity() => {
+                if let PolynomialDegree::Infinity() = other {
+                    return Some(std::cmp::Ordering::Equal);
+                }
+                return Some(std::cmp::Ordering::Greater);
+            }
+        }
+    }
+}
+
+impl Ord for PolynomialDegree {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
 /// Polynomial of some degree $n$
 ///
 /// Polynomial has a form: $f(x) = a_0 + a_1 x^1 + \dots{} + a_{n-1} x^{n-1} + a_n x^n$
@@ -50,16 +92,23 @@ impl<E: Curve> Polynomial<E> {
     /// ```rust
     /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
     /// use curv::elliptic::curves::Secp256k1;
+    /// use curv::cryptographic_primitives::secret_sharing::PolynomialDegree;
     ///
-    /// let polynomial = Polynomial::<Secp256k1>::sample_exact(3);
-    /// assert_eq!(polynomial.degree(), 3);
+    /// let polynomial = Polynomial::<Secp256k1>::sample_exact(3.into());
+    /// assert_eq!(polynomial.degree(), 3.into());
+    ///
+    /// let zero_polynomial = Polynomial::<Secp256k1>::sample_exact(PolynomialDegree::Infinity());
+    /// assert_eq!(zero_polynomial.degree(), PolynomialDegree::Infinity());
     /// ```
-    pub fn sample_exact(degree: u16) -> Self {
-        Self::from_coefficients(
-            iter::repeat_with(Scalar::random)
-                .take(usize::from(degree + 1))
-                .collect(),
-        )
+    pub fn sample_exact(degree: PolynomialDegree) -> Self {
+        match degree {
+            PolynomialDegree::Finite(degree) => Self::from_coefficients(
+                iter::repeat_with(Scalar::random)
+                    .take(usize::from(degree + 1))
+                    .collect(),
+            ),
+            PolynomialDegree::Infinity() => Self::from_coefficients(vec![]),
+        }
     }
 
     /// Samples random polynomial of degree $n$ with fixed constant term (ie. $a_0 = \text{constant\\_term}$)
@@ -71,7 +120,7 @@ impl<E: Curve> Polynomial<E> {
     ///
     /// let const_term = Scalar::<Secp256k1>::random();
     /// let polynomial = Polynomial::<Secp256k1>::sample_exact_with_fixed_const_term(3, const_term.clone());
-    /// assert_eq!(polynomial.degree(), 3);
+    /// assert_eq!(polynomial.degree(), 3.into());
     /// assert_eq!(polynomial.evaluate(&Scalar::zero()), const_term);
     /// ```
     pub fn sample_exact_with_fixed_const_term(n: u16, const_term: Scalar<E>) -> Self {
@@ -86,29 +135,40 @@ impl<E: Curve> Polynomial<E> {
     /// Returns degree $d$ of polynomial $f(x)$: $d = \deg f$
     ///
     /// ```rust
-    /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
+    /// # use curv::cryptographic_primitives::secret_sharing::{Polynomial, PolynomialDegree};
     /// use curv::elliptic::curves::{Secp256k1, Scalar};
     ///
     /// let polynomial = Polynomial::<Secp256k1>::from_coefficients(vec![
     ///     Scalar::from(1), Scalar::from(2),
     /// ]);
-    /// assert_eq!(polynomial.degree(), 1);
+    /// assert_eq!(polynomial.degree(), 1.into());
     ///
     /// let polynomial = Polynomial::<Secp256k1>::from_coefficients(vec![
     ///     Scalar::from(1), Scalar::zero(),
     /// ]);
-    /// assert_eq!(polynomial.degree(), 0);
+    /// assert_eq!(polynomial.degree(), 0.into());
+    ///
+    /// let polynomial = Polynomial::<Secp256k1>::from_coefficients(vec![
+    ///     Scalar::zero()
+    /// ]);
+    /// assert_eq!(polynomial.degree(), PolynomialDegree::Infinity());
+    ///
+    /// let polynomial = Polynomial::<Secp256k1>::from_coefficients(vec![
+    /// ]);
+    /// assert_eq!(polynomial.degree(), PolynomialDegree::Infinity());
     /// ```
-    pub fn degree(&self) -> u16 {
-        let i = self
-            .coefficients()
+    pub fn degree(&self) -> PolynomialDegree {
+        self.coefficients()
             .iter()
             .enumerate()
             .rev()
             .find(|(_, a)| !a.is_zero())
-            .map(|(i, _)| i)
-            .unwrap_or(0);
-        u16::try_from(i).expect("polynomial degree guaranteed to fit into u16")
+            .map(|(i, _)| {
+                PolynomialDegree::Finite(
+                    u16::try_from(i).expect("polynomial degree guaranteed to fit into u16"),
+                )
+            })
+            .unwrap_or(PolynomialDegree::Infinity())
     }
 
     /// Takes scalar $x$ and evaluates $f(x)$
@@ -118,7 +178,7 @@ impl<E: Curve> Polynomial<E> {
     /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
     /// use curv::elliptic::curves::{Secp256k1, Scalar};
     ///
-    /// let polynomial = Polynomial::<Secp256k1>::sample_exact(2);
+    /// let polynomial = Polynomial::<Secp256k1>::sample_exact(2.into());
     ///
     /// let x = Scalar::from(10);
     /// let y = polynomial.evaluate(&x);
@@ -145,7 +205,7 @@ impl<E: Curve> Polynomial<E> {
     /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
     /// use curv::elliptic::curves::{Secp256k1, Scalar};
     ///
-    /// let polynomial = Polynomial::<Secp256k1>::sample_exact(2);
+    /// let polynomial = Polynomial::<Secp256k1>::sample_exact(2.into());
     ///
     /// let x: u16 = 10;
     /// let y: Scalar<Secp256k1> = polynomial.evaluate_bigint(x);
@@ -168,7 +228,7 @@ impl<E: Curve> Polynomial<E> {
     /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
     /// use curv::elliptic::curves::{Secp256k1, Scalar};
     ///
-    /// let polynomial = Polynomial::<Secp256k1>::sample_exact(2);
+    /// let polynomial = Polynomial::<Secp256k1>::sample_exact(2.into());
     ///
     /// let xs = &[Scalar::from(10), Scalar::from(11)];
     /// let ys = polynomial.evaluate_many(xs);
@@ -193,7 +253,7 @@ impl<E: Curve> Polynomial<E> {
     /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
     /// use curv::elliptic::curves::{Secp256k1, Scalar};
     ///
-    /// let polynomial = Polynomial::<Secp256k1>::sample_exact(2);
+    /// let polynomial = Polynomial::<Secp256k1>::sample_exact(2.into());
     ///
     /// let xs: &[u16] = &[10, 11];
     /// let ys = polynomial.evaluate_many_bigint(xs.iter().copied());
@@ -224,7 +284,7 @@ impl<E: Curve> Polynomial<E> {
     /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
     /// use curv::elliptic::curves::{Secp256k1, Scalar};
     ///
-    /// let polynomial = Polynomial::<Secp256k1>::sample_exact(3);
+    /// let polynomial = Polynomial::<Secp256k1>::sample_exact(3.into());
     /// let a = polynomial.coefficients();
     /// let x = Scalar::<Secp256k1>::random();
     /// assert_eq!(polynomial.evaluate(&x), &a[0] + &a[1] * &x + &a[2] * &x*&x + &a[3] * &x*&x*&x);
@@ -253,7 +313,7 @@ impl<E: Curve> Polynomial<E> {
     /// # use curv::elliptic::curves::*;
     ///
     /// # let t = 3;
-    /// # let f = Polynomial::<Secp256r1>::sample_exact(t);
+    /// # let f = Polynomial::<Secp256r1>::sample_exact(t.into());
     /// # let (x_0, x_1, x_2, x_3) = (Scalar::from(1), Scalar::from(2), Scalar::from(3), Scalar::from(4));
     /// # let (y_0, y_1, y_2, y_3) = (f.evaluate(&x_0), f.evaluate(&x_1), f.evaluate(&x_2), f.evaluate(&x_3));
     /// let xs = &[x_0, x_1, x_2, x_3];
@@ -295,7 +355,7 @@ impl<E: Curve> Polynomial<E> {
 /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
 /// use curv::elliptic::curves::{Secp256k1, Scalar};
 ///
-/// let f = Polynomial::<Secp256k1>::sample_exact(3);
+/// let f = Polynomial::<Secp256k1>::sample_exact(3.into());
 ///
 /// let s = Scalar::<Secp256k1>::random();
 /// let g = &f * &s;
@@ -320,8 +380,8 @@ impl<E: Curve> ops::Mul<&Scalar<E>> for &Polynomial<E> {
 /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
 /// use curv::elliptic::curves::{Secp256k1, Scalar};
 ///
-/// let f = Polynomial::<Secp256k1>::sample_exact(2);
-/// let g = Polynomial::<Secp256k1>::sample_exact(3);
+/// let f = Polynomial::<Secp256k1>::sample_exact(2.into());
+/// let g = Polynomial::<Secp256k1>::sample_exact(3.into());
 /// let h = &f + &g;
 ///
 /// let x = Scalar::<Secp256k1>::from(10);
@@ -356,8 +416,8 @@ impl<E: Curve> ops::Add for &Polynomial<E> {
 /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
 /// use curv::elliptic::curves::{Secp256k1, Scalar};
 ///
-/// let f = Polynomial::<Secp256k1>::sample_exact(2);
-/// let g = Polynomial::<Secp256k1>::sample_exact(3);
+/// let f = Polynomial::<Secp256k1>::sample_exact(2.into());
+/// let g = Polynomial::<Secp256k1>::sample_exact(3.into());
 /// let h = &f - &g;
 ///
 /// let x = Scalar::<Secp256k1>::from(10);
