@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::elliptic::curves::{Curve, Scalar};
 
-/// Degree of a polynomial.
+/// Degree of a [polynomial](Polynomial).
+///
 /// For a polynomial of the form: $f(x) = a_0 + a_1 x^1 + \dots{} + a_{n-1} x^{n-1} + a_n x^n$
 ///
 /// The degree of $f(x)$ is defined as the biggest $i$ such that $a_i \neq 0$.
@@ -137,16 +138,7 @@ impl<E: Curve> Polynomial<E> {
     /// assert_eq!(polynomial.degree(), 1.into());
     ///
     /// let polynomial = Polynomial::<Secp256k1>::from_coefficients(vec![
-    ///     Scalar::from(1), Scalar::zero(),
-    /// ]);
-    /// assert_eq!(polynomial.degree(), 0.into());
-    ///
-    /// let polynomial = Polynomial::<Secp256k1>::from_coefficients(vec![
     ///     Scalar::zero()
-    /// ]);
-    /// assert_eq!(polynomial.degree(), PolynomialDegree::Infinity);
-    ///
-    /// let polynomial = Polynomial::<Secp256k1>::from_coefficients(vec![
     /// ]);
     /// assert_eq!(polynomial.degree(), PolynomialDegree::Infinity);
     /// ```
