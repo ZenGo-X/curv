@@ -540,6 +540,24 @@ pub mod hash_to_curve {
         let bytes = BigInt::to_bytes(&bn_times_two);
         generate_random_point(&bytes)
     }
+
+    #[cfg(test)]
+    mod tests {
+        use super::generate_random_point;
+
+        #[test]
+        fn generates_point() {
+            // Just prove that recursion terminates (for this input..)
+            let _ = generate_random_point(&[1u8; 32]);
+        }
+
+        #[test]
+        fn generates_different_points() {
+            let point1 = generate_random_point(&[1u8; 32]);
+            let point2 = generate_random_point(&[2u8; 32]);
+            assert_ne!(point1, point2)
+        }
+    }
 }
 
 #[cfg(test)]
