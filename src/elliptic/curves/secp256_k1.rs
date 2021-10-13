@@ -520,6 +520,9 @@ pub mod hash_to_curve {
 
     use super::Secp256k1;
 
+    /// Takes uniformly distributed bytes and produces secp256k1 point with unknown logarithm
+    ///
+    /// __Note:__ this function is subject to change
     pub fn generate_random_point(bytes: &[u8]) -> Point<Secp256k1> {
         let compressed_point_len = secp256k1::constants::PUBLIC_KEY_SIZE;
         let truncated = if bytes.len() > compressed_point_len - 1 {
