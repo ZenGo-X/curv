@@ -232,7 +232,91 @@ pub fn inverse_fft(polynomial: Polynomial<Secp256k1>) -> Vec<Scalar<Secp256k1>> 
     );
     inverse_fft_internal(polynomial, fft_generator, &factors_to_expand, fft_size, 0)
 }
+
+pub fn fft_internal(fft_vec: Vec<Scalar<Secp256k1>>) -> Polynomial<Scalar<Secp256k1> {
+    // ---------------------------------------------------------------------------------
+    // -------------------- Algorithm description in a nutshell (*) --------------------
+    // ---------------------------------------------------------------------------------
+    //  (*) - I really hope this will be a nutshell... let's see.
+    //
+    // So at this point we're looking for the coefficients of polynomial P(x) such that:
+    //                  P(g^i) = fft_vec[i]
+    // Where g is a root of unity of order of n=fft_vec.len().
+    // The polynomial P(x) has the form:
+    //                         n-1
+    //                  P(x) = Sum a_ix^i
+    //                         i=0
+    // Let's say n has a small prime factor d.
+    // i.e.: n=d*k for some integer k.
+    // We can also write P(x) like this:
+    //        d-1  k-1
+    // P(x) = Sum {Sum a_{i+(j*d)}*x^{i+(j*d)}} =
+    //        i=0  j=0
+    // -------------------------------------------
+    //        d-1      k-1
+    //      = Sum {x^i Sum {a_{i+(j*d)}*x^{j*d}}}
+    //        i=0      j=0
+    //                                k-1
+    // For each i we can denote each  Sum {a_{i+j*d} * x^{j*d}} as a polynomial P_i(x).
+    //                                j=0
+    //                            k-1
+    // We can also write P_i(x) = Sum {a_{i+j*d} * (x^d)*j}.
+    //                            j=0
+    // By making the substitution y=x^d we can think of P_i(y) as the following:
+    //          k-1
+    // P_i(y) = Sum {a_{i+j*d} * y^j} which is a polynomial of degree k.
+    //          j=0
+    //
+    // Coroallary #1:
+    // Had we known the coefficients of all P_i(y) we could very simply derive the
+    // coefficients of P(x) = sum a_ix^i, since each coefficient of each P_i(y) is
+    // algebraically equal to a coefficient of P(x).
+    //
+    // Recall we have fft_vec, a vector of evaluations of P(x) on a set of powers of
+    // a primitive root-of-unity of order n.
+    // From those, we can derive the evaluation of P_i(x) for the powers of a
+    // root-of-unity of order n/d.
+    //
+    // Let g denote the primitive root of unity of order n.
+    // Let h=g^d, be the primitive root of unity of order n/d.
+    // Let h^i for some 0<=i<n/d be a power of h.
+    // Thus, there are d powers of g: g^{i_1},...,g^{i_d} such that
+    // (g^{i_1})^d = ... = g^{i_d}^d = h^i.
+    // Thus the following equations hold:
+    // Consider the following set of d equations:
+    //
+    // - P(g^{i_1}) = P_0(h) + g^{i_1}*P_1(h) + ... + (g^{i_1})^{d-1})*P_{d-1}(h)
+    // - P(g^{i_2}) = P_0(h) + g^{i_2}*P_1(h) + ... + (g^{i_2})^{d-1})*P_{d-1}(h)
+    //   ........................................................................
+    // - P(g^{i_d}) = P_0(h) + g^{i_d}*P_1(h) + ... + (g^{i_d})^{d-1})*P_{d-1}(h)
+    //
+    // This set of equations can also be written using matrix/vector notation:
+    // (P(g^{i_1}))      (1  g^{i_1}   (g^{i_1})^2 .... (g^{i_1})^{d-1})   (  P_0(h^i)  )
+    // (P(g^{i_2}))      (1  g^{i_2}   (g^{i_2})^2 .... (g^{i_2})^{d-1})   (  P_1(h^i)  )
+    // (..........) ==== (.............................................) X (............)
+    // (..........)      (.............................................)   (............)
+    // (P(g^{i_d}))      (1  g^{i_d}   (g^{i_d})^2 .... (g^{i_d})^{d-1})   (P_{d-1}(h^i))
+    // \____ ____/       \_______________________  ___________________/    \_____ ____/
+    //      V                                    v                               v
+    //      A                                    B                               C
+    //
+    // We know vector A (since the evaluations are given in fft_vec).
+    // We can invert B (it's a vandermonde's matrix).
+    // So we can compute C = B^{-1} * A
+    // By doing so for h^i for all 0<=i<n/d we can obtain the evaluations of
+    // P_0,...,P_{d-1} of degree n/d over n/d powers of primitive root of unity h
+    // So we can recusively obtain the coefficient-representation of P_0,...,P_{d-1}.
+    // From those representations we can obtain the coefficient-representation of P(x)
+    // (based on Corollary #1).
+
+
+}
+// evaluations[i] = P(g^i)
+pub fn fft(evaluations: Vec<Scalar<Secp256k1>>) -> Polynomial<Scalar<Secp256k1>> {
+    // Find the factorization of the length of the evaluation vector.
+    let factorization = obtain_factorization(evaluations.len(), &FACTORIZATION_OF_ORDER).expect(
+        "The size of the given FFT doesn't divide the order of the primitive-root-of-unity.",
     );
 
-    fft_sandbox
+    // Start folding.
 }
