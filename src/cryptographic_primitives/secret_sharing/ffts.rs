@@ -273,16 +273,16 @@ fn fft_internal(
     }
 }
 
-pub fn fft(polynomial: Polynomial<Secp256k1>) -> Vec<Scalar<Secp256k1>> {
+pub fn fft(polynomial: Polynomial<Secp256k1>, fft_size: usize) -> Vec<Scalar<Secp256k1>> {
     let polynomial_deg = polynomial.degree() as usize;
-    let factors_to_expand =
-        find_minimal_factorization_bigger_than(polynomial_deg as usize, &FACTORIZATION_OF_ORDER)
-            .expect("Polynomial degree too big!");
-    let fft_size = factors_to_expand
-        .iter()
-        .fold(1usize, |acc, &(factor, exponent)| {
-            acc * factor.pow(exponent as u32) as usize
-        });
+    let factors_to_expand = obtain_factorization(
+        fft_size,
+        &FACTORIZATION_OF_ORDER
+            .iter()
+            .map(|&(f, _)| f)
+            .collect::<Vec<usize>>(),
+    )
+    .expect("Given degree doesn't divide order of primitive root-of-unity");
     let fft_generator = BigInt::mod_pow(
         &BigInt::from_hex(PRIMITIVE_ROOT_OF_UNITY)
             .expect("Failed to decode primitive root of unitiy"),
@@ -475,6 +475,23 @@ pub fn inverse_fft(evaluations: Vec<Scalar<Secp256k1>>) -> Polynomial<Secp256k1>
     )
 }
 
+pub fn multiply_polynomials(
+    a: Polynomial<Secp256k1>,
+    b: Polynomial<Secp256k1>,
+) -> Polynomial<Secp256k1> {
+    let fft_size = find_minimal_factorization_bigger_than(
+        (a.degree() + 1 + b.degree() + 1).into(),
+        &FACTORIZATION_OF_ORDER,
+    )
+    .expect("Degree of given polynomials is too big!")
+    .iter()
+    .fold(0, |acc, &(factor, count)| acc * (factor.pow(count as u32)));
+    let fft_a = fft(a, fft_size);
+    let fft_b = fft(b, fft_size);
+    let fft_c = fft_a.iter().zip(fft_b).map(|(a, b)| a * b).collect();
+    inverse_fft(fft_c)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
@@ -490,7 +507,7 @@ mod tests {
     fn evaluate_zero_degree_polynomial() {
         let c = Scalar::<Secp256k1>::from_bigint(&BigInt::from(5));
         let p = Polynomial::from_coefficients(vec![c.clone()]);
-        let evals = fft(p);
+        let evals = fft(p, 1);
         assert_eq!(evals.len(), 1);
         assert_eq!(evals[0], c);
     }
