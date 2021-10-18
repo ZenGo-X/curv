@@ -21,8 +21,8 @@ use std::{fmt, ops, ptr};
 use gmp::mpz::Mpz;
 use gmp::sign::Sign;
 use num_traits::{One, Zero};
-use zeroize::Zeroize;
 use ring_algorithm::RingNormalize;
+use zeroize::Zeroize;
 
 use super::errors::*;
 use super::traits::*;
