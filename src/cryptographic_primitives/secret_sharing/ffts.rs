@@ -21,7 +21,7 @@ struct PowerIterator {
 impl PowerIterator {
     pub fn new(base: Scalar<Secp256k1>, count: usize) -> Self {
         PowerIterator {
-            base: base,
+            base,
             next_pow: Scalar::<Secp256k1>::from(1),
             next_idx: 0,
             max_idx: count,
@@ -64,19 +64,19 @@ impl<'a> FactorizationIterator<'a> {
         let max = factors
             .iter()
             .fold(1usize, |acc, (_, count)| acc * (count + 1));
-        return FactorizationIterator {
+        FactorizationIterator {
             factorization: factors,
             index: 0usize,
-            max: max,
-        };
+            max,
+        }
     }
 }
 
 impl<'a> Iterator for FactorizationIterator<'a> {
     type Item = usize;
     fn next(&mut self) -> Option<Self::Item> {
-        let mut max = self.max;
-        if self.index >= max {
+        let mut index = self.index;
+        if self.index >= self.max {
             return None;
         }
         #[allow(unused_parens)]
@@ -84,8 +84,8 @@ impl<'a> Iterator for FactorizationIterator<'a> {
             .factorization
             .iter()
             .fold(1usize, |acc, (factor, count)| {
-                let how_many = max % (count + 1);
-                max /= (count + 1);
+                let how_many = index % (count + 1);
+                index /= (count + 1);
                 acc * factor.pow(how_many as u32)
             });
         self.index += 1;
@@ -102,8 +102,8 @@ struct ModularSliceIterator<'a, T> {
 impl<'a, T> ModularSliceIterator<'a, T> {
     fn new(slice: &'a [T], step: usize) -> Self {
         ModularSliceIterator {
-            slice: slice,
-            step: step,
+            slice,
+            step,
             next_index: 0,
         }
     }
@@ -145,6 +145,7 @@ fn obtain_factorization(num: usize, factors: &[usize]) -> Option<Vec<(usize, usi
                 }
                 (*factor, count)
             })
+            .filter(|&(_, count)| count != 0)
             .collect(),
     );
     if num_left != 1 {
@@ -155,9 +156,9 @@ fn obtain_factorization(num: usize, factors: &[usize]) -> Option<Vec<(usize, usi
 }
 
 // Given a factorization of a number $n$ and a lower bar $b$, find the smallest $m$ such that $m|n$ and $m>b$
-fn find_minimal_factorization_bigger_than<'a>(
+fn find_minimal_factorization_bigger_than(
     low_bar: usize,
-    factorization: &'a [(usize, usize)],
+    factorization: &[(usize, usize)],
 ) -> Option<Vec<(usize, usize)>> {
     let mut best_divisor = usize::MAX;
     for divisor in FactorizationIterator::new(factorization) {
@@ -195,11 +196,11 @@ fn merge_polynomials(
         .map(|p| p.into_coefficients().into_iter())
         .collect();
     Polynomial::<Secp256k1>::from_coefficients(
-        (0..fft_size - 1)
+        (0..fft_size)
             .map(|i| {
                 iters[i % polynomials_length]
                     .next()
-                    .unwrap_or(Scalar::<Secp256k1>::zero())
+                    .unwrap_or_else(Scalar::<Secp256k1>::zero)
             })
             .collect(),
     )
@@ -216,7 +217,7 @@ fn split_polynomial(
         .for_each(|(i, coefficient)| coefficient_vectors[i % factor].push(coefficient));
     coefficient_vectors
         .into_iter()
-        .map(|coefficients| Polynomial::<Secp256k1>::from_coefficients(coefficients))
+        .map(Polynomial::<Secp256k1>::from_coefficients)
         .collect()
 }
 
@@ -225,7 +226,7 @@ fn split_polynomial(
 fn fft_internal(
     polynomial: Polynomial<Secp256k1>,
     generator: BigInt,
-    size_factorization: &Vec<(usize, usize)>,
+    size_factorization: &[(usize, usize)],
     fft_size: usize,
     factor_index: usize,
 ) -> Vec<Scalar<Secp256k1>> {
@@ -240,7 +241,7 @@ fn fft_internal(
             let post_split_generator = Scalar::<Secp256k1>::from_bigint(&BigInt::mod_pow(
                 &generator,
                 &BigInt::from(split_factor as u64),
-                &(Scalar::<Secp256k1>::group_order() - 1),
+                Scalar::<Secp256k1>::group_order(),
             ));
             let split_polys = split_polynomial(polynomial, split_factor);
             let evals: Vec<Vec<Scalar<Secp256k1>>> = split_polys
@@ -274,7 +275,6 @@ fn fft_internal(
 }
 
 pub fn fft(polynomial: Polynomial<Secp256k1>, fft_size: usize) -> Vec<Scalar<Secp256k1>> {
-    let polynomial_deg = polynomial.degree() as usize;
     let factors_to_expand = obtain_factorization(
         fft_size,
         &FACTORIZATION_OF_ORDER
@@ -284,15 +284,15 @@ pub fn fft(polynomial: Polynomial<Secp256k1>, fft_size: usize) -> Vec<Scalar<Sec
     )
     .expect("Given degree doesn't divide order of primitive root-of-unity");
     let fft_generator = BigInt::mod_pow(
-        &BigInt::from_hex(PRIMITIVE_ROOT_OF_UNITY)
+        &BigInt::from_str_radix(PRIMITIVE_ROOT_OF_UNITY, 10)
             .expect("Failed to decode primitive root of unitiy"),
         &BigInt::from((ROOT_OF_UNITY_BASIC_ORDER / fft_size) as u64),
-        &(Scalar::<Secp256k1>::group_order() - 1),
+        Scalar::<Secp256k1>::group_order(),
     );
     fft_internal(polynomial, fft_generator, &factors_to_expand, fft_size, 0)
 }
 
-pub fn inverse_fft_internal(
+fn inverse_fft_internal(
     fft_vec: Vec<Scalar<Secp256k1>>,
     fft_size_factorization: &[(usize, usize)],
     fft_split_factor_index: usize,
@@ -382,18 +382,15 @@ pub fn inverse_fft_internal(
             let post_split_fft_generator = BigInt::mod_pow(
                 primitive_root_of_unity,
                 &BigInt::from(split_factor as u64),
-                &Scalar::<Secp256k1>::group_order(),
+                Scalar::<Secp256k1>::group_order(),
             );
-
             // TODO: The following line can be computed once per fft-recursion-level.
             let inverse_dft_generator_powers: Vec<Scalar<Secp256k1>> = PowerIterator::new(
                 Scalar::<Secp256k1>::from_bigint(&BigInt::mod_pow(
                     primitive_root_of_unity,
-                    &BigInt::from(post_split_fft_size as u64),
-                    &Scalar::<Secp256k1>::group_order(),
-                ))
-                .invert()
-                .unwrap(),
+                    &BigInt::from((post_split_fft_size * (split_factor - 1)) as u64),
+                    Scalar::<Secp256k1>::group_order(),
+                )),
                 split_factor,
             )
             .collect();
@@ -406,11 +403,11 @@ pub fn inverse_fft_internal(
             // pre-split generator 'g' who are 'split_factor'-roots of 'h^i'.
             // These are powers of 'g', 'g^d' such that (d*split_factor=i*split_factor) mod (fft_size)
             // Since we look for 'split_factor' such 'd's : d_0,...,d_{split_factor-1} we can see that for:
-            let mut A_vecs = vec![Vec::with_capacity(split_factor); post_split_fft_size];
+            let mut a_vecs = vec![Vec::with_capacity(split_factor); post_split_fft_size];
 
             // bye bye fft_vec
             fft_vec.into_iter().enumerate().for_each(|(i, e)| {
-                A_vecs[i].push(e);
+                a_vecs[i % post_split_fft_size].push(e);
             });
 
             let mut sub_ffts: Vec<Vec<Scalar<Secp256k1>>> =
@@ -420,20 +417,21 @@ pub fn inverse_fft_internal(
                 Scalar::<Secp256k1>::from_bigint(primitive_root_of_unity),
                 post_split_fft_size,
             )
-            .for_each(|g_i| {
+            .enumerate()
+            .for_each(|(i, w_l_i)| {
                 // In this iteration we compute the evaluation of all 'split_factor' polynomials at point h_i.
                 // Those are (g_i * (post_split_fft_generator^j)) for 0<=j<split_factor
-                PowerIterator::new(g_i, split_factor)
+                PowerIterator::new(w_l_i, split_factor)
                     .enumerate()
-                    .for_each(|(d_idx, d_0_pow)| {
+                    .for_each(|(j, w_l_ij)| {
                         // Compute P_i(h^i)
                         // Iterator over i-th inverse-DFT matrix
-                        sub_ffts[d_idx].push(
-                            d_0_pow.invert().unwrap()
+                        sub_ffts[j].push(
+                            w_l_ij.invert().unwrap()
                                 * &split_factor_inverse
                                 * dot_product(
-                                    ModularSliceIterator::new(&inverse_dft_generator_powers, d_idx),
-                                    &A_vecs[d_idx],
+                                    ModularSliceIterator::new(&inverse_dft_generator_powers, j),
+                                    &a_vecs[i],
                                 ),
                         );
                     });
@@ -466,13 +464,13 @@ pub fn inverse_fft(evaluations: Vec<Scalar<Secp256k1>>) -> Polynomial<Secp256k1>
             .collect::<Vec<usize>>(),
     )
     .expect("The size of the given FFT doesn't divide the order of the primitive-root-of-unity.");
-
-    inverse_fft_internal(
-        evaluations,
-        &factorization,
-        0,
-        &BigInt::from_hex(PRIMITIVE_ROOT_OF_UNITY).unwrap(),
-    )
+    let fft_size = evaluations.len();
+    let generator = BigInt::mod_pow(
+        &BigInt::from_str_radix(PRIMITIVE_ROOT_OF_UNITY, 10).unwrap(),
+        &BigInt::from((ROOT_OF_UNITY_BASIC_ORDER / fft_size) as u64),
+        Scalar::<Secp256k1>::group_order(),
+    );
+    inverse_fft_internal(evaluations, &factorization, 0, &generator)
 }
 
 pub fn multiply_polynomials(
@@ -480,12 +478,12 @@ pub fn multiply_polynomials(
     b: Polynomial<Secp256k1>,
 ) -> Polynomial<Secp256k1> {
     let fft_size = find_minimal_factorization_bigger_than(
-        (a.degree() + 1 + b.degree() + 1).into(),
+        (a.degree() + b.degree()).into(),
         &FACTORIZATION_OF_ORDER,
     )
     .expect("Degree of given polynomials is too big!")
     .iter()
-    .fold(0, |acc, &(factor, count)| acc * (factor.pow(count as u32)));
+    .fold(1, |acc, &(factor, count)| acc * (factor.pow(count as u32)));
     let fft_a = fft(a, fft_size);
     let fft_b = fft(b, fft_size);
     let fft_c = fft_a.iter().zip(fft_b).map(|(a, b)| a * b).collect();
@@ -494,7 +492,9 @@ pub fn multiply_polynomials(
 
 #[cfg(test)]
 mod tests {
+
     use crate::{
+        arithmetic::{Converter, Modulo},
         cryptographic_primitives::secret_sharing::{
             ffts::{fft, inverse_fft},
             Polynomial,
@@ -503,9 +503,37 @@ mod tests {
         BigInt,
     };
 
+    use super::{PowerIterator, PRIMITIVE_ROOT_OF_UNITY, ROOT_OF_UNITY_BASIC_ORDER};
+
+    fn make_scalar(num: u32) -> Scalar<Secp256k1> {
+        Scalar::<Secp256k1>::from_bigint(&BigInt::from(num))
+    }
+
+    fn get_primitive_root_of_unity_for_size(fft_size: usize) -> Option<Scalar<Secp256k1>> {
+        if 0 != (ROOT_OF_UNITY_BASIC_ORDER % fft_size) {
+            return None;
+        }
+        Some(Scalar::from_bigint(&BigInt::mod_pow(
+            &BigInt::from_str_radix(PRIMITIVE_ROOT_OF_UNITY, 10).unwrap(),
+            &BigInt::from((ROOT_OF_UNITY_BASIC_ORDER / fft_size) as u64),
+            Scalar::<Secp256k1>::group_order(),
+        )))
+    }
+
+    fn get_degrees_of_primitive_root_of_unity_for_size(
+        fft_size: usize,
+    ) -> Option<impl Iterator<Item = Scalar<Secp256k1>>> {
+        // prou == primitive-root-of-unity
+        let prou = match get_primitive_root_of_unity_for_size(fft_size) {
+            None => return None,
+            Some(prou) => prou,
+        };
+        Some(PowerIterator::new(prou, fft_size))
+    }
+
     #[test]
     fn evaluate_zero_degree_polynomial() {
-        let c = Scalar::<Secp256k1>::from_bigint(&BigInt::from(5));
+        let c = make_scalar(5);
         let p = Polynomial::from_coefficients(vec![c.clone()]);
         let evals = fft(p, 1);
         assert_eq!(evals.len(), 1);
@@ -514,10 +542,84 @@ mod tests {
 
     #[test]
     fn interpolate_zero_degree_polynomial() {
-        let c = Scalar::<Secp256k1>::from_bigint(&BigInt::from(5));
+        let c = make_scalar(5);
         let coeffs = vec![c.clone()];
         let interpolated_result = inverse_fft(coeffs);
         assert_eq!(interpolated_result.degree(), 0);
         assert_eq!(interpolated_result.coefficients()[0], c);
+    }
+
+    #[test]
+    fn evaluate_one_degree_polynomial() {
+        let coeffs = vec![make_scalar(0), make_scalar(1)];
+        // p(x) = x --> Easy to check
+        let p = Polynomial::from_coefficients(coeffs);
+        let evals = fft(p, 2);
+
+        assert_eq!(evals.len(), 2);
+        get_degrees_of_primitive_root_of_unity_for_size(2)
+            .unwrap()
+            .enumerate()
+            .for_each(|(idx, rou)| {
+                assert_eq!(evals[idx], rou);
+            });
+    }
+
+    #[test]
+    fn interpolate_one_degree_polynomial() {
+        let evals = vec![make_scalar(1), make_scalar(1)];
+        let interpolated_result = inverse_fft(evals.clone());
+        // assert_eq!(interpolated_result.degree(), 0);
+        get_degrees_of_primitive_root_of_unity_for_size(2)
+            .unwrap()
+            .enumerate()
+            .for_each(|(idx, rou)| assert_eq!(evals[idx], interpolated_result.evaluate(&rou)))
+    }
+
+    #[test]
+    fn evaluation_high_degree() {
+        let deg = 100;
+        let coeffs = (0..(deg + 1)).map(|i| make_scalar(i)).collect();
+        let p = Polynomial::from_coefficients(coeffs);
+        let fft_deg = 3 * 149;
+        let evals = fft(p.clone(), fft_deg);
+
+        assert_eq!(evals.len(), fft_deg);
+        get_degrees_of_primitive_root_of_unity_for_size(fft_deg)
+            .unwrap()
+            .enumerate()
+            .for_each(|(idx, rou)| {
+                assert_eq!(evals[idx], p.evaluate(&rou));
+            });
+    }
+
+    #[test]
+    fn interpolate_high_degree() {
+        let fft_size = 64 * 3 as usize;
+        let evals: Vec<Scalar<Secp256k1>> =
+            (0..(fft_size)).map(|i| make_scalar(i as u32)).collect();
+        let p = inverse_fft(evals.clone());
+        get_degrees_of_primitive_root_of_unity_for_size(fft_size)
+            .unwrap()
+            .enumerate()
+            .for_each(|(idx, rou)| assert_eq!(evals[idx], p.evaluate(&rou)))
+    }
+
+    #[test]
+    fn ensure_prou_is_of_correct_order() {
+        let one = make_scalar(1);
+        let prou = Scalar::<Secp256k1>::from_bigint(
+            &BigInt::from_str_radix(PRIMITIVE_ROOT_OF_UNITY, 10).unwrap(),
+        );
+        PowerIterator::new(prou, ROOT_OF_UNITY_BASIC_ORDER + 1)
+            .enumerate()
+            .for_each(|(exp, pow)| match exp {
+                0 | ROOT_OF_UNITY_BASIC_ORDER => {
+                    assert_eq!(one, pow);
+                }
+                _ => {
+                    assert_ne!(one, pow);
+                }
+            });
     }
 }

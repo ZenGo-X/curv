@@ -4,7 +4,7 @@ use std::{iter, ops};
 
 use serde::{Deserialize, Serialize};
 
-use crate::elliptic::curves::{Curve, Scalar, Secp256k1};
+use crate::elliptic::curves::{Curve, Scalar};
 
 /// Degree of a [polynomial](Polynomial).
 ///
@@ -77,7 +77,13 @@ impl<E: Curve> Polynomial<E> {
     /// assert_eq!(coefs, poly.coefficients());
     /// ```
     pub fn from_coefficients(coefficients: Vec<Scalar<E>>) -> Self {
-        Self { coefficients }
+        if coefficients.is_empty() {
+            Self {
+                coefficients: vec![Scalar::<E>::zero()],
+            }
+        } else {
+            Self { coefficients }
+        }
     }
 
     /// Sample a random polynomial of given degree
