@@ -22,6 +22,7 @@ use gmp::mpz::Mpz;
 use gmp::sign::Sign;
 use num_traits::{One, Zero};
 use zeroize::Zeroize;
+use ring_algorithm::RingNormalize;
 
 use super::errors::*;
 use super::traits::*;
@@ -369,6 +370,20 @@ impl One for BigInt {
     }
     fn is_one(&self) -> bool {
         self.gmp.is_one()
+    }
+}
+
+impl RingNormalize for BigInt {
+    fn leading_unit(&self) -> Self {
+        match self.gmp.sign() {
+            Sign::Negative => -BigInt::one(),
+            _ => BigInt::one(),
+        }
+    }
+    fn normalize_mut(&mut self) {
+        if self.gmp.sign() == Sign::Negative {
+            *self = -&*self
+        }
     }
 }
 

@@ -8,6 +8,7 @@ use super::traits::*;
 
 use num_bigint::BigInt as BN;
 use num_bigint::Sign;
+use ring_algorithm::RingNormalize;
 
 mod primes;
 mod ring_algorithms;
@@ -373,6 +374,21 @@ impl num_traits::Zero for BigInt {
 impl num_traits::One for BigInt {
     fn one() -> Self {
         BN::one().wrap()
+    }
+}
+
+impl RingNormalize for BigInt {
+    fn leading_unit(&self) -> Self {
+        if self.num.sign() == num_bigint::Sign::Minus {
+            -Self::one()
+        } else {
+            Self::one()
+        }
+    }
+    fn normalize_mut(&mut self) {
+        if self.num.sign() == num_bigint::Sign::Minus {
+            *self = -&*self
+        }
     }
 }
 
