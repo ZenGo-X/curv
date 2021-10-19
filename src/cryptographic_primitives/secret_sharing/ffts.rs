@@ -503,7 +503,9 @@ mod tests {
         BigInt,
     };
 
-    use super::{PowerIterator, PRIMITIVE_ROOT_OF_UNITY, ROOT_OF_UNITY_BASIC_ORDER};
+    use super::{
+        multiply_polynomials, PowerIterator, PRIMITIVE_ROOT_OF_UNITY, ROOT_OF_UNITY_BASIC_ORDER,
+    };
 
     fn make_scalar(num: u32) -> Scalar<Secp256k1> {
         Scalar::<Secp256k1>::from_bigint(&BigInt::from(num))
@@ -565,6 +567,14 @@ mod tests {
             });
     }
 
+    #[test]
+    fn multiply_320_degree() {
+        let deg = 320;
+        let p1 = Polynomial::<Secp256k1>::sample_exact(deg);
+        let p2 = Polynomial::<Secp256k1>::sample_exact(deg);
+        let prod = multiply_polynomials(p1, p2);
+        assert_eq!(prod.degree(), 640);
+    }
     #[test]
     fn interpolate_one_degree_polynomial() {
         let evals = vec![make_scalar(1), make_scalar(1)];
