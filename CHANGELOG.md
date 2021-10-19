@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.9.0
+* Change `Polynomial::degree` to return a special enum `PolynomialDegree` [#147] \
+  `PolynomialDegree` correctly represent a degree of polynomial that can be either infinite (for polynomial `f(x) = 0`)
+  or finite (for all other sorts of polynomials)
+
+
+[#147]: https://github.com/ZenGo-X/curv/pull/148
+
 ## v0.8.3
 * Add `generate_random_point` function from `centipede`, `bulletproof` crates [#148] \
   It takes uniformly distributed bytes and produces secp256k1 point with unknown logarithm. 
