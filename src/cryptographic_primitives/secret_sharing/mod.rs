@@ -8,4 +8,4 @@
 pub mod feldman_vss;
 mod polynomial;
 
-pub use polynomial::Polynomial;
+pub use polynomial::{Polynomial, PolynomialDegree};

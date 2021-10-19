@@ -1,9 +1,45 @@
+use std::cmp::Ordering;
 use std::convert::TryFrom;
 use std::{iter, ops};
 
 use serde::{Deserialize, Serialize};
 
 use crate::elliptic::curves::{Curve, Scalar};
+
+/// Degree of a [polynomial](Polynomial).
+///
+/// For a polynomial of the form: $f(x) = a_0 + a_1 x^1 + \dots{} + a_{n-1} x^{n-1} + a_n x^n$
+///
+/// The degree of $f(x)$ is defined as the biggest $i$ such that $a_i \neq 0$.
+/// If $f(x) = 0$ it's degree is defined as $\infty$.
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum PolynomialDegree {
+    Infinity,
+    Finite(u16),
+}
+
+impl From<u16> for PolynomialDegree {
+    fn from(deg: u16) -> Self {
+        PolynomialDegree::Finite(deg)
+    }
+}
+
+impl PartialOrd for PolynomialDegree {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for PolynomialDegree {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (Self::Infinity, Self::Infinity) => Ordering::Equal,
+            (Self::Infinity, Self::Finite(_)) => Ordering::Greater,
+            (Self::Finite(_), Self::Infinity) => Ordering::Less,
+            (Self::Finite(a), Self::Finite(b)) => a.cmp(b),
+        }
+    }
+}
 
 /// Polynomial of some degree $n$
 ///
@@ -50,16 +86,23 @@ impl<E: Curve> Polynomial<E> {
     /// ```rust
     /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
     /// use curv::elliptic::curves::Secp256k1;
+    /// use curv::cryptographic_primitives::secret_sharing::PolynomialDegree;
     ///
     /// let polynomial = Polynomial::<Secp256k1>::sample_exact(3);
-    /// assert_eq!(polynomial.degree(), 3);
+    /// assert_eq!(polynomial.degree(), 3.into());
+    ///
+    /// let zero_polynomial = Polynomial::<Secp256k1>::sample_exact(PolynomialDegree::Infinity);
+    /// assert_eq!(zero_polynomial.degree(), PolynomialDegree::Infinity);
     /// ```
-    pub fn sample_exact(degree: u16) -> Self {
-        Self::from_coefficients(
-            iter::repeat_with(Scalar::random)
-                .take(usize::from(degree + 1))
-                .collect(),
-        )
+    pub fn sample_exact(degree: impl Into<PolynomialDegree>) -> Self {
+        match degree.into() {
+            PolynomialDegree::Finite(degree) => Self::from_coefficients(
+                iter::repeat_with(Scalar::random)
+                    .take(usize::from(degree) + 1)
+                    .collect(),
+            ),
+            PolynomialDegree::Infinity => Self::from_coefficients(vec![]),
+        }
     }
 
     /// Samples random polynomial of degree $n$ with fixed constant term (ie. $a_0 = \text{constant\\_term}$)
@@ -71,7 +114,7 @@ impl<E: Curve> Polynomial<E> {
     ///
     /// let const_term = Scalar::<Secp256k1>::random();
     /// let polynomial = Polynomial::<Secp256k1>::sample_exact_with_fixed_const_term(3, const_term.clone());
-    /// assert_eq!(polynomial.degree(), 3);
+    /// assert_eq!(polynomial.degree(), 3.into());
     /// assert_eq!(polynomial.evaluate(&Scalar::zero()), const_term);
     /// ```
     pub fn sample_exact_with_fixed_const_term(n: u16, const_term: Scalar<E>) -> Self {
@@ -86,29 +129,31 @@ impl<E: Curve> Polynomial<E> {
     /// Returns degree $d$ of polynomial $f(x)$: $d = \deg f$
     ///
     /// ```rust
-    /// # use curv::cryptographic_primitives::secret_sharing::Polynomial;
+    /// # use curv::cryptographic_primitives::secret_sharing::{Polynomial, PolynomialDegree};
     /// use curv::elliptic::curves::{Secp256k1, Scalar};
     ///
     /// let polynomial = Polynomial::<Secp256k1>::from_coefficients(vec![
     ///     Scalar::from(1), Scalar::from(2),
     /// ]);
-    /// assert_eq!(polynomial.degree(), 1);
+    /// assert_eq!(polynomial.degree(), 1.into());
     ///
     /// let polynomial = Polynomial::<Secp256k1>::from_coefficients(vec![
-    ///     Scalar::from(1), Scalar::zero(),
+    ///     Scalar::zero()
     /// ]);
-    /// assert_eq!(polynomial.degree(), 0);
+    /// assert_eq!(polynomial.degree(), PolynomialDegree::Infinity);
     /// ```
-    pub fn degree(&self) -> u16 {
-        let i = self
-            .coefficients()
+    pub fn degree(&self) -> PolynomialDegree {
+        self.coefficients()
             .iter()
             .enumerate()
             .rev()
             .find(|(_, a)| !a.is_zero())
-            .map(|(i, _)| i)
-            .unwrap_or(0);
-        u16::try_from(i).expect("polynomial degree guaranteed to fit into u16")
+            .map(|(i, _)| {
+                PolynomialDegree::Finite(
+                    u16::try_from(i).expect("polynomial degree guaranteed to fit into u16"),
+                )
+            })
+            .unwrap_or(PolynomialDegree::Infinity)
     }
 
     /// Takes scalar $x$ and evaluates $f(x)$
