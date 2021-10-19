@@ -514,6 +514,55 @@ impl Zeroize for Secp256k1Point {
     }
 }
 
+pub mod hash_to_curve {
+    use crate::elliptic::curves::wrappers::{Point, Scalar};
+    use crate::{arithmetic::traits::*, BigInt};
+
+    use super::Secp256k1;
+
+    /// Takes uniformly distributed bytes and produces secp256k1 point with unknown logarithm
+    ///
+    /// __Note:__ this function is subject to change
+    pub fn generate_random_point(bytes: &[u8]) -> Point<Secp256k1> {
+        let compressed_point_len = secp256k1::constants::PUBLIC_KEY_SIZE;
+        let truncated = if bytes.len() > compressed_point_len - 1 {
+            &bytes[0..compressed_point_len - 1]
+        } else {
+            &bytes
+        };
+        let mut buffer = [0u8; secp256k1::constants::PUBLIC_KEY_SIZE];
+        buffer[0] = 0x2;
+        buffer[1..1 + truncated.len()].copy_from_slice(truncated);
+        if let Ok(point) = Point::from_bytes(&buffer) {
+            return point;
+        }
+
+        let bn = BigInt::from_bytes(bytes);
+        let two = BigInt::from(2);
+        let bn_times_two = BigInt::mod_mul(&bn, &two, Scalar::<Secp256k1>::group_order());
+        let bytes = BigInt::to_bytes(&bn_times_two);
+        generate_random_point(&bytes)
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::generate_random_point;
+
+        #[test]
+        fn generates_point() {
+            // Just prove that recursion terminates (for this input..)
+            let _ = generate_random_point(&[1u8; 32]);
+        }
+
+        #[test]
+        fn generates_different_points() {
+            let point1 = generate_random_point(&[1u8; 32]);
+            let point2 = generate_random_point(&[2u8; 32]);
+            assert_ne!(point1, point2)
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use sha2::{Digest, Sha256};

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.8.3
+* Add `generate_random_point` function from `centipede`, `bulletproof` crates [#148] \
+  It takes uniformly distributed bytes and produces secp256k1 point with unknown logarithm. 
+  Subject to change in near future.
+
+[#148]: https://github.com/ZenGo-X/curv/pull/148
+
 ## v0.8.2
 * Bugfix for BigInt deserialization via serde_json [#145]
 
