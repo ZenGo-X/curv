@@ -11,7 +11,7 @@ use std::vec::IntoIter;
 /// Iterator for powers of a given element
 ///
 /// For a given element $g$ and a non-negative number $c$, the iterator yields $g^0,g^1,\ldots,g^{c-1}$
-struct PowerIterator {
+pub struct PowerIterator {
     base: Scalar<Secp256k1>,
     next_pow: Scalar<Secp256k1>,
     next_idx: usize,
@@ -52,9 +52,9 @@ struct FactorizationIterator<'a> {
 
 // "115481771728459905245102424859900657047113141323743738905491223467302634970004" - of degree 18051648
 // This is the biggest "small" factor of q-1.
-const PRIMITIVE_ROOT_OF_UNITY: &str =
+pub const PRIMITIVE_ROOT_OF_UNITY: &str =
     "115481771728459905245102424859900657047113141323743738905491223467302634970004";
-const ROOT_OF_UNITY_BASIC_ORDER: usize = 18051648;
+pub const ROOT_OF_UNITY_BASIC_ORDER: usize = 18051648;
 
 // This is the factorization of [ROOT_OF_UNITY_BASIC_ORDER]
 const FACTORIZATION_OF_ORDER: [(usize, usize); 4] = [(2, 6), (3, 1), (149, 1), (631, 1)];
