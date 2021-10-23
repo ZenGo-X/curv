@@ -394,10 +394,9 @@ fn inverse_fft_internal(
                 split_factor,
             )
             .collect();
-            let split_factor_inverse =
-                Scalar::<Secp256k1>::from_bigint(&BigInt::from(split_factor as u64))
-                    .invert()
-                    .unwrap();
+            let split_factor_inverse = Scalar::<Secp256k1>::from(split_factor as u64)
+                .invert()
+                .unwrap();
 
             // For each power 'h^i' of the post-split generator 'h' we find 'split_factor' powers of
             // pre-split generator 'g' who are 'split_factor'-roots of 'h^i'.
@@ -508,7 +507,7 @@ mod tests {
     };
 
     fn make_scalar(num: u32) -> Scalar<Secp256k1> {
-        Scalar::<Secp256k1>::from_bigint(&BigInt::from(num))
+        Scalar::<Secp256k1>::from(num)
     }
 
     fn get_primitive_root_of_unity_for_size(fft_size: usize) -> Option<Scalar<Secp256k1>> {
