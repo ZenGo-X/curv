@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::convert::TryInto;
 use std::{iter, ops};
 
 use serde::{Deserialize, Serialize};
@@ -20,6 +21,16 @@ pub enum PolynomialDegree {
 impl From<usize> for PolynomialDegree {
     fn from(deg: usize) -> Self {
         PolynomialDegree::Finite(deg)
+    }
+}
+
+impl TryInto<usize> for PolynomialDegree {
+    type Error = ();
+    fn try_into(self) -> Result<usize, Self::Error> {
+        match self {
+            PolynomialDegree::Finite(n) => Ok(n),
+            PolynomialDegree::Infinity => Err(()),
+        }
     }
 }
 
