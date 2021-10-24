@@ -1,7 +1,7 @@
 use crate::arithmetic::{Converter, Modulo};
 use crate::BigInt;
 use crate::{
-    cryptographic_primitives::secret_sharing::Polynomial,
+    cryptographic_primitives::secret_sharing::{Polynomial, PolynomialDegree},
     elliptic::curves::{Scalar, Secp256k1},
 };
 use std::iter::IntoIterator;
@@ -476,13 +476,18 @@ pub fn multiply_polynomials(
     a: Polynomial<Secp256k1>,
     b: Polynomial<Secp256k1>,
 ) -> Polynomial<Secp256k1> {
-    let fft_size = find_minimal_factorization_bigger_than(
-        (a.degree() + b.degree()).into(),
-        &FACTORIZATION_OF_ORDER,
-    )
-    .expect("Degree of given polynomials is too big!")
-    .iter()
-    .fold(1, |acc, &(factor, count)| acc * (factor.pow(count as u32)));
+    let a_deg = match a.degree() {
+        PolynomialDegree::Finite(n) => n,
+        PolynomialDegree::Infinity => return Polynomial::from_coefficients(vec![]),
+    };
+    let b_deg = match b.degree() {
+        PolynomialDegree::Finite(n) => n,
+        PolynomialDegree::Infinity => return Polynomial::from_coefficients(vec![]),
+    };
+    let fft_size = find_minimal_factorization_bigger_than(a_deg + b_deg, &FACTORIZATION_OF_ORDER)
+        .expect("Degree of given polynomials is too big!")
+        .iter()
+        .fold(1, |acc, &(factor, count)| acc * (factor.pow(count as u32)));
     let fft_a = fft(a, fft_size);
     let fft_b = fft(b, fft_size);
     let fft_c = fft_a.iter().zip(fft_b).map(|(a, b)| a * b).collect();
@@ -496,7 +501,7 @@ mod tests {
         arithmetic::{Converter, Modulo},
         cryptographic_primitives::secret_sharing::{
             ffts::{fft, inverse_fft},
-            Polynomial,
+            Polynomial, PolynomialDegree,
         },
         elliptic::curves::{Scalar, Secp256k1},
         BigInt,
@@ -546,7 +551,7 @@ mod tests {
         let c = make_scalar(5);
         let coeffs = vec![c.clone()];
         let interpolated_result = inverse_fft(coeffs);
-        assert_eq!(interpolated_result.degree(), 0);
+        assert_eq!(interpolated_result.degree(), PolynomialDegree::Finite(0));
         assert_eq!(interpolated_result.coefficients()[0], c);
     }
 
@@ -572,7 +577,7 @@ mod tests {
         let p1 = Polynomial::<Secp256k1>::sample_exact(deg);
         let p2 = Polynomial::<Secp256k1>::sample_exact(deg);
         let prod = multiply_polynomials(p1, p2);
-        assert_eq!(prod.degree(), 640);
+        assert_eq!(prod.degree(), PolynomialDegree::Finite(640));
     }
     #[test]
     fn interpolate_one_degree_polynomial() {

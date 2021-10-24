@@ -1,5 +1,4 @@
 use std::cmp::Ordering;
-use std::convert::TryFrom;
 use std::{iter, ops};
 
 use serde::{Deserialize, Serialize};
@@ -15,11 +14,11 @@ use crate::elliptic::curves::{Curve, Scalar};
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum PolynomialDegree {
     Infinity,
-    Finite(u16),
+    Finite(usize),
 }
 
-impl From<u16> for PolynomialDegree {
-    fn from(deg: u16) -> Self {
+impl From<usize> for PolynomialDegree {
+    fn from(deg: usize) -> Self {
         PolynomialDegree::Finite(deg)
     }
 }
@@ -103,9 +102,7 @@ impl<E: Curve> Polynomial<E> {
     pub fn sample_exact(degree: impl Into<PolynomialDegree>) -> Self {
         match degree.into() {
             PolynomialDegree::Finite(degree) => Self::from_coefficients(
-                iter::repeat_with(Scalar::random)
-                    .take(usize::from(degree) + 1)
-                    .collect(),
+                iter::repeat_with(Scalar::random).take(degree + 1).collect(),
             ),
             PolynomialDegree::Infinity => Self::from_coefficients(vec![]),
         }
@@ -123,11 +120,11 @@ impl<E: Curve> Polynomial<E> {
     /// assert_eq!(polynomial.degree(), 3.into());
     /// assert_eq!(polynomial.evaluate(&Scalar::zero()), const_term);
     /// ```
-    pub fn sample_exact_with_fixed_const_term(n: u16, const_term: Scalar<E>) -> Self {
+    pub fn sample_exact_with_fixed_const_term(n: usize, const_term: Scalar<E>) -> Self {
         if n == 0 {
             Self::from_coefficients(vec![const_term])
         } else {
-            let random_coefficients = iter::repeat_with(Scalar::random).take(usize::from(n));
+            let random_coefficients = iter::repeat_with(Scalar::random).take(n);
             Self::from_coefficients(iter::once(const_term).chain(random_coefficients).collect())
         }
     }
@@ -154,11 +151,7 @@ impl<E: Curve> Polynomial<E> {
             .enumerate()
             .rev()
             .find(|(_, a)| !a.is_zero())
-            .map(|(i, _)| {
-                PolynomialDegree::Finite(
-                    u16::try_from(i).expect("polynomial degree guaranteed to fit into u16"),
-                )
-            })
+            .map(|(i, _)| PolynomialDegree::Finite(i))
             .unwrap_or(PolynomialDegree::Infinity)
     }
 
@@ -198,7 +191,7 @@ impl<E: Curve> Polynomial<E> {
     ///
     /// let polynomial = Polynomial::<Secp256k1>::sample_exact(2);
     ///
-    /// let x: u16 = 10;
+    /// let x: usize = 10;
     /// let y: Scalar<Secp256k1> = polynomial.evaluate_bigint(x);
     ///
     /// let a = polynomial.coefficients();
@@ -246,7 +239,7 @@ impl<E: Curve> Polynomial<E> {
     ///
     /// let polynomial = Polynomial::<Secp256k1>::sample_exact(2);
     ///
-    /// let xs: &[u16] = &[10, 11];
+    /// let xs: &[usize] = &[10, 11];
     /// let ys = polynomial.evaluate_many_bigint(xs.iter().copied());
     ///
     /// let a = polynomial.coefficients();
@@ -323,14 +316,14 @@ impl<E: Curve> Polynomial<E> {
     /// Generally, formula of Lagrange interpolation is:
     ///
     /// $$ L_{X,Y}(x) = \sum^t_{j=0} Y\_j \cdot l_{X,j}(x) $$
-    pub fn lagrange_basis(x: &Scalar<E>, j: u16, xs: &[Scalar<E>]) -> Scalar<E> {
-        let x_j = &xs[usize::from(j)];
-        let num: Scalar<E> = (0u16..)
+    pub fn lagrange_basis(x: &Scalar<E>, j: usize, xs: &[Scalar<E>]) -> Scalar<E> {
+        let x_j = &xs[j];
+        let num: Scalar<E> = (0usize..)
             .zip(xs)
             .filter(|(m, _)| *m != j)
             .map(|(_, x_m)| x - x_m)
             .product();
-        let denum: Scalar<E> = (0u16..)
+        let denum: Scalar<E> = (0usize..)
             .zip(xs)
             .filter(|(m, _)| *m != j)
             .map(|(_, x_m)| x_j - x_m)

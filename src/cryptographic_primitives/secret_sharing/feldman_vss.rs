@@ -6,7 +6,7 @@
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 use std::{fmt, ops};
 
 use serde::{Deserialize, Serialize};
@@ -17,8 +17,8 @@ use crate::ErrorSS::{self, VerifyShareError};
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct ShamirSecretSharing {
-    pub threshold: u16,   //t
-    pub share_count: u16, //n
+    pub threshold: usize,   //t
+    pub share_count: usize, //n
 }
 
 /// Feldman VSS, based on  Paul Feldman. 1987. A practical scheme for non-interactive verifiable secret sharing.
@@ -49,12 +49,12 @@ pub struct SecretShares<E: Curve> {
 }
 
 impl<E: Curve> VerifiableSS<E> {
-    pub fn reconstruct_limit(&self) -> u16 {
+    pub fn reconstruct_limit(&self) -> usize {
         self.parameters.threshold + 1
     }
 
     // generate VerifiableSS from a secret
-    pub fn share(t: u16, n: u16, secret: &Scalar<E>) -> (VerifiableSS<E>, SecretShares<E>) {
+    pub fn share(t: usize, n: usize, secret: &Scalar<E>) -> (VerifiableSS<E>, SecretShares<E>) {
         assert!(t < n);
         let polynomial = Polynomial::<E>::sample_exact_with_fixed_const_term(t, secret.clone());
         let shares = polynomial.evaluate_many_bigint(1..=n).collect();
@@ -104,12 +104,12 @@ impl<E: Curve> VerifiableSS<E> {
 
     // generate VerifiableSS from a secret and user defined x values (in case user wants to distribute point f(1), f(4), f(6) and not f(1),f(2),f(3))
     pub fn share_at_indices(
-        t: u16,
-        n: u16,
+        t: usize,
+        n: usize,
         secret: &Scalar<E>,
-        index_vec: &[u16],
+        index_vec: &[usize],
     ) -> (VerifiableSS<E>, SecretShares<E>) {
-        assert_eq!(usize::from(n), index_vec.len());
+        assert_eq!(n, index_vec.len());
 
         let polynomial = Polynomial::<E>::sample_exact_with_fixed_const_term(t, secret.clone());
         let shares = polynomial
@@ -137,7 +137,7 @@ impl<E: Curve> VerifiableSS<E> {
     // returns vector of coefficients
     #[deprecated(since = "0.8.0", note = "please use Polynomial::sample instead")]
     pub fn sample_polynomial(t: usize, coef0: &Scalar<E>) -> Vec<Scalar<E>> {
-        Polynomial::<E>::sample_exact_with_fixed_const_term(t.try_into().unwrap(), coef0.clone())
+        Polynomial::<E>::sample_exact_with_fixed_const_term(t, coef0.clone())
             .coefficients()
             .to_vec()
     }
@@ -157,9 +157,9 @@ impl<E: Curve> VerifiableSS<E> {
         Polynomial::<E>::from_coefficients(coefficients.to_vec()).evaluate(&point)
     }
 
-    pub fn reconstruct(&self, indices: &[u16], shares: &[Scalar<E>]) -> Scalar<E> {
+    pub fn reconstruct(&self, indices: &[usize], shares: &[Scalar<E>]) -> Scalar<E> {
         assert_eq!(shares.len(), indices.len());
-        assert!(shares.len() >= usize::from(self.reconstruct_limit()));
+        assert!(shares.len() >= self.reconstruct_limit());
         // add one to indices to get points
         let points = indices
             .iter()
@@ -216,13 +216,13 @@ impl<E: Curve> VerifiableSS<E> {
         tail.fold(head.clone(), |acc, x| acc + x)
     }
 
-    pub fn validate_share(&self, secret_share: &Scalar<E>, index: u16) -> Result<(), ErrorSS> {
+    pub fn validate_share(&self, secret_share: &Scalar<E>, index: usize) -> Result<(), ErrorSS> {
         let g = Point::generator();
         let ss_point = g * secret_share;
         self.validate_share_public(&ss_point, index)
     }
 
-    pub fn validate_share_public(&self, ss_point: &Point<E>, index: u16) -> Result<(), ErrorSS> {
+    pub fn validate_share_public(&self, ss_point: &Point<E>, index: usize) -> Result<(), ErrorSS> {
         let comm_to_point = self.get_point_commitment(index);
         if *ss_point == comm_to_point {
             Ok(())
@@ -231,7 +231,7 @@ impl<E: Curve> VerifiableSS<E> {
         }
     }
 
-    pub fn get_point_commitment(&self, index: u16) -> Point<E> {
+    pub fn get_point_commitment(&self, index: usize) -> Point<E> {
         let index_fe = Scalar::from(index);
         let mut comm_iterator = self.commitments.iter().rev();
         let head = comm_iterator.next().unwrap();
@@ -243,10 +243,10 @@ impl<E: Curve> VerifiableSS<E> {
     // used in http://stevengoldfeder.com/papers/GG18.pdf
     pub fn map_share_to_new_params(
         _params: &ShamirSecretSharing,
-        index: u16,
-        s: &[u16],
+        index: usize,
+        s: &[usize],
     ) -> Scalar<E> {
-        let j = (0u16..)
+        let j = (0usize..)
             .zip(s)
             .find_map(|(j, s_j)| if *s_j == index { Some(j) } else { None })
             .expect("`s` doesn't include `index`");
