@@ -165,6 +165,20 @@ impl<E: Curve> From<u64> for Scalar<E> {
     }
 }
 
+impl<E: Curve> From<usize> for Scalar<E> {
+    fn from(a: usize) -> Self {
+        if cfg!(target_pointer_width = "16") {
+            Self::from(a as u16)
+        } else if cfg!(target_pointer_width = "32") {
+            Self::from(a as u32)
+        } else if cfg!(target_pointer_width = "64") {
+            Self::from(a as u64)
+        } else {
+            panic!("Rust currently doesn't supprort architectures that aren't 16/32/64 bits")
+        }
+    }
+}
+
 impl<E: Curve> From<i32> for Scalar<E> {
     fn from(n: i32) -> Self {
         Self::from(&BigInt::from(n))
