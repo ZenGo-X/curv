@@ -15,7 +15,6 @@ name = "curv"
 crate-type = ["lib"]
 
 [dependencies]
-cryptoxide = "0.1.2"
 curve25519-dalek = "3"
 digest = "0.9"
 generic-array = "0.14"
