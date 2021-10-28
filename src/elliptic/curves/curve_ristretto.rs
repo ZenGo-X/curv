@@ -59,7 +59,6 @@ pub type PK = curve25519_dalek::ristretto::RistrettoPoint;
 ///   Underlying library intentionally doesn't expose x coordinate of curve point, therefore
 ///   `.x_coord()`, `.coords()` methods always return `None`, `from_coords()` constructor always
 ///   returns `Err(NotOnCurve)`
-#[derive(Debug, PartialEq, Clone)]
 pub enum Ristretto {}
 #[derive(Clone, Debug)]
 pub struct RistrettoScalar {

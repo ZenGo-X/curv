@@ -17,7 +17,7 @@ use crate::BigInt;
 /// Elliptic curve implementation
 ///
 /// Refers to according implementation of [ECPoint] and [ECScalar].
-pub trait Curve: PartialEq + Clone + fmt::Debug + 'static {
+pub trait Curve: 'static {
     type Point: ECPoint<Scalar = Self::Scalar>;
     type Scalar: ECScalar;
 

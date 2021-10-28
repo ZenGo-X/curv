@@ -9,7 +9,6 @@ use p256::{AffinePoint, EncodedPoint, FieldBytes, ProjectivePoint, Scalar};
 
 use generic_array::GenericArray;
 use rand::{thread_rng, Rng};
-use serde::{Deserialize, Serialize};
 use zeroize::Zeroize;
 
 use super::traits::{ECPoint, ECScalar};
@@ -56,7 +55,6 @@ const GROUP_ORDER_BYTES: [u8; 32] = [
 ];
 
 /// P-256 curve implementation based on [p256] library
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Secp256r1 {}
 
 pub type SK = Scalar;

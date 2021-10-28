@@ -97,7 +97,6 @@ impl ops::DerefMut for SK {
 ///   recovering x coordinate of ed25519 point from its y coordinate. Every time you call
 ///   `.x_coord()` or `from_coords()`, it takes y coordinate and runs `xrecover(y)` underhood. Keep
 ///   in mind that `xrecover` is quite expensive operation.
-#[derive(Debug, PartialEq, Clone)]
 pub enum Ed25519 {}
 
 #[derive(Clone)]
