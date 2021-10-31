@@ -7,7 +7,7 @@ authors = [
     "Denis Varlakov",
 ]
 license = "MIT"
-description = "Curv contains an extremly simple interface to onboard new elliptic curves. Use this library for general purpose elliptic curve cryptography"
+description = "Curv contains an extremely simple interface to onboard new elliptic curves. Use this library for general purpose elliptic curve cryptography"
 repository = "https://github.com/ZenGo-X/curv"
 
 [lib]
