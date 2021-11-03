@@ -6,7 +6,7 @@
 
 Curv
 =====================================
-Curv contains an extremly simple interface to onboard new elliptic curves. 
+Curv contains an extremely simple interface to onboard new elliptic curves. 
 Use this library for general purpose elliptic curve cryptography. 
 
 The library has a built in support for some useful operations/primitives such as verifiable secret sharing, commitment 
