@@ -4,6 +4,8 @@ use std::iter;
 
 use rand::{rngs::OsRng, Rng};
 
+use zeroize::Zeroize;
+
 use crate::arithmetic::*;
 use crate::test_for_all_curves;
 
@@ -357,4 +359,15 @@ fn scalar_assign_negation<E: Curve>() {
         s
     };
     assert_eq!(s_neg_1, s_neg_2);
+}
+
+test_for_all_curves!(point_zeroize);
+fn point_zeroize<E: Curve>() {
+    let mut first_point = E::Point::generator().scalar_mul(&random_nonzero_scalar());
+    let first_copy = first_point.clone();
+    first_point.zeroize();
+    assert_ne!(first_point, first_copy);
+    let mut second_point = E::Point::generator().scalar_mul(&random_nonzero_scalar());
+    second_point.zeroize();
+    assert_eq!(first_point, second_point);
 }
