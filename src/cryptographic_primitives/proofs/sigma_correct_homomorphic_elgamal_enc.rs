@@ -9,6 +9,8 @@
 use digest::Digest;
 use serde::{Deserialize, Serialize};
 
+use zeroize::Zeroizing;
+
 use crate::cryptographic_primitives::hashing::DigestExt;
 use crate::elliptic::curves::{Curve, Point, Scalar};
 use crate::marker::HashChoice;
@@ -56,10 +58,10 @@ impl<E: Curve, H: Digest + Clone> HomoELGamalProof<E, H> {
     ) -> HomoELGamalProof<E, H> {
         let s1: Scalar<E> = Scalar::random();
         let s2: Scalar<E> = Scalar::random();
-        let A1 = &delta.H * &s1;
-        let A2 = &delta.Y * &s2;
+        let A1 = Zeroizing::new(&delta.H * &s1);
+        let A2 = Zeroizing::new(&delta.Y * &s2);
         let A3 = &delta.G * &s2;
-        let T = A1 + A2;
+        let T = &*A1 + &*A2;
         let e = H::new()
             .chain_point(&T)
             .chain_point(&A3)

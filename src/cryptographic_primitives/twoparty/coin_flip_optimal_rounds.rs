@@ -15,7 +15,7 @@ use crate::cryptographic_primitives::proofs::sigma_valid_pedersen_blind::Pederse
 use crate::elliptic::curves::{Curve, Point, Scalar};
 
 /// based on How To Simulate It – A Tutorial on the Simulation
-/// Proof Technique. protocol 7.3: Multiple coin tossing. which provide simulatble constant round
+/// Proof Technique. protocol 7.3: Multiple coin tossing. which provide simulatable constant round
 /// coin toss
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(bound = "")]
