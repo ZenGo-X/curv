@@ -44,8 +44,8 @@ impl ZeroizeBN for BigInt {
 
 impl zeroize::Zeroize for BigInt {
     fn zeroize(&mut self) {
-        use std::{ptr, sync::atomic};
-        unsafe { ptr::write_volatile(&mut self.num, Zero::zero()) };
+        use std::sync::atomic;
+        self.num *= 0;
         atomic::fence(atomic::Ordering::SeqCst);
         atomic::compiler_fence(atomic::Ordering::SeqCst);
     }
