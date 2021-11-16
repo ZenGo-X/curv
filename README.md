@@ -18,7 +18,7 @@ serialize/deserialize support to be used in higher level code to implement netwo
 To use `curv` crate, add the following to your Cargo.toml:
 ```toml
 [dependencies]
-curv-kzen = "0.8"
+curv-kzen = "0.9"
 ```
 
 The crate will be available under `curv` name, e.g.:
