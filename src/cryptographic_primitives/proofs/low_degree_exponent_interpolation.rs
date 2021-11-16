@@ -40,7 +40,7 @@ impl<E: Curve> LdeiStatement<E> {
         if g.len() != alpha.len() {
             return Err(InvalidLdeiStatement::AlphaLengthDoesntMatchG);
         }
-        if witness.w.degree() > d.into() {
+        if witness.w.degree() > d {
             return Err(InvalidLdeiStatement::PolynomialDegreeMoreThanD);
         }
         if !ensure_list_is_pairwise_distinct(&alpha) {
@@ -84,7 +84,7 @@ impl<E: Curve, H: Digest + Clone> LdeiProof<E, H> {
         if statement.alpha.len() != statement.g.len() {
             return Err(InvalidLdeiStatement::AlphaLengthDoesntMatchG);
         }
-        if witness.w.degree() > statement.d.into() {
+        if witness.w.degree() > statement.d {
             return Err(InvalidLdeiStatement::PolynomialDegreeMoreThanD);
         }
         if !ensure_list_is_pairwise_distinct(&statement.alpha) {
@@ -145,7 +145,7 @@ impl<E: Curve, H: Digest + Clone> LdeiProof<E, H> {
         if e != self.e {
             return Err(ProofError);
         }
-        if self.z.degree() > statement.d.into() {
+        if self.z.degree() > statement.d {
             return Err(ProofError);
         }
 

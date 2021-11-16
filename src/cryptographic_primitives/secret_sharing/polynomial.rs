@@ -18,6 +18,15 @@ pub enum PolynomialDegree {
     Finite(u16),
 }
 
+impl PolynomialDegree {
+    pub fn is_finite(&self) -> bool {
+        matches!(self, PolynomialDegree::Finite(_))
+    }
+    pub fn is_infinite(&self) -> bool {
+        matches!(self, PolynomialDegree::Infinity)
+    }
+}
+
 impl From<u16> for PolynomialDegree {
     fn from(deg: u16) -> Self {
         PolynomialDegree::Finite(deg)
@@ -27,6 +36,21 @@ impl From<u16> for PolynomialDegree {
 impl PartialOrd for PolynomialDegree {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl PartialEq<u16> for PolynomialDegree {
+    fn eq(&self, other: &u16) -> bool {
+        matches!(self, PolynomialDegree::Finite(degree) if degree == other)
+    }
+}
+
+impl PartialOrd<u16> for PolynomialDegree {
+    fn partial_cmp(&self, other: &u16) -> Option<Ordering> {
+        match self {
+            PolynomialDegree::Infinity => Some(Ordering::Greater),
+            PolynomialDegree::Finite(degree) => Some(degree.cmp(other)),
+        }
     }
 }
 
