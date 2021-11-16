@@ -44,10 +44,19 @@ impl ZeroizeBN for BigInt {
 
 impl zeroize::Zeroize for BigInt {
     fn zeroize(&mut self) {
-        use std::sync::atomic;
-        self.num *= 0;
-        atomic::fence(atomic::Ordering::SeqCst);
+        use core::{ptr, sync::atomic};
+        // Copy the inner so we can read the data inside
+        let original = unsafe { ptr::read(self) };
+        // Replace self with a zeroed integer.
+        unsafe { ptr::write_volatile(self, Self::zero()) };
+        let (mut sign, uint) = original.num.into_parts();
+        // Zero out the temp sign in case it's a secret somehow
+        unsafe { ptr::write_volatile(&mut sign, Sign::NoSign) };
+        // zero out the bigint's data itself.
+        // This is semi-UB because it's a repr(Rust) type, but because it's a single field we can assume it matches the wrapper.
+        let mut data: Vec<usize> = unsafe { core::mem::transmute(uint) };
         atomic::compiler_fence(atomic::Ordering::SeqCst);
+        data.zeroize();
     }
 }
 
