@@ -8,6 +8,7 @@ use super::traits::*;
 
 use num_bigint::BigInt as BN;
 use num_bigint::Sign;
+use zeroize::Zeroize;
 
 mod primes;
 mod ring_algorithms;
@@ -31,7 +32,7 @@ impl BigInt {
         &mut self.num
     }
     fn into_inner(self) -> BN {
-        self.num
+        self.num.clone()
     }
 }
 
@@ -42,14 +43,14 @@ impl ZeroizeBN for BigInt {
     }
 }
 
-impl zeroize::Zeroize for BigInt {
+impl Zeroize for BigInt {
     fn zeroize(&mut self) {
         use core::{ptr, sync::atomic};
         // Copy the inner so we can read the data inside
-        let original = unsafe { ptr::read(self) };
+        let original = unsafe { ptr::read(&mut self.num) };
         // Replace self with a zeroed integer.
         unsafe { ptr::write_volatile(self, Self::zero()) };
-        let (mut sign, uint) = original.num.into_parts();
+        let (mut sign, uint) = original.into_parts();
         // Zero out the temp sign in case it's a secret somehow
         unsafe { ptr::write_volatile(&mut sign, Sign::NoSign) };
         // zero out the bigint's data itself.
@@ -57,6 +58,12 @@ impl zeroize::Zeroize for BigInt {
         let mut data: Vec<usize> = unsafe { core::mem::transmute(uint) };
         atomic::compiler_fence(atomic::Ordering::SeqCst);
         data.zeroize();
+    }
+}
+
+impl Drop for BigInt {
+    fn drop(&mut self) {
+        self.zeroize();
     }
 }
 
@@ -360,7 +367,7 @@ crate::__bigint_impl_assigns! {
 impl ops::Neg for BigInt {
     type Output = BigInt;
     fn neg(self) -> Self::Output {
-        self.num.neg().wrap()
+        (&self.num).neg().wrap()
     }
 }
 impl ops::Neg for &BigInt {

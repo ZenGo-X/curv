@@ -456,13 +456,4 @@ mod test {
             + SubAssign<u64>,
     {
     }
-
-    #[test]
-    fn test_bigint_zeroize() {
-        let n = BigInt::from(42);
-        println!("n = {:?}, &n = {:p}", n, &n);
-        let n_ptr = &n as *const BigInt;
-        drop(n);
-        println!("*n_ptr = {:?}", unsafe { (*n_ptr).clone() });
-    }
 }
