@@ -377,10 +377,9 @@ mod test {
         T: Converter + BasicOps + Modulo + Samplable + NumberTests + EGCD + BitManipulation,
         T: Primes,
         // Deprecated but not deleted yet traits from self::traits module
-        T: ZeroizeBN,
         u64: ConvertFrom<BigInt>,
         // Foreign traits implementations
-        T: zeroize::Zeroize + num_traits::One + num_traits::Zero,
+        T: num_traits::One + num_traits::Zero,
         T: num_traits::Num + num_integer::Integer + num_integer::Roots,
         // Conversion traits
         for<'a> u64: std::convert::TryFrom<&'a BigInt>,
@@ -456,5 +455,14 @@ mod test {
             + SubAssign<&'a BigInt>
             + SubAssign<u64>,
     {
+    }
+
+    #[test]
+    fn test_bigint_zeroize() {
+        let n = BigInt::from(42);
+        println!("n = {:?}, &n = {:p}", n, &n);
+        let n_ptr = &n as *const BigInt;
+        drop(n);
+        println!("*n_ptr = {:?}", unsafe { (*n_ptr).clone() });
     }
 }
