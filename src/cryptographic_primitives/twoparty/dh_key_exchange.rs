@@ -45,7 +45,7 @@ impl<E: Curve> Party1FirstMessage<E> {
 
         let ec_key_pair = EcKeyPair {
             public_share: public_share.clone(),
-            secret_share,
+            secret_share: secret_share.clone(),
         };
         (Party1FirstMessage { public_share }, ec_key_pair)
     }
@@ -70,7 +70,7 @@ impl<E: Curve> Party2FirstMessage<E> {
         let public_share = base * &secret_share;
         let ec_key_pair = EcKeyPair {
             public_share: public_share.clone(),
-            secret_share,
+            secret_share: secret_share.clone(),
         };
         (Party2FirstMessage { public_share }, ec_key_pair)
     }

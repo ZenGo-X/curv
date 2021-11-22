@@ -90,7 +90,7 @@ impl Party1FirstMessage {
         );
         let ec_key_pair = EcKeyPair {
             public_share,
-            secret_share,
+            secret_share: secret_share.clone(),
         };
         (
             Party1FirstMessage {
@@ -164,7 +164,7 @@ impl<E: Curve, H: Digest + Clone> Party2FirstMessage<E, H> {
         let d_log_proof = DLogProof::prove(&secret_share);
         let ec_key_pair = EcKeyPair {
             public_share: public_share.clone(),
-            secret_share,
+            secret_share: secret_share.clone(),
         };
         (
             Party2FirstMessage {

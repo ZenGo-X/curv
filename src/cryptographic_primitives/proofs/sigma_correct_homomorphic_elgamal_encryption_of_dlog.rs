@@ -62,14 +62,12 @@ impl<E: Curve, H: Digest + Clone> HomoELGamalDlogProof<E, H> {
         let e = H::new()
             .chain_points([&A1, &A2, &A3, &delta.G, &delta.Y, &delta.D, &delta.E])
             .result_scalar();
-        let z1 = &s1 + &e * &w.x;
-        let z2 = &s2 + e * &w.r;
         HomoELGamalDlogProof {
             A1,
             A2,
             A3,
-            z1,
-            z2,
+            z1: &s1 + &e * &w.x,
+            z2: &s2 + e * &w.r,
             hash_choice: HashChoice::new(),
         }
     }

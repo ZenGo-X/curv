@@ -53,13 +53,12 @@ impl<E: Curve, H: Digest + Clone> PedersenBlindingProof<E, H> {
             .result_scalar();
 
         let er = &e * r;
-        let z = &s + &er;
         PedersenBlindingProof {
-            e,
+            e: e.clone(),
             m: m.clone(),
             a,
             com,
-            z,
+            z: &s + &er,
             hash_choice: HashChoice::new(),
         }
     }

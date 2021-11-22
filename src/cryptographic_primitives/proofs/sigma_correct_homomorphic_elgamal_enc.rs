@@ -71,14 +71,12 @@ impl<E: Curve, H: Digest + Clone> HomoELGamalProof<E, H> {
             .chain_point(&delta.D)
             .chain_point(&delta.E)
             .result_scalar();
-        // dealing with zero field element
-        let z1 = &s1 + &w.x * &e;
-        let z2 = s2 + &w.r * e;
         HomoELGamalProof {
             T,
             A3,
-            z1,
-            z2,
+            // dealing with zero field element
+            z1: &s1 + &w.x * &e,
+            z2: s2 + &w.r * e,
             hash_choice: HashChoice::new(),
         }
     }

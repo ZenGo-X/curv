@@ -56,17 +56,15 @@ impl<E: Curve, H: Digest + Clone> PedersenProof<E, H> {
             .result_scalar();
 
         let em = &e * m;
-        let z1 = &s1 + em;
         let er = &e * r;
-        let z2 = &s2 + er;
 
         PedersenProof {
-            e,
+            e: e.clone(),
             a1,
             a2,
             com,
-            z1,
-            z2,
+            z1: &s1 + em,
+            z2: &s2 + er,
             hash_choice: HashChoice::new(),
         }
     }

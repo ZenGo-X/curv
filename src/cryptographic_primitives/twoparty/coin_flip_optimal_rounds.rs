@@ -45,8 +45,7 @@ impl<E: Curve, H: Digest + Clone> Party1FirstMessage<E, H> {
 impl<E: Curve> Party2FirstMessage<E> {
     pub fn share<H: Digest + Clone>(proof: &PedersenProof<E, H>) -> Party2FirstMessage<E> {
         PedersenProof::verify(proof).expect("{(m,r),c} proof failed");
-        let seed = Scalar::random();
-        Party2FirstMessage { seed }
+        Party2FirstMessage { seed: Scalar::random() }
     }
 }
 impl<E: Curve, H: Digest + Clone> Party1SecondMessage<E, H> {
