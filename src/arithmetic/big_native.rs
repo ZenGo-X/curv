@@ -1,5 +1,6 @@
 use std::convert::{TryFrom, TryInto};
 use std::{fmt, ops};
+use core::{ptr, sync::atomic};
 
 use num_traits::Signed;
 
@@ -36,16 +37,8 @@ impl BigInt {
     }
 }
 
-#[allow(deprecated)]
-impl ZeroizeBN for BigInt {
-    fn zeroize_bn(&mut self) {
-        zeroize::Zeroize::zeroize(self)
-    }
-}
-
-impl Zeroize for BigInt {
-    fn zeroize(&mut self) {
-        use core::{ptr, sync::atomic};
+impl Drop for BigInt {
+    fn drop(&mut self) {
         // Copy the inner so we can read the data inside
         let original = unsafe { ptr::read(&mut self.num) };
         // Replace self with a zeroed integer.
@@ -58,12 +51,6 @@ impl Zeroize for BigInt {
         let mut data: Vec<usize> = unsafe { core::mem::transmute(uint) };
         atomic::compiler_fence(atomic::Ordering::SeqCst);
         data.zeroize();
-    }
-}
-
-impl Drop for BigInt {
-    fn drop(&mut self) {
-        self.zeroize();
     }
 }
 
