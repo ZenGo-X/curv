@@ -56,7 +56,7 @@ impl<E: Curve> VerifiableSS<E> {
     // generate VerifiableSS from a secret
     pub fn share(t: u16, n: u16, secret: &Scalar<E>) -> (VerifiableSS<E>, SecretShares<E>) {
         assert!(t < n);
-        let polynomial = Polynomial::<E>::sample_exact_with_fixed_const_term(t, secret.clone());
+        let polynomial = Polynomial::<E>::sample_exact_with_fixed_const_term(t, &secret);
         let shares = polynomial.evaluate_many_bigint(1..=n).collect();
 
         let g = Point::<E>::generator();
@@ -83,7 +83,7 @@ impl<E: Curve> VerifiableSS<E> {
         let n = self.parameters.share_count;
 
         let one = Scalar::<E>::from(1);
-        let poly = Polynomial::<E>::sample_exact_with_fixed_const_term(t, one.clone());
+        let poly = Polynomial::<E>::sample_exact_with_fixed_const_term(t, &one);
         let secret_shares_biased: Vec<_> = poly.evaluate_many_bigint(1..=n).collect();
         let secret_shares: Vec<_> = (0..secret_shares_biased.len())
             .map(|i| &secret_shares_biased[i] - &one)
@@ -111,7 +111,7 @@ impl<E: Curve> VerifiableSS<E> {
     ) -> (VerifiableSS<E>, SecretShares<E>) {
         assert_eq!(usize::from(n), index_vec.len());
 
-        let polynomial = Polynomial::<E>::sample_exact_with_fixed_const_term(t, secret.clone());
+        let polynomial = Polynomial::<E>::sample_exact_with_fixed_const_term(t, &secret);
         let shares = polynomial
             .evaluate_many_bigint(index_vec.iter().cloned())
             .collect();
@@ -137,7 +137,7 @@ impl<E: Curve> VerifiableSS<E> {
     // returns vector of coefficients
     #[deprecated(since = "0.8.0", note = "please use Polynomial::sample instead")]
     pub fn sample_polynomial(t: usize, coef0: &Scalar<E>) -> Vec<Scalar<E>> {
-        Polynomial::<E>::sample_exact_with_fixed_const_term(t.try_into().unwrap(), coef0.clone())
+        Polynomial::<E>::sample_exact_with_fixed_const_term(t.try_into().unwrap(), &coef0)
             .coefficients()
             .to_vec()
     }
@@ -153,8 +153,8 @@ impl<E: Curve> VerifiableSS<E> {
     }
 
     #[deprecated(since = "0.8.0", note = "please use Polynomial::evaluate instead")]
-    pub fn mod_evaluate_polynomial(coefficients: &[Scalar<E>], point: Scalar<E>) -> Scalar<E> {
-        Polynomial::<E>::from_coefficients(coefficients.to_vec()).evaluate(&point)
+    pub fn mod_evaluate_polynomial(coefficients: &[Scalar<E>], point: &Scalar<E>) -> Scalar<E> {
+        Polynomial::<E>::from_coefficients(coefficients.to_vec()).evaluate(point)
     }
 
     pub fn reconstruct(&self, indices: &[u16], shares: &[Scalar<E>]) -> Scalar<E> {
