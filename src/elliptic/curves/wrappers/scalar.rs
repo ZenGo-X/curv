@@ -92,6 +92,16 @@ impl<E: Curve> Scalar<E> {
         E::Scalar::group_order()
     }
 
+    /// Returns the factorization of the size of the multiplicative group of scalars.
+    pub fn multiplicative_group_order_factorization() -> &'static [(BigInt, u32)] {
+        E::Scalar::multiplicative_group_order_factorization()
+    }
+
+    /// Returns a generator for the multiplicative group of scalars.
+    pub fn primitive_root_of_unity() -> E::Scalar {
+        E::Scalar::primitive_root_of_unity()
+    }
+
     /// Returns inversion `self^-1 mod group_order`, or None if `self` is zero
     pub fn invert(&self) -> Option<Self> {
         self.as_raw().invert().map(Self::from_raw)

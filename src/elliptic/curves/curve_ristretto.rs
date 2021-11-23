@@ -42,6 +42,17 @@ lazy_static::lazy_static! {
             ge: RistrettoPoint::deserialize(&hash).unwrap().ge,
         }
     };
+
+    static ref ORDER_FACTORIZATION: [(BigInt, u32); 5]  =
+    [
+        (BigInt::from_str_radix("2",10).unwrap(), 2),
+        (BigInt::from_str_radix("3",10).unwrap(), 1),
+        (BigInt::from_str_radix("11",10).unwrap(), 1),
+        (BigInt::from_str_radix("198211423230930754013084525763697",10).unwrap(), 1),
+        (BigInt::from_str_radix("276602624281642239937218680557139826668747",10).unwrap(), 1)
+    ];
+
+    static ref ROOT_OF_UNITY: BigInt = BigInt::from(2);
 }
 
 pub const SECRET_KEY_SIZE: usize = 32;
@@ -184,6 +195,16 @@ impl ECScalar for RistrettoScalar {
 
     fn group_order() -> &'static BigInt {
         &GROUP_ORDER
+    }
+
+    fn multiplicative_group_order_factorization() -> &'static [(BigInt, u32)] {
+        &*ORDER_FACTORIZATION
+    }
+
+    fn primitive_root_of_unity() -> RistrettoScalar {
+        let mut scalar = RistrettoScalar::from_bigint(&ROOT_OF_UNITY);
+        scalar.purpose = "root of unity";
+        scalar
     }
 
     fn underlying_ref(&self) -> &Self::Underlying {
