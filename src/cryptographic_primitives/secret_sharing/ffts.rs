@@ -13,7 +13,7 @@ use std::iter::Iterator;
 use std::vec::IntoIter;
 
 // Only 10-bit numbers are considered "small" for FFT purposes.
-const SMALL_FACTOR_BITLENGTH: usize = 10;
+const SMALL_FACTOR_BITLENGTH: usize = 11;
 /// Iterator for powers of a given element
 ///
 /// For a given element $g$ and a non-negative number $c$, the iterator yields $g^0,g^1,\ldots,g^{c-1}$
