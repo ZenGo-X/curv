@@ -92,6 +92,16 @@ impl<E: Curve> Scalar<E> {
         E::Scalar::group_order()
     }
 
+    /// Returns the factorization of the size of the multiplicative group of scalars.
+    pub fn multiplicative_group_order_factorization() -> &'static [(BigInt, u32)] {
+        E::Scalar::multiplicative_group_order_factorization()
+    }
+
+    /// Returns a generator for the multiplicative group of scalars.
+    pub fn primitive_root_of_unity() -> E::Scalar {
+        E::Scalar::primitive_root_of_unity()
+    }
+
     /// Returns inversion `self^-1 mod group_order`, or None if `self` is zero
     pub fn invert(&self) -> Option<Self> {
         self.as_raw().invert().map(Self::from_raw)
@@ -162,6 +172,20 @@ impl<E: Curve> From<u32> for Scalar<E> {
 impl<E: Curve> From<u64> for Scalar<E> {
     fn from(n: u64) -> Self {
         Self::from(&BigInt::from(n))
+    }
+}
+
+impl<E: Curve> From<usize> for Scalar<E> {
+    fn from(a: usize) -> Self {
+        if cfg!(target_pointer_width = "16") {
+            Self::from(a as u16)
+        } else if cfg!(target_pointer_width = "32") {
+            Self::from(a as u32)
+        } else if cfg!(target_pointer_width = "64") {
+            Self::from(a as u64)
+        } else {
+            panic!("Rust currently doesn't supprort architectures that aren't 16/32/64 bits")
+        }
     }
 }
 

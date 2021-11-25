@@ -23,6 +23,24 @@ lazy_static::lazy_static! {
         });
         to_bn
     };
+    static ref ORDER_FACTORIZATION: [(BigInt, u32); 12] =
+    [
+        (BigInt::from_str_radix("2",10).unwrap(), 32),
+        (BigInt::from_str_radix("3",10).unwrap(), 1),
+        (BigInt::from_str_radix("11",10).unwrap(), 1),
+        (BigInt::from_str_radix("19",10).unwrap(), 1),
+        (BigInt::from_str_radix("10177",10).unwrap(), 1),
+        (BigInt::from_str_radix("125527",10).unwrap(), 1),
+        (BigInt::from_str_radix("859267",10).unwrap(), 1),
+        (BigInt::from_str_radix("906349",10).unwrap(), 2),
+        (BigInt::from_str_radix("2508409",10).unwrap(), 1),
+        (BigInt::from_str_radix("2529403",10).unwrap(), 1),
+        (BigInt::from_str_radix("52437899",10).unwrap(), 1),
+        (BigInt::from_str_radix("254760293",10).unwrap(), 2)
+    ];
+
+    static ref ROOT_OF_UNITY: BigInt = BigInt::from(7);
+
 }
 
 const SECRET_KEY_SIZE: usize = 32;
@@ -153,6 +171,16 @@ impl ECScalar for FieldScalar {
 
     fn group_order() -> &'static BigInt {
         &GROUP_ORDER
+    }
+
+    fn multiplicative_group_order_factorization() -> &'static [(BigInt, u32)] {
+        &*ORDER_FACTORIZATION
+    }
+
+    fn primitive_root_of_unity() -> FieldScalar {
+        let mut scalar = FieldScalar::from_bigint(&ROOT_OF_UNITY);
+        scalar.purpose = "root of unity";
+        scalar
     }
 
     fn underlying_ref(&self) -> &Self::Underlying {

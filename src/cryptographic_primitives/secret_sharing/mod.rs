@@ -6,6 +6,7 @@
 */
 
 pub mod feldman_vss;
+pub mod ffts;
 mod polynomial;
 
 pub use polynomial::{Polynomial, PolynomialDegree};

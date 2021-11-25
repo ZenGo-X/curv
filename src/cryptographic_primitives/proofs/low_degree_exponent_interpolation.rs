@@ -24,7 +24,7 @@ pub struct LdeiStatement<E: Curve> {
     pub alpha: Vec<Scalar<E>>,
     pub g: Vec<Point<E>>,
     pub x: Vec<Point<E>>,
-    pub d: u16,
+    pub d: usize,
 }
 
 impl<E: Curve> LdeiStatement<E> {
@@ -35,7 +35,7 @@ impl<E: Curve> LdeiStatement<E> {
         witness: &LdeiWitness<E>,
         alpha: Vec<Scalar<E>>,
         g: Vec<Point<E>>,
-        d: u16,
+        d: usize,
     ) -> Result<Self, InvalidLdeiStatement> {
         if g.len() != alpha.len() {
             return Err(InvalidLdeiStatement::AlphaLengthDoesntMatchG);

@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::convert::TryFrom;
+use std::convert::TryInto;
 use std::{iter, ops};
 
 use serde::{Deserialize, Serialize};
@@ -15,12 +15,22 @@ use crate::elliptic::curves::{Curve, Scalar};
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum PolynomialDegree {
     Infinity,
-    Finite(u16),
+    Finite(usize),
 }
 
-impl From<u16> for PolynomialDegree {
-    fn from(deg: u16) -> Self {
+impl From<usize> for PolynomialDegree {
+    fn from(deg: usize) -> Self {
         PolynomialDegree::Finite(deg)
+    }
+}
+
+impl TryInto<usize> for PolynomialDegree {
+    type Error = ();
+    fn try_into(self) -> Result<usize, Self::Error> {
+        match self {
+            PolynomialDegree::Finite(n) => Ok(n),
+            PolynomialDegree::Infinity => Err(()),
+        }
     }
 }
 
@@ -77,7 +87,13 @@ impl<E: Curve> Polynomial<E> {
     /// assert_eq!(coefs, poly.coefficients());
     /// ```
     pub fn from_coefficients(coefficients: Vec<Scalar<E>>) -> Self {
-        Self { coefficients }
+        if coefficients.is_empty() {
+            Self {
+                coefficients: vec![Scalar::<E>::zero()],
+            }
+        } else {
+            Self { coefficients }
+        }
     }
 
     /// Sample a random polynomial of given degree
@@ -97,9 +113,7 @@ impl<E: Curve> Polynomial<E> {
     pub fn sample_exact(degree: impl Into<PolynomialDegree>) -> Self {
         match degree.into() {
             PolynomialDegree::Finite(degree) => Self::from_coefficients(
-                iter::repeat_with(Scalar::random)
-                    .take(usize::from(degree) + 1)
-                    .collect(),
+                iter::repeat_with(Scalar::random).take(degree + 1).collect(),
             ),
             PolynomialDegree::Infinity => Self::from_coefficients(vec![]),
         }
@@ -117,11 +131,11 @@ impl<E: Curve> Polynomial<E> {
     /// assert_eq!(polynomial.degree(), 3.into());
     /// assert_eq!(polynomial.evaluate(&Scalar::zero()), const_term);
     /// ```
-    pub fn sample_exact_with_fixed_const_term(n: u16, const_term: Scalar<E>) -> Self {
+    pub fn sample_exact_with_fixed_const_term(n: usize, const_term: Scalar<E>) -> Self {
         if n == 0 {
             Self::from_coefficients(vec![const_term])
         } else {
-            let random_coefficients = iter::repeat_with(Scalar::random).take(usize::from(n));
+            let random_coefficients = iter::repeat_with(Scalar::random).take(n);
             Self::from_coefficients(iter::once(const_term).chain(random_coefficients).collect())
         }
     }
@@ -148,11 +162,7 @@ impl<E: Curve> Polynomial<E> {
             .enumerate()
             .rev()
             .find(|(_, a)| !a.is_zero())
-            .map(|(i, _)| {
-                PolynomialDegree::Finite(
-                    u16::try_from(i).expect("polynomial degree guaranteed to fit into u16"),
-                )
-            })
+            .map(|(i, _)| PolynomialDegree::Finite(i))
             .unwrap_or(PolynomialDegree::Infinity)
     }
 
@@ -192,7 +202,7 @@ impl<E: Curve> Polynomial<E> {
     ///
     /// let polynomial = Polynomial::<Secp256k1>::sample_exact(2);
     ///
-    /// let x: u16 = 10;
+    /// let x: usize = 10;
     /// let y: Scalar<Secp256k1> = polynomial.evaluate_bigint(x);
     ///
     /// let a = polynomial.coefficients();
@@ -240,7 +250,7 @@ impl<E: Curve> Polynomial<E> {
     ///
     /// let polynomial = Polynomial::<Secp256k1>::sample_exact(2);
     ///
-    /// let xs: &[u16] = &[10, 11];
+    /// let xs: &[usize] = &[10, 11];
     /// let ys = polynomial.evaluate_many_bigint(xs.iter().copied());
     ///
     /// let a = polynomial.coefficients();
@@ -278,6 +288,10 @@ impl<E: Curve> Polynomial<E> {
         &self.coefficients
     }
 
+    pub fn into_coefficients(self) -> Vec<Scalar<E>> {
+        self.coefficients
+    }
+
     /// Evaluates lagrange basis polynomial
     ///
     /// $$l_{X,j}(x) = \prod_{\substack{0 \leq m \leq t,\\\\m \ne j}} \frac{x - X_m}{X_j - X_m}$$
@@ -313,14 +327,14 @@ impl<E: Curve> Polynomial<E> {
     /// Generally, formula of Lagrange interpolation is:
     ///
     /// $$ L_{X,Y}(x) = \sum^t_{j=0} Y\_j \cdot l_{X,j}(x) $$
-    pub fn lagrange_basis(x: &Scalar<E>, j: u16, xs: &[Scalar<E>]) -> Scalar<E> {
-        let x_j = &xs[usize::from(j)];
-        let num: Scalar<E> = (0u16..)
+    pub fn lagrange_basis(x: &Scalar<E>, j: usize, xs: &[Scalar<E>]) -> Scalar<E> {
+        let x_j = &xs[j];
+        let num: Scalar<E> = (0usize..)
             .zip(xs)
             .filter(|(m, _)| *m != j)
             .map(|(_, x_m)| x - x_m)
             .product();
-        let denum: Scalar<E> = (0u16..)
+        let denum: Scalar<E> = (0usize..)
             .zip(xs)
             .filter(|(m, _)| *m != j)
             .map(|(_, x_m)| x_j - x_m)
@@ -330,6 +344,10 @@ impl<E: Curve> Polynomial<E> {
             .expect("elements in xs are not pairwise distinct");
         num * denum
     }
+
+    // Compute the inverse FFT of a set of points.
+    // An inverse FFT takes a polynomial $ P(x) = \sum_{i=0}^{n-1} a_ix^i $ and computes and computes a set of $ n $ points
+    // $ (x_1,y_1),\ldots,(x_n,y_n) $ such that  $ P(x_i) = y_i $.
 }
 
 /// Multiplies polynomial `f(x)` at scalar `s`, returning resulting polynomial `g(x) = s * f(x)`

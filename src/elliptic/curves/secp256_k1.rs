@@ -61,6 +61,17 @@ lazy_static::lazy_static! {
         purpose: "base_point2",
         ge: Some(PK(PublicKey::from_slice(&BASE_POINT2_UNCOMPRESSED[..]).unwrap())),
     };
+
+    static ref ORDER_FACTORIZATION: [(BigInt, u32); 7]   =
+        [(BigInt::from_hex("2").unwrap(), 6),
+        (BigInt::from_hex("3").unwrap(), 1),
+        (BigInt::from_hex("95").unwrap(), 1),
+        (BigInt::from_hex("277").unwrap(), 1),
+        (BigInt::from_hex("17d6cfb8ee30c51").unwrap(), 1),
+        (BigInt::from_hex("978c6f353c3889a79").unwrap(), 1),
+        (BigInt::from_hex("10dbff26eab8198050172ee03275").unwrap(), 1)];
+
+    static ref ROOT_OF_UNITY: BigInt = BigInt::from(7);
 }
 
 /* X coordinate of a point of unknown discrete logarithm.
@@ -290,6 +301,16 @@ impl ECScalar for Secp256k1Scalar {
 
     fn group_order() -> &'static BigInt {
         &CURVE_ORDER
+    }
+
+    fn multiplicative_group_order_factorization() -> &'static [(BigInt, u32)] {
+        &*ORDER_FACTORIZATION
+    }
+
+    fn primitive_root_of_unity() -> Secp256k1Scalar {
+        let mut scalar = Secp256k1Scalar::from_bigint(&ROOT_OF_UNITY);
+        scalar.purpose = "root of unity";
+        scalar
     }
 
     fn underlying_ref(&self) -> &Self::Underlying {

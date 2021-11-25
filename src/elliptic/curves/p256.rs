@@ -37,6 +37,25 @@ lazy_static::lazy_static! {
         purpose: "generator",
         ge: AffinePoint::generator()
     };
+
+    static ref ORDER_FACTORIZATION: [(BigInt, u32); 12]   =
+    [
+        (BigInt::from_str_radix("2",10).unwrap(), 4),
+        (BigInt::from_str_radix("3",10).unwrap(), 1),
+        (BigInt::from_str_radix("71",10).unwrap(), 1),
+        (BigInt::from_str_radix("131",10).unwrap(), 1),
+        (BigInt::from_str_radix("373",10).unwrap(), 1),
+        (BigInt::from_str_radix("3407",10).unwrap(), 1),
+        (BigInt::from_str_radix("17449",10).unwrap(), 1),
+        (BigInt::from_str_radix("38189",10).unwrap(), 1),
+        (BigInt::from_str_radix("187019741",10).unwrap(), 1),
+        (BigInt::from_str_radix("622491383",10).unwrap(), 1),
+        (BigInt::from_str_radix("1002328039319",10).unwrap(), 1),
+        (BigInt::from_str_radix("2624747550333869278416773953",10).unwrap(), 1)
+    ];
+
+    static ref ROOT_OF_UNITY: BigInt = BigInt::from(7);
+
 }
 
 /* X coordinate of a point of unknown discrete logarithm.
@@ -195,6 +214,16 @@ impl ECScalar for Secp256r1Scalar {
 
     fn group_order() -> &'static BigInt {
         &GROUP_ORDER
+    }
+
+    fn multiplicative_group_order_factorization() -> &'static [(BigInt, u32)] {
+        &*ORDER_FACTORIZATION
+    }
+
+    fn primitive_root_of_unity() -> Secp256r1Scalar {
+        let mut scalar = Secp256r1Scalar::from_bigint(&ROOT_OF_UNITY);
+        scalar.purpose = "root of unity";
+        scalar
     }
 
     fn underlying_ref(&self) -> &SK {

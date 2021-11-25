@@ -92,6 +92,12 @@ pub trait ECScalar: Clone + PartialEq + fmt::Debug + 'static {
     /// Returns an order of generator point
     fn group_order() -> &'static BigInt;
 
+    /// Returns the factorization of the size of the multiplicative group of scalars.
+    fn multiplicative_group_order_factorization() -> &'static [(BigInt, u32)];
+
+    /// Returns a generator for the multiplicative group of scalars.
+    fn primitive_root_of_unity() -> Self;
+
     /// Returns a reference to underlying scalar value
     fn underlying_ref(&self) -> &Self::Underlying;
     /// Returns a mutable reference to underlying scalar value
