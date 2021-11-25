@@ -1,3 +1,5 @@
+use typenum::Mod;
+
 use crate::arithmetic::{BitManipulation, Converter, Modulo};
 use crate::elliptic::curves::{Curve, ECScalar, Secp256k1};
 use crate::BigInt;
@@ -221,24 +223,13 @@ fn fft_internal<T: Curve>(
 ) -> Vec<Scalar<T>> {
     let split_factor = obtain_split_factor(size_factorization, factor_index);
     let stride = generator_powers.len() / fft_size;
-    // let generator_scalar = &generator_powers[stride];
     match split_factor {
-        // None => PowerIterator::new(generator_scalar, fft_size)
-        //     .into_iter()
-        //     .map(|root| polynomial.evaluate(&root))
-        //     .collect(),
         None => ModularSliceIterator::new(generator_powers, stride)
             .into_iter()
             .take(fft_size)
             .map(|root| polynomial.evaluate(&root))
             .collect(),
         Some(split_factor) => {
-            // let post_split_generator = Scalar::<T>::from_bigint(&BigInt::mod_pow(
-            //     &generator,
-            //     &BigInt::from(split_factor as u64),
-            //     Scalar::<T>::group_order(),
-            // ));
-            // let post_split_generator = &generator_powers[stride * split_factor];
             let split_polys = split_polynomial(polynomial, split_factor);
             let evals: Vec<Vec<Scalar<T>>> = split_polys
                 .into_iter()
@@ -257,10 +248,6 @@ fn fft_internal<T: Curve>(
                 .into_iter()
                 .enumerate()
                 .map(|(idx, pow_deg)| {
-                    // PowerIterator::new(generator_scalar, fft_size)
-                    //     .into_iter()
-                    //     .enumerate()
-                    //     .map(|(idx, eval_item)| {
                     ModularSliceIterator::new(&generator_powers, pow_deg)
                         .take(split_factor)
                         // PowerIterator::new(eval_item, split_factor)
@@ -315,6 +302,7 @@ fn inverse_fft_internal<T: Curve>(
     fft_size_factorization: &[(usize, usize)],
     fft_split_factor_index: usize,
     primitive_root_of_unity: &BigInt,
+    generator_powers: &[Scalar<T>],
 ) -> Polynomial<T> {
     // ---------------------------------------------------------------------------------
     // -------------------- Algorithm description in a "nutshell" ----------------------
@@ -401,16 +389,6 @@ fn inverse_fft_internal<T: Curve>(
                 &BigInt::from(split_factor as u64),
                 Scalar::<T>::group_order(),
             );
-            // TODO: The following line can be computed once per fft-recursion-level.
-            let inverse_dft_generator_powers: Vec<Scalar<T>> = PowerIterator::new(
-                Scalar::<T>::from_bigint(&BigInt::mod_pow(
-                    primitive_root_of_unity,
-                    &BigInt::from((post_split_fft_size * (split_factor - 1)) as u64),
-                    Scalar::<T>::group_order(),
-                )),
-                split_factor,
-            )
-            .collect();
             let split_factor_inverse = Scalar::<T>::from(split_factor as u64).invert().unwrap();
 
             // For each power 'h^i' of the post-split generator 'h' we find 'split_factor' powers of
@@ -427,29 +405,39 @@ fn inverse_fft_internal<T: Curve>(
             let mut sub_ffts: Vec<Vec<Scalar<T>>> =
                 vec![Vec::with_capacity(post_split_fft_size); split_factor];
 
-            PowerIterator::new(
-                Scalar::<T>::from_bigint(primitive_root_of_unity),
-                post_split_fft_size,
-            )
-            .enumerate()
-            .for_each(|(i, w_l_i)| {
-                // In this iteration we compute the evaluation of all 'split_factor' polynomials at point h_i.
-                // Those are (g_i * (post_split_fft_generator^j)) for 0<=j<split_factor
-                PowerIterator::new(w_l_i, split_factor)
-                    .enumerate()
-                    .for_each(|(j, w_l_ij)| {
-                        // Compute P_i(h^i)
-                        // Iterator over i-th inverse-DFT matrix
-                        sub_ffts[j].push(
-                            w_l_ij.invert().unwrap()
-                                * &split_factor_inverse
-                                * dot_product(
-                                    ModularSliceIterator::new(&inverse_dft_generator_powers, j),
-                                    &a_vecs[i],
-                                ),
-                        );
-                    });
-            });
+            let prou_stride = generator_powers.len() / fft_size;
+            (0..post_split_fft_size)
+                .map(|i| i * prou_stride)
+                // PowerIterator::new(
+                //     Scalar::<T>::from_bigint(primitive_root_of_unity),
+                //     post_split_fft_size,
+                // )
+                .enumerate()
+                .for_each(|(i, w_l_i)| {
+                    // In this iteration we compute the evaluation of all 'split_factor' polynomials at point h_i.
+                    // Those are (g_i * (post_split_fft_generator^j)) for 0<=j<split_factor
+                    ModularSliceIterator::new(generator_powers, generator_powers.len() - w_l_i)
+                        .take(split_factor)
+                        // PowerIterator::new(w_l_i, split_factor)
+                        .enumerate()
+                        .for_each(|(j, w_l_ij)| {
+                            // Compute P_i(h^i)
+                            // Iterator over i-th inverse-DFT matrix
+                            sub_ffts[j].push(
+                                w_l_ij
+                                    * &split_factor_inverse
+                                    * dot_product(
+                                        ModularSliceIterator::new(
+                                            generator_powers,
+                                            (generator_powers.len() / split_factor)
+                                                * (split_factor - 1)
+                                                * j,
+                                        ),
+                                        &a_vecs[i],
+                                    ),
+                            );
+                        });
+                });
             merge_polynomials(
                 sub_ffts
                     .into_iter()
@@ -459,6 +447,7 @@ fn inverse_fft_internal<T: Curve>(
                             fft_size_factorization,
                             fft_split_factor_index + 1,
                             &post_split_fft_generator,
+                            generator_powers,
                         )
                     })
                     .collect(),
@@ -497,7 +486,15 @@ pub fn inverse_fft<T: Curve>(evaluations: Vec<Scalar<T>>) -> Polynomial<T> {
         &(group_order / BigInt::from(fft_size as u64)),
         group_order,
     );
-    inverse_fft_internal(evaluations, &factorization, 0, &generator)
+    let generator_powers: Vec<Scalar<T>> =
+        PowerIterator::new(Scalar::<T>::from_bigint(&generator), fft_size).collect();
+    inverse_fft_internal(
+        evaluations,
+        &factorization,
+        0,
+        &generator,
+        &generator_powers,
+    )
 }
 
 pub fn multiply_polynomials<T: Curve>(a: Polynomial<T>, b: Polynomial<T>) -> Polynomial<T> {
