@@ -1,5 +1,5 @@
 use crate::arithmetic::{BitManipulation, Converter, Modulo};
-use crate::elliptic::curves::{Curve, ECScalar};
+use crate::elliptic::curves::{Curve, ECScalar, Secp256k1};
 use crate::BigInt;
 use crate::{
     cryptographic_primitives::secret_sharing::{Polynomial, PolynomialDegree},
@@ -198,7 +198,7 @@ fn merge_polynomials<T: Curve>(polynomials: Vec<Polynomial<T>>, fft_size: usize)
     )
 }
 fn split_polynomial<T: Curve>(polynomial: Polynomial<T>, factor: usize) -> Vec<Polynomial<T>> {
-    let mut coefficient_vectors = vec![Vec::new(); factor];
+    let mut coefficient_vectors = vec![Vec::with_capacity(polynomial.coefficients().len()); factor];
     polynomial
         .into_coefficients()
         .into_iter()
@@ -214,42 +214,56 @@ fn split_polynomial<T: Curve>(polynomial: Polynomial<T>, factor: usize) -> Vec<P
 // Folds the recursion step with factor number factor_index from the size_factorization.
 fn fft_internal<T: Curve>(
     polynomial: Polynomial<T>,
-    generator: BigInt,
     size_factorization: &[(usize, usize)],
     fft_size: usize,
     factor_index: usize,
+    generator_powers: &[Scalar<T>],
 ) -> Vec<Scalar<T>> {
     let split_factor = obtain_split_factor(size_factorization, factor_index);
-    let generator_scalar = Scalar::<T>::from_bigint(&generator);
+    let stride = generator_powers.len() / fft_size;
+    // let generator_scalar = &generator_powers[stride];
     match split_factor {
-        None => PowerIterator::new(generator_scalar, fft_size)
+        // None => PowerIterator::new(generator_scalar, fft_size)
+        //     .into_iter()
+        //     .map(|root| polynomial.evaluate(&root))
+        //     .collect(),
+        None => ModularSliceIterator::new(generator_powers, stride)
             .into_iter()
+            .take(fft_size)
             .map(|root| polynomial.evaluate(&root))
             .collect(),
         Some(split_factor) => {
-            let post_split_generator = Scalar::<T>::from_bigint(&BigInt::mod_pow(
-                &generator,
-                &BigInt::from(split_factor as u64),
-                Scalar::<T>::group_order(),
-            ));
+            // let post_split_generator = Scalar::<T>::from_bigint(&BigInt::mod_pow(
+            //     &generator,
+            //     &BigInt::from(split_factor as u64),
+            //     Scalar::<T>::group_order(),
+            // ));
+            // let post_split_generator = &generator_powers[stride * split_factor];
             let split_polys = split_polynomial(polynomial, split_factor);
             let evals: Vec<Vec<Scalar<T>>> = split_polys
                 .into_iter()
                 .map(|sub_poly| {
                     fft_internal(
                         sub_poly,
-                        post_split_generator.to_bigint(),
                         size_factorization,
                         fft_size / split_factor,
                         factor_index + 1,
+                        generator_powers,
                     )
                 })
                 .collect();
-            PowerIterator::new(generator_scalar, fft_size)
+            (0..fft_size)
+                .map(|i| i * stride)
                 .into_iter()
                 .enumerate()
-                .map(|(idx, eval_item)| {
-                    PowerIterator::new(eval_item, split_factor)
+                .map(|(idx, pow_deg)| {
+                    // PowerIterator::new(generator_scalar, fft_size)
+                    //     .into_iter()
+                    //     .enumerate()
+                    //     .map(|(idx, eval_item)| {
+                    ModularSliceIterator::new(&generator_powers, pow_deg)
+                        .take(split_factor)
+                        // PowerIterator::new(eval_item, split_factor)
                         .into_iter()
                         .enumerate()
                         .map(|(degree, cur_item_degree)| {
@@ -291,7 +305,9 @@ pub fn fft<T: Curve>(polynomial: Polynomial<T>, fft_size: usize) -> Vec<Scalar<T
         &(group_order / fft_size_bigint),
         group_order,
     );
-    fft_internal(polynomial, fft_generator, &factors_to_expand, fft_size, 0)
+    let gen_pows: Vec<Scalar<T>> =
+        PowerIterator::new(Scalar::from_bigint(&fft_generator), fft_size).collect();
+    fft_internal(polynomial, &factors_to_expand, fft_size, 0, &gen_pows)
 }
 
 fn inverse_fft_internal<T: Curve>(
