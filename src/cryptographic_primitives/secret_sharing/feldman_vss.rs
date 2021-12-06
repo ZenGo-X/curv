@@ -110,6 +110,10 @@ impl<E: Curve> VerifiableSS<E> {
         index_vec: &[u16],
     ) -> (VerifiableSS<E>, SecretShares<E>) {
         assert_eq!(usize::from(n), index_vec.len());
+        assert!(
+            !index_vec.iter().any(|&i| i == 0),
+            "Sharing to index 0 will reveal the secret"
+        );
 
         let polynomial = Polynomial::<E>::sample_exact_with_fixed_const_term(t, secret.clone());
         let shares = polynomial
