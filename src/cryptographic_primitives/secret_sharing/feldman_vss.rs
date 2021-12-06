@@ -102,7 +102,8 @@ impl<E: Curve> VerifiableSS<E> {
         )
     }
 
-    // generate VerifiableSS from a secret and user defined x values (in case user wants to distribute point f(1), f(4), f(6) and not f(1),f(2),f(3))
+    /// generate VerifiableSS from a secret and user defined x values (in case user wants to distribute point f(1), f(4), f(6) and not f(1),f(2),f(3))
+    /// NOTE: The caller should make sure that `t`, `n` and the contents of `index_vec` can't be controlled by a malicious party..
     pub fn share_at_indices(
         t: u16,
         n: u16,
