@@ -7,6 +7,7 @@
 */
 
 use std::convert::{TryFrom, TryInto};
+use std::num::NonZeroU16;
 use std::{fmt, ops};
 
 use serde::{Deserialize, Serialize};
@@ -102,18 +103,24 @@ impl<E: Curve> VerifiableSS<E> {
         )
     }
 
-    // generate VerifiableSS from a secret and user defined x values (in case user wants to distribute point f(1), f(4), f(6) and not f(1),f(2),f(3))
-    pub fn share_at_indices(
+    /// generate VerifiableSS from a secret and user defined x values (in case user wants to distribute point f(1), f(4), f(6) and not f(1),f(2),f(3))
+    /// NOTE: The caller should make sure that `t`, `n` and the contents of `index_vec` can't be controlled by a malicious party.
+    pub fn share_at_indices<I>(
         t: u16,
         n: u16,
         secret: &Scalar<E>,
-        index_vec: &[u16],
-    ) -> (VerifiableSS<E>, SecretShares<E>) {
-        assert_eq!(usize::from(n), index_vec.len());
+        indicies: I,
+    ) -> (VerifiableSS<E>, SecretShares<E>)
+    where
+        I: IntoIterator<Item = NonZeroU16>,
+        I::IntoIter: ExactSizeIterator,
+    {
+        let indicies = indicies.into_iter();
+        assert_eq!(usize::from(n), indicies.len());
 
         let polynomial = Polynomial::<E>::sample_exact_with_fixed_const_term(t, secret.clone());
         let shares = polynomial
-            .evaluate_many_bigint(index_vec.iter().cloned())
+            .evaluate_many_bigint(indicies.map(NonZeroU16::get))
             .collect();
 
         let g = Point::<E>::generator();
@@ -286,8 +293,12 @@ mod tests {
     fn test_secret_sharing_3_out_of_5_at_indices<E: Curve>() {
         let secret = Scalar::random();
         let parties = [1, 2, 4, 5, 6];
-        let (vss_scheme, secret_shares) =
-            VerifiableSS::<E>::share_at_indices(3, 5, &secret, &parties);
+        let (vss_scheme, secret_shares) = VerifiableSS::<E>::share_at_indices(
+            3,
+            5,
+            &secret,
+            parties.iter().map(|&v| NonZeroU16::new(v).unwrap()),
+        );
 
         let shares_vec = vec![
             secret_shares[0].clone(),
