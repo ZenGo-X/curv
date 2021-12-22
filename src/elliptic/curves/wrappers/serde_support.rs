@@ -339,18 +339,20 @@ enum ScalarField {
 
 #[cfg(test)]
 mod serde_tests {
-    use serde_test::{assert_de_tokens, assert_de_tokens_error, assert_tokens, Token::*};
+    use serde_test::{
+        assert_de_tokens, assert_de_tokens_error, assert_tokens, Configure, Token::*,
+    };
 
     use crate::elliptic::curves::*;
     use crate::test_for_all_curves;
 
-    test_for_all_curves!(test_serde_point);
-    fn test_serde_point<E: Curve>() {
+    test_for_all_curves!(serializes_deserializes_point);
+    fn serializes_deserializes_point<E: Curve>() {
         let random_point = Point::<E>::generator() * Scalar::random();
         for point in [Point::zero(), random_point] {
             println!("Point: {:?}", point);
             let bytes = point.to_bytes(true).to_vec();
-            let tokens = vec![
+            let tokens = [
                 Struct {
                     name: "Point",
                     len: 2,
@@ -361,16 +363,16 @@ mod serde_tests {
                 Bytes(bytes.leak()),
                 StructEnd,
             ];
-            assert_tokens(&point, &tokens);
+            assert_tokens(&point.compact(), &tokens);
         }
     }
 
-    test_for_all_curves!(test_serde_scalar);
-    fn test_serde_scalar<E: Curve>() {
+    test_for_all_curves!(serializes_deserializes_scalar);
+    fn serializes_deserializes_scalar<E: Curve>() {
         for scalar in [Scalar::<E>::zero(), Scalar::random()] {
             println!("Scalar: {:?}", scalar);
             let bytes = scalar.to_bytes().to_vec();
-            let tokens = vec![
+            let tokens = [
                 Struct {
                     name: "Scalar",
                     len: 2,
@@ -381,12 +383,12 @@ mod serde_tests {
                 Bytes(bytes.leak()),
                 StructEnd,
             ];
-            assert_tokens(&scalar, &tokens);
+            assert_tokens(&scalar.compact(), &tokens);
         }
     }
 
-    test_for_all_curves!(test_deserialize_point_from_seq_of_bytes);
-    fn test_deserialize_point_from_seq_of_bytes<E: Curve>() {
+    test_for_all_curves!(deserializes_point_from_seq_of_bytes);
+    fn deserializes_point_from_seq_of_bytes<E: Curve>() {
         let random_point = Point::<E>::generator() * Scalar::random();
         for point in [Point::zero(), random_point] {
             println!("Point: {:?}", point);
@@ -405,12 +407,12 @@ mod serde_tests {
             ];
             tokens.extend(bytes.iter().copied().map(U8));
             tokens.extend_from_slice(&[SeqEnd, StructEnd]);
-            assert_de_tokens(&point, &tokens);
+            assert_de_tokens(&point.compact(), &tokens);
         }
     }
 
-    test_for_all_curves!(test_deserialize_scalar_from_seq_of_bytes);
-    fn test_deserialize_scalar_from_seq_of_bytes<E: Curve>() {
+    test_for_all_curves!(deserializes_scalar_from_seq_of_bytes);
+    fn deserializes_scalar_from_seq_of_bytes<E: Curve>() {
         for scalar in [Scalar::<E>::zero(), Scalar::random()] {
             println!("Scalar: {:?}", scalar);
             let bytes = scalar.to_bytes();
@@ -428,13 +430,77 @@ mod serde_tests {
             ];
             tokens.extend(bytes.iter().copied().map(U8));
             tokens.extend_from_slice(&[SeqEnd, StructEnd]);
-            assert_de_tokens(&scalar, &tokens);
+            assert_de_tokens(&scalar.compact(), &tokens);
         }
+    }
+
+    test_for_all_curves!(deserializes_point_represented_as_seq);
+    fn deserializes_point_represented_as_seq<E: Curve>() {
+        let point = Point::<E>::generator() * Scalar::random();
+        let tokens = [
+            Seq {
+                len: Option::Some(2),
+            },
+            Str(E::CURVE_NAME),
+            Bytes(point.to_bytes(true).to_vec().leak()),
+            SeqEnd,
+        ];
+        assert_de_tokens(&point.compact(), &tokens);
+    }
+
+    test_for_all_curves!(deserializes_scalar_represented_as_seq);
+    fn deserializes_scalar_represented_as_seq<E: Curve>() {
+        let scalar = Scalar::<E>::random();
+        let tokens = [
+            Seq {
+                len: Option::Some(2),
+            },
+            Str(E::CURVE_NAME),
+            Bytes(scalar.to_bytes().to_vec().leak()),
+            SeqEnd,
+        ];
+        assert_de_tokens(&scalar.compact(), &tokens);
+    }
+
+    test_for_all_curves!(serializes_deserializes_point_in_human_readable_format);
+    fn serializes_deserializes_point_in_human_readable_format<E: Curve>() {
+        let point = Point::<E>::generator() * Scalar::random();
+        let tokens = [
+            Struct {
+                name: "Point",
+                len: 2,
+            },
+            Str("curve"),
+            Str(E::CURVE_NAME),
+            Str("point"),
+            Str(Box::leak(
+                hex::encode(&*point.to_bytes(true)).into_boxed_str(),
+            )),
+            StructEnd,
+        ];
+        assert_tokens(&point.readable(), &tokens);
+    }
+
+    test_for_all_curves!(serializes_deserializes_scalar_in_human_readable_format);
+    fn serializes_deserializes_scalar_in_human_readable_format<E: Curve>() {
+        let scalar = Scalar::<E>::random();
+        let tokens = [
+            Struct {
+                name: "Scalar",
+                len: 2,
+            },
+            Str("curve"),
+            Str(E::CURVE_NAME),
+            Str("scalar"),
+            Str(Box::leak(hex::encode(&*scalar.to_bytes()).into_boxed_str())),
+            StructEnd,
+        ];
+        assert_tokens(&scalar.readable(), &tokens);
     }
 
     test_for_all_curves!(doesnt_deserialize_point_from_different_curve);
     fn doesnt_deserialize_point_from_different_curve<E: Curve>() {
-        let tokens = vec![
+        let tokens = [
             Struct {
                 name: "Point",
                 len: 2,
@@ -453,7 +519,7 @@ mod serde_tests {
 
     test_for_all_curves!(doesnt_deserialize_scalar_from_different_curve);
     fn doesnt_deserialize_scalar_from_different_curve<E: Curve>() {
-        let tokens = vec![
+        let tokens = [
             Struct {
                 name: "Scalar",
                 len: 2,
