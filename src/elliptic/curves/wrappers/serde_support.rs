@@ -20,13 +20,18 @@ impl<'p, E: Curve> Serialize for Point<E> {
     where
         S: Serializer,
     {
+        let is_human_readable = serializer.is_human_readable();
         let mut s = serializer.serialize_struct("Point", 2)?;
         s.serialize_field("curve", E::CURVE_NAME)?;
-        s.serialize_field(
-            "point",
-            // Serializes bytes efficiently
-            Bytes::new(&self.to_bytes(true)),
-        )?;
+        if !is_human_readable {
+            s.serialize_field(
+                "point",
+                // Serializes bytes efficiently
+                Bytes::new(&self.to_bytes(true)),
+            )?;
+        } else {
+            s.serialize_field("point", &hex::encode(&*self.to_bytes(true)))?;
+        }
         s.end()
     }
 }
@@ -210,11 +215,44 @@ impl<'de, E: Curve> Deserialize<'de> for PointFromBytes<E> {
                 Point::from_bytes(&buffer.as_slice()[..seq_len])
                     .map_err(|e| A::Error::custom(format!("invalid point: {}", e)))
             }
+
+            fn visit_str<Err>(self, v: &str) -> Result<Self::Value, Err>
+            where
+                Err: Error,
+            {
+                let uncompressed_len = <E::Point as ECPoint>::UncompressedPointLength::USIZE;
+                let compressed_len = <E::Point as ECPoint>::CompressedPointLength::USIZE;
+
+                let mut buffer =
+                    GenericArray::<u8, <E::Point as ECPoint>::UncompressedPointLength>::default();
+
+                let point = if uncompressed_len * 2 == v.len() {
+                    hex::decode_to_slice(v, &mut buffer)
+                        .map_err(|_| Err::custom("malformed hex encoding"))?;
+                    Point::from_bytes(&buffer)
+                        .map_err(|e| Err::custom(format!("invalid point: {}", e)))?
+                } else if compressed_len * 2 == v.len() {
+                    hex::decode_to_slice(v, &mut buffer[..compressed_len])
+                        .map_err(|_| Err::custom("malformed hex encoding"))?;
+                    Point::from_bytes(&buffer[..compressed_len])
+                        .map_err(|e| Err::custom(format!("invalid point: {}", e)))?
+                } else {
+                    return Err(Err::custom("invalid point"));
+                };
+
+                Ok(point)
+            }
         }
 
-        deserializer
-            .deserialize_bytes(PointBytesVisitor(PhantomData))
-            .map(PointFromBytes)
+        if !deserializer.is_human_readable() {
+            deserializer
+                .deserialize_bytes(PointBytesVisitor(PhantomData))
+                .map(PointFromBytes)
+        } else {
+            deserializer
+                .deserialize_str(PointBytesVisitor(PhantomData))
+                .map(PointFromBytes)
+        }
     }
 }
 
@@ -227,13 +265,18 @@ impl<E: Curve> Serialize for Scalar<E> {
     where
         S: Serializer,
     {
+        let is_human_readable = serializer.is_human_readable();
         let mut s = serializer.serialize_struct("Scalar", 2)?;
         s.serialize_field("curve", E::CURVE_NAME)?;
-        s.serialize_field(
-            "scalar",
-            // Serializes bytes efficiently
-            Bytes::new(&self.to_bytes()),
-        )?;
+        if !is_human_readable {
+            s.serialize_field(
+                "scalar",
+                // Serializes bytes efficiently
+                Bytes::new(&self.to_bytes()),
+            )?;
+        } else {
+            s.serialize_field("scalar", &hex::encode(&*self.to_bytes()))?;
+        }
         s.end()
     }
 }
@@ -363,6 +406,26 @@ impl<'de, E: Curve> Deserialize<'de> for ScalarFromBytes<E> {
 
                 Scalar::from_bytes(buffer.as_slice())
                     .map_err(|_| A::Error::custom("invalid scalar"))
+            }
+
+            fn visit_str<Err>(self, v: &str) -> Result<Self::Value, Err>
+            where
+                Err: Error,
+            {
+                let expected_len = <E::Scalar as ECScalar>::ScalarLength::USIZE;
+                if expected_len * 2 != v.len() {
+                    return Err(Err::invalid_length(
+                        v.len(),
+                        &format!("{}", expected_len * 2).as_str(),
+                    ));
+                }
+
+                let mut buffer =
+                    GenericArray::<u8, <E::Scalar as ECScalar>::ScalarLength>::default();
+                hex::decode_to_slice(v, &mut buffer)
+                    .map_err(|_| Err::custom("malformed hex encoding"))?;
+
+                Scalar::from_bytes(&buffer).map_err(|_| Err::custom("invalid scalar"))
             }
         }
 
