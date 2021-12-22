@@ -73,6 +73,27 @@ impl<'de, E: Curve> Deserialize<'de> for Point<E> {
                 let point = point.ok_or_else(|| A::Error::missing_field("point"))?;
                 Ok(point.0)
             }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                if let Some(size) = seq.size_hint() {
+                    if size != 2 {
+                        return Err(A::Error::invalid_length(size, &"2"));
+                    }
+                }
+                let _curve_name: CurveNameGuard<E> = seq
+                    .next_element()?
+                    .ok_or_else(|| A::Error::missing_field("curve name"))?;
+                let point: PointFromBytes<E> = seq
+                    .next_element()?
+                    .ok_or_else(|| A::Error::missing_field("point value"))?;
+                if seq.next_element::<IgnoredAny>()?.is_some() {
+                    return Err(A::Error::custom("point consist of too many fields"));
+                }
+                Ok(point.0)
+            }
         }
 
         deserializer.deserialize_struct("Point", &["curve", "point"], PointVisitor(PhantomData))
@@ -257,6 +278,27 @@ impl<'de, E: Curve> Deserialize<'de> for Scalar<E> {
                 let _curve_name =
                     curve_name.ok_or_else(|| A::Error::missing_field("curve_name"))?;
                 let scalar = scalar.ok_or_else(|| A::Error::missing_field("scalar"))?;
+                Ok(scalar.0)
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                if let Some(size) = seq.size_hint() {
+                    if size != 2 {
+                        return Err(A::Error::invalid_length(size, &"2"));
+                    }
+                }
+                let _curve_name: CurveNameGuard<E> = seq
+                    .next_element()?
+                    .ok_or_else(|| A::Error::missing_field("curve name"))?;
+                let scalar: ScalarFromBytes<E> = seq
+                    .next_element()?
+                    .ok_or_else(|| A::Error::missing_field("scalar value"))?;
+                if seq.next_element::<IgnoredAny>()?.is_some() {
+                    return Err(A::Error::custom("scalar consist of too many fields"));
+                }
                 Ok(scalar.0)
             }
         }
