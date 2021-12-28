@@ -326,7 +326,8 @@ impl ECPoint for Ed25519Point {
     }
 
     fn from_coords(x: &BigInt, y: &BigInt) -> Result<Ed25519Point, NotOnCurve> {
-        let expected_x = xrecover(y);
+        let is_odd = x.is_odd();
+        let expected_x = xrecover(y, is_odd);
         if &expected_x != x {
             return Err(NotOnCurve);
         }
@@ -340,26 +341,43 @@ impl ECPoint for Ed25519Point {
                 padding
             }
         };
+        // BigInt uses Big-Endian but the 25519 libraries use Little-Endian, so we reverse the bytes
         padded.reverse();
+        // All curve25519 libs serialize a point by taking the `y` coordinate,
+        // and putting the is_odd flag of the `x` coordinate in the most significant bit.
+        padded[31] |= (is_odd as u8) << 7;
+
         Self::deserialize(&padded).map_err(|_e| NotOnCurve)
     }
 
     fn x_coord(&self) -> Option<BigInt> {
-        let y = self.y_coord().unwrap();
-        Some(xrecover(&y))
+        self.coords().map(|c| c.x)
     }
 
     fn y_coord(&self) -> Option<BigInt> {
-        let mut bytes = self.ge.to_bytes().to_vec();
+        let mut bytes = self.ge.to_bytes();
+        // According to https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.2
+        // the most significant bit in a point encoding says if x is even or odd
+        // so we clear that bit as it's not part of the field element.
+        bytes[31] &= 0b01111111;
+
+        // reverse because BigInt is Big-Endian while the field element is Little-Endian
         bytes.reverse();
         Some(BigInt::from_bytes(&bytes))
     }
 
     fn coords(&self) -> Option<PointCoords> {
-        let y = self
-            .y_coord()
-            .expect("coordinates are always defined for edwards curves");
-        Some(PointCoords { x: xrecover(&y), y })
+        let mut bytes = self.ge.to_bytes();
+        // According to https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.2
+        // the most significant bit in a point encoding says if x is odd or even
+        let is_odd = (bytes[31] >> 7) == 1;
+        bytes[31] &= 0b01111111;
+
+        // reverse because BigInt is Big-Endian while the field element is Little-Endian
+        bytes.reverse();
+        let y = BigInt::from_bytes(&bytes);
+        let x = xrecover(&y, is_odd);
+        Some(PointCoords { x, y })
     }
 
     fn serialize_compressed(&self) -> GenericArray<u8, Self::CompressedPointLength> {
@@ -479,7 +497,7 @@ impl ECPoint for Ed25519Point {
 
 #[allow(clippy::many_single_char_names)]
 //helper function, based on https://ed25519.cr.yp.to/python/ed25519.py
-fn xrecover(y_coor: &BigInt) -> BigInt {
+fn xrecover(y_coor: &BigInt, is_odd: bool) -> BigInt {
     //   let d = "37095705934669439343138083508754565189542113879843219016388785533085940283555";
     //   let d_bn = BigInt::from(d.as_bytes());
     let q = BigInt::from(2u32).pow(255u32) - BigInt::from(19u32);
@@ -502,11 +520,11 @@ fn xrecover(y_coor: &BigInt) -> BigInt {
         let i = expmod(&BigInt::from(2i32), &q_minus_1_div_4, &q);
         x = BigInt::mod_mul(&x, &i, &q);
     }
-    if BigInt::modulus(&x, &BigInt::from(2i32)) != BigInt::zero() {
-        x = q - x.clone();
+    if x.is_odd() != is_odd {
+        q - x
+    } else {
+        x
     }
-
-    x
 }
 
 //helper function, based on https://ed25519.cr.yp.to/python/ed25519.py
