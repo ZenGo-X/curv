@@ -20,13 +20,18 @@ impl<'p, E: Curve> Serialize for Point<E> {
     where
         S: Serializer,
     {
+        let is_human_readable = serializer.is_human_readable();
         let mut s = serializer.serialize_struct("Point", 2)?;
         s.serialize_field("curve", E::CURVE_NAME)?;
-        s.serialize_field(
-            "point",
-            // Serializes bytes efficiently
-            Bytes::new(&self.to_bytes(true)),
-        )?;
+        if !is_human_readable {
+            s.serialize_field(
+                "point",
+                // Serializes bytes efficiently
+                Bytes::new(&self.to_bytes(true)),
+            )?;
+        } else {
+            s.serialize_field("point", &hex::encode(&*self.to_bytes(true)))?;
+        }
         s.end()
     }
 }
@@ -71,6 +76,27 @@ impl<'de, E: Curve> Deserialize<'de> for Point<E> {
                 let _curve_name =
                     curve_name.ok_or_else(|| A::Error::missing_field("curve_name"))?;
                 let point = point.ok_or_else(|| A::Error::missing_field("point"))?;
+                Ok(point.0)
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                if let Some(size) = seq.size_hint() {
+                    if size != 2 {
+                        return Err(A::Error::invalid_length(size, &"2"));
+                    }
+                }
+                let _curve_name: CurveNameGuard<E> = seq
+                    .next_element()?
+                    .ok_or_else(|| A::Error::missing_field("curve name"))?;
+                let point: PointFromBytes<E> = seq
+                    .next_element()?
+                    .ok_or_else(|| A::Error::missing_field("point value"))?;
+                if seq.next_element::<IgnoredAny>()?.is_some() {
+                    return Err(A::Error::custom("point consist of too many fields"));
+                }
                 Ok(point.0)
             }
         }
@@ -189,11 +215,44 @@ impl<'de, E: Curve> Deserialize<'de> for PointFromBytes<E> {
                 Point::from_bytes(&buffer.as_slice()[..seq_len])
                     .map_err(|e| A::Error::custom(format!("invalid point: {}", e)))
             }
+
+            fn visit_str<Err>(self, v: &str) -> Result<Self::Value, Err>
+            where
+                Err: Error,
+            {
+                let uncompressed_len = <E::Point as ECPoint>::UncompressedPointLength::USIZE;
+                let compressed_len = <E::Point as ECPoint>::CompressedPointLength::USIZE;
+
+                let mut buffer =
+                    GenericArray::<u8, <E::Point as ECPoint>::UncompressedPointLength>::default();
+
+                let point = if uncompressed_len * 2 == v.len() {
+                    hex::decode_to_slice(v, &mut buffer)
+                        .map_err(|_| Err::custom("malformed hex encoding"))?;
+                    Point::from_bytes(&buffer)
+                        .map_err(|e| Err::custom(format!("invalid point: {}", e)))?
+                } else if compressed_len * 2 == v.len() {
+                    hex::decode_to_slice(v, &mut buffer[..compressed_len])
+                        .map_err(|_| Err::custom("malformed hex encoding"))?;
+                    Point::from_bytes(&buffer[..compressed_len])
+                        .map_err(|e| Err::custom(format!("invalid point: {}", e)))?
+                } else {
+                    return Err(Err::custom("invalid point"));
+                };
+
+                Ok(point)
+            }
         }
 
-        deserializer
-            .deserialize_bytes(PointBytesVisitor(PhantomData))
-            .map(PointFromBytes)
+        if !deserializer.is_human_readable() {
+            deserializer
+                .deserialize_bytes(PointBytesVisitor(PhantomData))
+                .map(PointFromBytes)
+        } else {
+            deserializer
+                .deserialize_str(PointBytesVisitor(PhantomData))
+                .map(PointFromBytes)
+        }
     }
 }
 
@@ -206,13 +265,18 @@ impl<E: Curve> Serialize for Scalar<E> {
     where
         S: Serializer,
     {
+        let is_human_readable = serializer.is_human_readable();
         let mut s = serializer.serialize_struct("Scalar", 2)?;
         s.serialize_field("curve", E::CURVE_NAME)?;
-        s.serialize_field(
-            "scalar",
-            // Serializes bytes efficiently
-            Bytes::new(&self.to_bytes()),
-        )?;
+        if !is_human_readable {
+            s.serialize_field(
+                "scalar",
+                // Serializes bytes efficiently
+                Bytes::new(&self.to_bytes()),
+            )?;
+        } else {
+            s.serialize_field("scalar", &hex::encode(&*self.to_bytes()))?;
+        }
         s.end()
     }
 }
@@ -257,6 +321,27 @@ impl<'de, E: Curve> Deserialize<'de> for Scalar<E> {
                 let _curve_name =
                     curve_name.ok_or_else(|| A::Error::missing_field("curve_name"))?;
                 let scalar = scalar.ok_or_else(|| A::Error::missing_field("scalar"))?;
+                Ok(scalar.0)
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                if let Some(size) = seq.size_hint() {
+                    if size != 2 {
+                        return Err(A::Error::invalid_length(size, &"2"));
+                    }
+                }
+                let _curve_name: CurveNameGuard<E> = seq
+                    .next_element()?
+                    .ok_or_else(|| A::Error::missing_field("curve name"))?;
+                let scalar: ScalarFromBytes<E> = seq
+                    .next_element()?
+                    .ok_or_else(|| A::Error::missing_field("scalar value"))?;
+                if seq.next_element::<IgnoredAny>()?.is_some() {
+                    return Err(A::Error::custom("scalar consist of too many fields"));
+                }
                 Ok(scalar.0)
             }
         }
@@ -322,6 +407,26 @@ impl<'de, E: Curve> Deserialize<'de> for ScalarFromBytes<E> {
                 Scalar::from_bytes(buffer.as_slice())
                     .map_err(|_| A::Error::custom("invalid scalar"))
             }
+
+            fn visit_str<Err>(self, v: &str) -> Result<Self::Value, Err>
+            where
+                Err: Error,
+            {
+                let expected_len = <E::Scalar as ECScalar>::ScalarLength::USIZE;
+                if expected_len * 2 != v.len() {
+                    return Err(Err::invalid_length(
+                        v.len(),
+                        &format!("{}", expected_len * 2).as_str(),
+                    ));
+                }
+
+                let mut buffer =
+                    GenericArray::<u8, <E::Scalar as ECScalar>::ScalarLength>::default();
+                hex::decode_to_slice(v, &mut buffer)
+                    .map_err(|_| Err::custom("malformed hex encoding"))?;
+
+                Scalar::from_bytes(&buffer).map_err(|_| Err::custom("invalid scalar"))
+            }
         }
 
         deserializer
@@ -339,18 +444,20 @@ enum ScalarField {
 
 #[cfg(test)]
 mod serde_tests {
-    use serde_test::{assert_de_tokens, assert_de_tokens_error, assert_tokens, Token::*};
+    use serde_test::{
+        assert_de_tokens, assert_de_tokens_error, assert_tokens, Configure, Token::*,
+    };
 
     use crate::elliptic::curves::*;
     use crate::test_for_all_curves;
 
-    test_for_all_curves!(test_serde_point);
-    fn test_serde_point<E: Curve>() {
+    test_for_all_curves!(serializes_deserializes_point);
+    fn serializes_deserializes_point<E: Curve>() {
         let random_point = Point::<E>::generator() * Scalar::random();
         for point in [Point::zero(), random_point] {
             println!("Point: {:?}", point);
             let bytes = point.to_bytes(true).to_vec();
-            let tokens = vec![
+            let tokens = [
                 Struct {
                     name: "Point",
                     len: 2,
@@ -361,16 +468,16 @@ mod serde_tests {
                 Bytes(bytes.leak()),
                 StructEnd,
             ];
-            assert_tokens(&point, &tokens);
+            assert_tokens(&point.compact(), &tokens);
         }
     }
 
-    test_for_all_curves!(test_serde_scalar);
-    fn test_serde_scalar<E: Curve>() {
+    test_for_all_curves!(serializes_deserializes_scalar);
+    fn serializes_deserializes_scalar<E: Curve>() {
         for scalar in [Scalar::<E>::zero(), Scalar::random()] {
             println!("Scalar: {:?}", scalar);
             let bytes = scalar.to_bytes().to_vec();
-            let tokens = vec![
+            let tokens = [
                 Struct {
                     name: "Scalar",
                     len: 2,
@@ -381,12 +488,12 @@ mod serde_tests {
                 Bytes(bytes.leak()),
                 StructEnd,
             ];
-            assert_tokens(&scalar, &tokens);
+            assert_tokens(&scalar.compact(), &tokens);
         }
     }
 
-    test_for_all_curves!(test_deserialize_point_from_seq_of_bytes);
-    fn test_deserialize_point_from_seq_of_bytes<E: Curve>() {
+    test_for_all_curves!(deserializes_point_from_seq_of_bytes);
+    fn deserializes_point_from_seq_of_bytes<E: Curve>() {
         let random_point = Point::<E>::generator() * Scalar::random();
         for point in [Point::zero(), random_point] {
             println!("Point: {:?}", point);
@@ -405,12 +512,12 @@ mod serde_tests {
             ];
             tokens.extend(bytes.iter().copied().map(U8));
             tokens.extend_from_slice(&[SeqEnd, StructEnd]);
-            assert_de_tokens(&point, &tokens);
+            assert_de_tokens(&point.compact(), &tokens);
         }
     }
 
-    test_for_all_curves!(test_deserialize_scalar_from_seq_of_bytes);
-    fn test_deserialize_scalar_from_seq_of_bytes<E: Curve>() {
+    test_for_all_curves!(deserializes_scalar_from_seq_of_bytes);
+    fn deserializes_scalar_from_seq_of_bytes<E: Curve>() {
         for scalar in [Scalar::<E>::zero(), Scalar::random()] {
             println!("Scalar: {:?}", scalar);
             let bytes = scalar.to_bytes();
@@ -428,13 +535,77 @@ mod serde_tests {
             ];
             tokens.extend(bytes.iter().copied().map(U8));
             tokens.extend_from_slice(&[SeqEnd, StructEnd]);
-            assert_de_tokens(&scalar, &tokens);
+            assert_de_tokens(&scalar.compact(), &tokens);
         }
+    }
+
+    test_for_all_curves!(deserializes_point_represented_as_seq);
+    fn deserializes_point_represented_as_seq<E: Curve>() {
+        let point = Point::<E>::generator() * Scalar::random();
+        let tokens = [
+            Seq {
+                len: Option::Some(2),
+            },
+            Str(E::CURVE_NAME),
+            Bytes(point.to_bytes(true).to_vec().leak()),
+            SeqEnd,
+        ];
+        assert_de_tokens(&point.compact(), &tokens);
+    }
+
+    test_for_all_curves!(deserializes_scalar_represented_as_seq);
+    fn deserializes_scalar_represented_as_seq<E: Curve>() {
+        let scalar = Scalar::<E>::random();
+        let tokens = [
+            Seq {
+                len: Option::Some(2),
+            },
+            Str(E::CURVE_NAME),
+            Bytes(scalar.to_bytes().to_vec().leak()),
+            SeqEnd,
+        ];
+        assert_de_tokens(&scalar.compact(), &tokens);
+    }
+
+    test_for_all_curves!(serializes_deserializes_point_in_human_readable_format);
+    fn serializes_deserializes_point_in_human_readable_format<E: Curve>() {
+        let point = Point::<E>::generator() * Scalar::random();
+        let tokens = [
+            Struct {
+                name: "Point",
+                len: 2,
+            },
+            Str("curve"),
+            Str(E::CURVE_NAME),
+            Str("point"),
+            Str(Box::leak(
+                hex::encode(&*point.to_bytes(true)).into_boxed_str(),
+            )),
+            StructEnd,
+        ];
+        assert_tokens(&point.readable(), &tokens);
+    }
+
+    test_for_all_curves!(serializes_deserializes_scalar_in_human_readable_format);
+    fn serializes_deserializes_scalar_in_human_readable_format<E: Curve>() {
+        let scalar = Scalar::<E>::random();
+        let tokens = [
+            Struct {
+                name: "Scalar",
+                len: 2,
+            },
+            Str("curve"),
+            Str(E::CURVE_NAME),
+            Str("scalar"),
+            Str(Box::leak(hex::encode(&*scalar.to_bytes()).into_boxed_str())),
+            StructEnd,
+        ];
+        assert_tokens(&scalar.readable(), &tokens);
     }
 
     test_for_all_curves!(doesnt_deserialize_point_from_different_curve);
     fn doesnt_deserialize_point_from_different_curve<E: Curve>() {
-        let tokens = vec![
+        let tokens = [
             Struct {
                 name: "Point",
                 len: 2,
@@ -453,7 +624,7 @@ mod serde_tests {
 
     test_for_all_curves!(doesnt_deserialize_scalar_from_different_curve);
     fn doesnt_deserialize_scalar_from_different_curve<E: Curve>() {
-        let tokens = vec![
+        let tokens = [
             Struct {
                 name: "Scalar",
                 len: 2,
