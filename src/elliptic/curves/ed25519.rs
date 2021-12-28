@@ -498,7 +498,7 @@ fn xrecover(y_coor: &BigInt) -> BigInt {
 
     let mut x = expmod(&x_sqr, &q_plus_3_div_8, &q);
     if BigInt::mod_sub(&(x.clone() * x.clone()), &x_sqr, &q) != BigInt::zero() {
-        let q_minus_1_div_4 = (q.clone() - BigInt::from(3i32)) / BigInt::from(4i32);
+        let q_minus_1_div_4 = (q.clone() - BigInt::from(1i32)) / BigInt::from(4i32);
         let i = expmod(&BigInt::from(2i32), &q_minus_1_div_4, &q);
         x = BigInt::mod_mul(&x, &i, &q);
     }
