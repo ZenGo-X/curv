@@ -15,6 +15,12 @@ pub(super) enum EncodedPointChoice<E: Curve> {
 impl<E: Curve> Deref for EncodedPoint<E> {
     type Target = [u8];
     fn deref(&self) -> &[u8] {
+        self.as_ref()
+    }
+}
+
+impl<E: Curve> AsRef<[u8]> for EncodedPoint<E> {
+    fn as_ref(&self) -> &[u8] {
         match &self.0 {
             EncodedPointChoice::Compressed(bytes) => bytes.as_ref(),
             EncodedPointChoice::Uncompressed(bytes) => bytes.as_ref(),
