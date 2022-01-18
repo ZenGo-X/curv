@@ -15,7 +15,7 @@ use crate::cryptographic_primitives::proofs::sigma_valid_pedersen_blind::Pederse
 use crate::elliptic::curves::{Curve, Point, Scalar};
 
 /// based on How To Simulate It – A Tutorial on the Simulation
-/// Proof Technique. protocol 7.3: Multiple coin tossing. which provide simulatble constant round
+/// Proof Technique. protocol 7.3: Multiple coin tossing. which provide simulatable constant round
 /// coin toss
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(bound = "")]
@@ -45,8 +45,7 @@ impl<E: Curve, H: Digest + Clone> Party1FirstMessage<E, H> {
 impl<E: Curve> Party2FirstMessage<E> {
     pub fn share<H: Digest + Clone>(proof: &PedersenProof<E, H>) -> Party2FirstMessage<E> {
         PedersenProof::verify(proof).expect("{(m,r),c} proof failed");
-        let seed = Scalar::random();
-        Party2FirstMessage { seed }
+        Party2FirstMessage { seed: Scalar::random() }
     }
 }
 impl<E: Curve, H: Digest + Clone> Party1SecondMessage<E, H> {

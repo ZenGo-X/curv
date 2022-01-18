@@ -113,16 +113,16 @@ impl<E: Curve> Polynomial<E> {
     /// use curv::elliptic::curves::{Secp256k1, Scalar};
     ///
     /// let const_term = Scalar::<Secp256k1>::random();
-    /// let polynomial = Polynomial::<Secp256k1>::sample_exact_with_fixed_const_term(3, const_term.clone());
+    /// let polynomial = Polynomial::<Secp256k1>::sample_exact_with_fixed_const_term(3, &const_term);
     /// assert_eq!(polynomial.degree(), 3.into());
     /// assert_eq!(polynomial.evaluate(&Scalar::zero()), const_term);
     /// ```
-    pub fn sample_exact_with_fixed_const_term(n: u16, const_term: Scalar<E>) -> Self {
+    pub fn sample_exact_with_fixed_const_term(n: u16, const_term: &Scalar<E>) -> Self {
         if n == 0 {
-            Self::from_coefficients(vec![const_term])
+            Self::from_coefficients(vec![const_term.clone()])
         } else {
             let random_coefficients = iter::repeat_with(Scalar::random).take(usize::from(n));
-            Self::from_coefficients(iter::once(const_term).chain(random_coefficients).collect())
+            Self::from_coefficients(iter::once(const_term.clone()).chain(random_coefficients).collect())
         }
     }
 

@@ -6,6 +6,7 @@
 */
 
 use std::marker::PhantomData;
+use zeroize::Zeroizing;
 
 use super::traits::Commitment;
 use super::SECURITY_BITS;
@@ -29,9 +30,9 @@ impl<E: Curve> Commitment<Point<E>> for PedersenCommitment<E> {
         let h = Point::base_point2();
         let message_scalar: Scalar<E> = Scalar::from(message);
         let blinding_scalar: Scalar<E> = Scalar::from(blinding_factor);
-        let mg = g * message_scalar;
-        let rh = h * blinding_scalar;
-        mg + rh
+        let mg = Zeroizing::new(g * message_scalar);
+        let rh = Zeroizing::new(h * blinding_scalar);
+        &*mg + &*rh
     }
 
     fn create_commitment(message: &BigInt) -> (Point<E>, BigInt) {

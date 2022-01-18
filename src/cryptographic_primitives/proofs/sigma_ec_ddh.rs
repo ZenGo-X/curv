@@ -61,11 +61,10 @@ impl<E: Curve, H: Digest + Clone> ECDDHProof<E, H> {
             .chain_point(&a1)
             .chain_point(&a2)
             .result_scalar();
-        let z = &s + e * &w.x;
         ECDDHProof {
             a1,
             a2,
-            z,
+            z: &s + e * &w.x,
             hash_choice: HashChoice::new(),
         }
     }

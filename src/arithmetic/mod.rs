@@ -387,10 +387,9 @@ mod test {
         T: Converter + BasicOps + Modulo + Samplable + NumberTests + EGCD + BitManipulation,
         T: Primes,
         // Deprecated but not deleted yet traits from self::traits module
-        T: ZeroizeBN,
         u64: ConvertFrom<BigInt>,
         // Foreign traits implementations
-        T: zeroize::Zeroize + num_traits::One + num_traits::Zero,
+        T: num_traits::One + num_traits::Zero,
         T: num_traits::Num + num_integer::Integer + num_integer::Roots,
         // Conversion traits
         for<'a> u64: std::convert::TryFrom<&'a BigInt>,

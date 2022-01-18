@@ -90,7 +90,7 @@ impl Party1FirstMessage {
         );
         let ec_key_pair = EcKeyPair {
             public_share,
-            secret_share,
+            secret_share: secret_share.clone(),
         };
         (
             Party1FirstMessage {
@@ -108,10 +108,10 @@ impl Party1FirstMessage {
     }
 
     pub fn create_commitments_with_fixed_secret_share<E: Curve, H: Digest + Clone>(
-        secret_share: Scalar<E>,
+        secret_share: &Scalar<E>,
     ) -> (Party1FirstMessage, CommWitness<E, H>, EcKeyPair<E>) {
         let base = Point::<E>::generator();
-        let public_share = base * &secret_share;
+        let public_share = base * secret_share;
 
         let d_log_proof = DLogProof::prove(&secret_share);
 
@@ -129,7 +129,7 @@ impl Party1FirstMessage {
 
         let ec_key_pair = EcKeyPair {
             public_share,
-            secret_share,
+            secret_share: secret_share.clone(),
         };
         (
             Party1FirstMessage {
@@ -164,7 +164,7 @@ impl<E: Curve, H: Digest + Clone> Party2FirstMessage<E, H> {
         let d_log_proof = DLogProof::prove(&secret_share);
         let ec_key_pair = EcKeyPair {
             public_share: public_share.clone(),
-            secret_share,
+            secret_share: secret_share.clone(),
         };
         (
             Party2FirstMessage {
@@ -176,14 +176,14 @@ impl<E: Curve, H: Digest + Clone> Party2FirstMessage<E, H> {
     }
 
     pub fn create_with_fixed_secret_share(
-        secret_share: Scalar<E>,
+        secret_share: &Scalar<E>,
     ) -> (Party2FirstMessage<E, H>, EcKeyPair<E>) {
         let base = Point::generator();
-        let public_share = base * &secret_share;
+        let public_share = base * secret_share;
         let d_log_proof = DLogProof::prove(&secret_share);
         let ec_key_pair = EcKeyPair {
             public_share: public_share.clone(),
-            secret_share,
+            secret_share: secret_share.clone(),
         };
         (
             Party2FirstMessage {

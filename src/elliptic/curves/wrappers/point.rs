@@ -1,5 +1,7 @@
 use std::{fmt, iter};
 
+use zeroize::Zeroize;
+
 use crate::elliptic::curves::traits::*;
 use crate::BigInt;
 
@@ -305,5 +307,11 @@ impl<E: Curve> iter::Sum for Point<E> {
 impl<'p, E: Curve> iter::Sum<&'p Point<E>> for Point<E> {
     fn sum<I: Iterator<Item = &'p Point<E>>>(iter: I) -> Self {
         iter.fold(Point::zero(), |acc, p| acc + p)
+    }
+}
+
+impl<E: Curve> Zeroize for Point<E> {
+    fn zeroize(&mut self) {
+        self.raw_point.zeroize();
     }
 }

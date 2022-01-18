@@ -25,8 +25,8 @@ pub struct ShamirSecretSharing {
 /// Feldman VSS, based on  Paul Feldman. 1987. A practical scheme for non-interactive verifiable secret sharing.
 /// In Foundations of Computer Science, 1987., 28th Annual Symposium on.IEEE, 427–43
 ///
-/// implementation details: The code is using FE and GE. Each party is given an index from 1,..,n and a secret share of type FE.
-/// The index of the party is also the point on the polynomial where we treat this number as u32 but converting it to FE internally.
+/// Implementation details: The code is generic over the curve. Each party is given an index from `1,..,n` and a secret share of type `Scalar<E>`.
+/// The index of the party is also the point on the polynomial where we treat this number as `u32` but converting it to `Scalar<E>` internally.
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct VerifiableSS<E: Curve> {
@@ -57,7 +57,7 @@ impl<E: Curve> VerifiableSS<E> {
     // generate VerifiableSS from a secret
     pub fn share(t: u16, n: u16, secret: &Scalar<E>) -> (VerifiableSS<E>, SecretShares<E>) {
         assert!(t < n);
-        let polynomial = Polynomial::<E>::sample_exact_with_fixed_const_term(t, secret.clone());
+        let polynomial = Polynomial::<E>::sample_exact_with_fixed_const_term(t, &secret);
         let shares = polynomial.evaluate_many_bigint(1..=n).collect();
 
         let g = Point::<E>::generator();
@@ -84,7 +84,7 @@ impl<E: Curve> VerifiableSS<E> {
         let n = self.parameters.share_count;
 
         let one = Scalar::<E>::from(1);
-        let poly = Polynomial::<E>::sample_exact_with_fixed_const_term(t, one.clone());
+        let poly = Polynomial::<E>::sample_exact_with_fixed_const_term(t, &one);
         let secret_shares_biased: Vec<_> = poly.evaluate_many_bigint(1..=n).collect();
         let secret_shares: Vec<_> = (0..secret_shares_biased.len())
             .map(|i| &secret_shares_biased[i] - &one)
@@ -118,7 +118,7 @@ impl<E: Curve> VerifiableSS<E> {
         let indicies = indicies.into_iter();
         assert_eq!(usize::from(n), indicies.len());
 
-        let polynomial = Polynomial::<E>::sample_exact_with_fixed_const_term(t, secret.clone());
+        let polynomial = Polynomial::<E>::sample_exact_with_fixed_const_term(t, &secret);
         let shares = polynomial
             .evaluate_many_bigint(indicies.map(NonZeroU16::get))
             .collect();
@@ -144,7 +144,7 @@ impl<E: Curve> VerifiableSS<E> {
     // returns vector of coefficients
     #[deprecated(since = "0.8.0", note = "please use Polynomial::sample instead")]
     pub fn sample_polynomial(t: usize, coef0: &Scalar<E>) -> Vec<Scalar<E>> {
-        Polynomial::<E>::sample_exact_with_fixed_const_term(t.try_into().unwrap(), coef0.clone())
+        Polynomial::<E>::sample_exact_with_fixed_const_term(t.try_into().unwrap(), &coef0)
             .coefficients()
             .to_vec()
     }
@@ -160,8 +160,8 @@ impl<E: Curve> VerifiableSS<E> {
     }
 
     #[deprecated(since = "0.8.0", note = "please use Polynomial::evaluate instead")]
-    pub fn mod_evaluate_polynomial(coefficients: &[Scalar<E>], point: Scalar<E>) -> Scalar<E> {
-        Polynomial::<E>::from_coefficients(coefficients.to_vec()).evaluate(&point)
+    pub fn mod_evaluate_polynomial(coefficients: &[Scalar<E>], point: &Scalar<E>) -> Scalar<E> {
+        Polynomial::<E>::from_coefficients(coefficients.to_vec()).evaluate(point)
     }
 
     pub fn reconstruct(&self, indices: &[u16], shares: &[Scalar<E>]) -> Scalar<E> {

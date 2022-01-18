@@ -1,5 +1,6 @@
 use std::convert::{TryFrom, TryInto};
 use std::{fmt, ops};
+use core::{ptr, sync::atomic};
 
 use num_traits::Signed;
 
@@ -8,6 +9,7 @@ use super::traits::*;
 
 use num_bigint::BigInt as BN;
 use num_bigint::Sign;
+use zeroize::Zeroize;
 
 mod primes;
 mod ring_algorithms;
@@ -31,23 +33,24 @@ impl BigInt {
         &mut self.num
     }
     fn into_inner(self) -> BN {
-        self.num
+        self.num.clone()
     }
 }
 
-#[allow(deprecated)]
-impl ZeroizeBN for BigInt {
-    fn zeroize_bn(&mut self) {
-        zeroize::Zeroize::zeroize(self)
-    }
-}
-
-impl zeroize::Zeroize for BigInt {
-    fn zeroize(&mut self) {
-        use std::{ptr, sync::atomic};
-        unsafe { ptr::write_volatile(&mut self.num, Zero::zero()) };
-        atomic::fence(atomic::Ordering::SeqCst);
+impl Drop for BigInt {
+    fn drop(&mut self) {
+        // Copy the inner so we can read the data inside
+        let original = unsafe { ptr::read(&mut self.num) };
+        // Replace self with a zeroed integer.
+        unsafe { ptr::write_volatile(self, Self::zero()) };
+        let (mut sign, uint) = original.into_parts();
+        // Zero out the temp sign in case it's a secret somehow
+        unsafe { ptr::write_volatile(&mut sign, Sign::NoSign) };
+        // zero out the bigint's data itself.
+        // This is semi-UB because it's a repr(Rust) type, but because it's a single field we can assume it matches the wrapper.
+        let mut data: Vec<usize> = unsafe { core::mem::transmute(uint) };
         atomic::compiler_fence(atomic::Ordering::SeqCst);
+        data.zeroize();
     }
 }
 
@@ -351,7 +354,7 @@ crate::__bigint_impl_assigns! {
 impl ops::Neg for BigInt {
     type Output = BigInt;
     fn neg(self) -> Self::Output {
-        self.num.neg().wrap()
+        (&self.num).neg().wrap()
     }
 }
 impl ops::Neg for &BigInt {

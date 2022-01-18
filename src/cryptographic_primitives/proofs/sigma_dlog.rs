@@ -49,11 +49,10 @@ impl<E: Curve, H: Digest + Clone> DLogProof<E, H> {
             .result_scalar();
 
         let challenge_mul_sk = challenge * sk;
-        let challenge_response = &sk_t_rand_commitment - &challenge_mul_sk;
         DLogProof {
             pk,
             pk_t_rand_commitment,
-            challenge_response,
+            challenge_response: &sk_t_rand_commitment - &challenge_mul_sk,
             hash_choice: HashChoice::new(),
         }
     }

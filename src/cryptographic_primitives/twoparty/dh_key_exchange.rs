@@ -45,19 +45,19 @@ impl<E: Curve> Party1FirstMessage<E> {
 
         let ec_key_pair = EcKeyPair {
             public_share: public_share.clone(),
-            secret_share,
+            secret_share: secret_share.clone(),
         };
         (Party1FirstMessage { public_share }, ec_key_pair)
     }
 
     pub fn first_with_fixed_secret_share(
-        secret_share: Scalar<E>,
+        secret_share: &Scalar<E>,
     ) -> (Party1FirstMessage<E>, EcKeyPair<E>) {
-        let public_share = Point::generator() * secret_share.clone();
+        let public_share = Point::generator() * secret_share;
 
         let ec_key_pair = EcKeyPair {
             public_share: public_share.clone(),
-            secret_share,
+            secret_share: secret_share.clone(),
         };
         (Party1FirstMessage { public_share }, ec_key_pair)
     }
@@ -70,18 +70,18 @@ impl<E: Curve> Party2FirstMessage<E> {
         let public_share = base * &secret_share;
         let ec_key_pair = EcKeyPair {
             public_share: public_share.clone(),
-            secret_share,
+            secret_share: secret_share.clone(),
         };
         (Party2FirstMessage { public_share }, ec_key_pair)
     }
 
     pub fn first_with_fixed_secret_share(
-        secret_share: Scalar<E>,
+        secret_share: &Scalar<E>,
     ) -> (Party2FirstMessage<E>, EcKeyPair<E>) {
-        let public_share = Point::generator() * &secret_share;
+        let public_share = Point::generator() * secret_share;
         let ec_key_pair = EcKeyPair {
             public_share: public_share.clone(),
-            secret_share,
+            secret_share: secret_share.clone(),
         };
         (Party2FirstMessage { public_share }, ec_key_pair)
     }
@@ -123,11 +123,11 @@ mod tests {
     fn test_dh_key_exchange_fixed_shares<E: Curve>() {
         let secret_party_1 = Scalar::try_from(&BigInt::from(1)).unwrap();
         let (kg_party_one_first_message, kg_ec_key_pair_party1) =
-            Party1FirstMessage::<E>::first_with_fixed_secret_share(secret_party_1);
+            Party1FirstMessage::<E>::first_with_fixed_secret_share(&secret_party_1);
         let secret_party_2 = Scalar::try_from(&BigInt::from(2)).unwrap();
 
         let (kg_party_two_first_message, kg_ec_key_pair_party2) =
-            Party2FirstMessage::first_with_fixed_secret_share(secret_party_2.clone());
+            Party2FirstMessage::first_with_fixed_secret_share(&secret_party_2);
 
         assert_eq!(
             compute_pubkey(
