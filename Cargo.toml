@@ -25,7 +25,7 @@ serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
 merkle = { git = "https://github.com/KZen-networks/merkle.rs" }
-zeroize = "0.5.2"
+zeroize = "1.5.6"
 sha3 = "0.8.1"
 
 
