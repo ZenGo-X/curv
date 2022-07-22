@@ -94,8 +94,9 @@ impl ECScalar for Secp256r1Scalar {
         let scalar = loop {
             let mut bytes = FieldBytes::default();
             rng.fill(&mut bytes[..]);
-            if let Some(scalar) = Scalar::from_repr(bytes) {
-                break scalar;
+            let element = Scalar::from_repr(bytes);
+            if bool::from(element.is_some())  {
+                break element.unwrap();
             }
         };
         Secp256r1Scalar {
@@ -107,12 +108,12 @@ impl ECScalar for Secp256r1Scalar {
     fn zero() -> Secp256r1Scalar {
         Secp256r1Scalar {
             purpose: "zero",
-            fe: Scalar::zero().into(),
+            fe: Scalar::ZERO.into(),
         }
     }
 
     fn is_zero(&self) -> bool {
-        bool::from(self.fe.is_zero())
+        *self.fe == Scalar::ZERO
     }
 
     fn from_bigint(n: &BigInt) -> Secp256r1Scalar {
