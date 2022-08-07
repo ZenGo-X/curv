@@ -1,4 +1,5 @@
 use curv::elliptic::curves::*;
+use sha2::Sha256;
 
 /// secret_sharing_3_out_of_5
 /// Feldman VSS, based on  Paul Feldman. 1987. A practical scheme for non-interactive verifiable secret sharing.
@@ -16,7 +17,7 @@ pub fn secret_sharing_3_out_of_5<E: Curve>() {
 
     let secret = Scalar::random();
 
-    let (vss_scheme, secret_shares) = VerifiableSS::<E>::share(3, 5, &secret);
+    let (vss_scheme, secret_shares) = VerifiableSS::<E, Sha256>::share(3, 5, &secret);
 
     let shares_vec = vec![
         secret_shares[0].clone(),
@@ -42,11 +43,11 @@ pub fn secret_sharing_3_out_of_5<E: Curve>() {
 
     // test map (t,n) - (t',t')
     let s = &vec![0, 1, 2, 3, 4];
-    let l0 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 0, s);
-    let l1 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 1, s);
-    let l2 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 2, s);
-    let l3 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 3, s);
-    let l4 = VerifiableSS::<E>::map_share_to_new_params(&vss_scheme.parameters, 4, s);
+    let l0 = VerifiableSS::<E, Sha256>::map_share_to_new_params(&vss_scheme.parameters, 0, s);
+    let l1 = VerifiableSS::<E, Sha256>::map_share_to_new_params(&vss_scheme.parameters, 1, s);
+    let l2 = VerifiableSS::<E, Sha256>::map_share_to_new_params(&vss_scheme.parameters, 2, s);
+    let l3 = VerifiableSS::<E, Sha256>::map_share_to_new_params(&vss_scheme.parameters, 3, s);
+    let l4 = VerifiableSS::<E, Sha256>::map_share_to_new_params(&vss_scheme.parameters, 4, s);
 
     let w = l0 * secret_shares[0].clone()
         + l1 * secret_shares[1].clone()
