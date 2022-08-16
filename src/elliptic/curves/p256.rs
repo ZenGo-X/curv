@@ -4,9 +4,10 @@ use std::convert::TryFrom;
 
 use p256::elliptic_curve::group::ff::PrimeField;
 use p256::elliptic_curve::group::prime::PrimeCurveAffine;
+use p256::elliptic_curve::ops::Reduce;
 use p256::elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint};
 use p256::{AffinePoint, EncodedPoint, FieldBytes, ProjectivePoint, Scalar};
-use p256::elliptic_curve::ops::Reduce;
+use p256::elliptic_curve::Field;
 
 use generic_array::GenericArray;
 use rand::{thread_rng, Rng};
@@ -96,7 +97,7 @@ impl ECScalar for Secp256r1Scalar {
             let mut bytes = FieldBytes::default();
             rng.fill(&mut bytes[..]);
             let element = Scalar::from_repr(bytes);
-            if bool::from(element.is_some())  {
+            if bool::from(element.is_some()) {
                 break element.unwrap();
             }
         };
@@ -114,7 +115,7 @@ impl ECScalar for Secp256r1Scalar {
     }
 
     fn is_zero(&self) -> bool {
-        *self.fe == Scalar::ZERO
+        bool::from(self.fe.is_zero())
     }
 
     fn from_bigint(n: &BigInt) -> Secp256r1Scalar {
@@ -126,7 +127,7 @@ impl ECScalar for Secp256r1Scalar {
 
         Secp256r1Scalar {
             purpose: "from_bigint",
-            fe: Scalar::from_be_bytes_reduced(GenericArray::from(n_reduced)).into(), 
+            fe: Scalar::from_be_bytes_reduced(GenericArray::from(n_reduced)).into(),
         }
     }
 
