@@ -6,8 +6,8 @@ use p256::elliptic_curve::group::ff::PrimeField;
 use p256::elliptic_curve::group::prime::PrimeCurveAffine;
 use p256::elliptic_curve::ops::Reduce;
 use p256::elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint};
-use p256::{AffinePoint, EncodedPoint, FieldBytes, ProjectivePoint, Scalar};
 use p256::elliptic_curve::Field;
+use p256::{AffinePoint, EncodedPoint, FieldBytes, ProjectivePoint, Scalar};
 
 use generic_array::GenericArray;
 use rand::{thread_rng, Rng};
