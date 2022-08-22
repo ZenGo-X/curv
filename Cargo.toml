@@ -47,8 +47,8 @@ version = "0.20"
 features = ["serde", "rand-std", "global-context"]
 
 [dependencies.p256]
-version = "0.9"
-features = ["ecdsa", "ecdsa-core", "zeroize"]
+version = "0.11.1"
+features = ["ecdsa", "ecdsa-core"]
 
 [dev-dependencies]
 serde_test = "1.0"

@@ -4,7 +4,9 @@ use std::convert::TryFrom;
 
 use p256::elliptic_curve::group::ff::PrimeField;
 use p256::elliptic_curve::group::prime::PrimeCurveAffine;
+use p256::elliptic_curve::ops::Reduce;
 use p256::elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint};
+use p256::elliptic_curve::Field;
 use p256::{AffinePoint, EncodedPoint, FieldBytes, ProjectivePoint, Scalar};
 
 use generic_array::GenericArray;
@@ -94,8 +96,9 @@ impl ECScalar for Secp256r1Scalar {
         let scalar = loop {
             let mut bytes = FieldBytes::default();
             rng.fill(&mut bytes[..]);
-            if let Some(scalar) = Scalar::from_repr(bytes) {
-                break scalar;
+            let element = Scalar::from_repr(bytes);
+            if bool::from(element.is_some()) {
+                break element.unwrap();
             }
         };
         Secp256r1Scalar {
@@ -107,7 +110,7 @@ impl ECScalar for Secp256r1Scalar {
     fn zero() -> Secp256r1Scalar {
         Secp256r1Scalar {
             purpose: "zero",
-            fe: Scalar::zero().into(),
+            fe: Scalar::ZERO.into(),
         }
     }
 
@@ -124,7 +127,7 @@ impl ECScalar for Secp256r1Scalar {
 
         Secp256r1Scalar {
             purpose: "from_bigint",
-            fe: Scalar::from_bytes_reduced(&n_reduced.into()).into(),
+            fe: Scalar::from_be_bytes_reduced(GenericArray::from(n_reduced)).into(),
         }
     }
 
@@ -139,10 +142,16 @@ impl ECScalar for Secp256r1Scalar {
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError> {
         let bytes = <[u8; 32]>::try_from(bytes).or(Err(DeserializationError))?;
         let bytes = FieldBytes::from(bytes);
-        Ok(Secp256r1Scalar {
-            purpose: "deserialize",
-            fe: Scalar::from_repr(bytes).ok_or(DeserializationError)?.into(),
-        })
+        let scalar = Scalar::from_repr(bytes);
+
+        if bool::from(scalar.is_some()) {
+            Ok(Secp256r1Scalar {
+                purpose: "deserialize",
+                fe: scalar.unwrap().into(),
+            })
+        } else {
+            Err(DeserializationError)
+        }
     }
 
     fn add(&self, other: &Self) -> Secp256r1Scalar {
@@ -252,13 +261,16 @@ impl ECPoint for Secp256r1Point {
             &x_arr.into(),
             &y_arr.into(),
             false,
-        ))
-        .ok_or(NotOnCurve)?;
+        ));
 
-        Ok(Secp256r1Point {
-            purpose: "from_coords",
-            ge,
-        })
+        if bool::from(ge.is_some()) {
+            Ok(Secp256r1Point {
+                purpose: "from_coords",
+                ge: ge.unwrap(),
+            })
+        } else {
+            Err(NotOnCurve)
+        }
     }
 
     fn x_coord(&self) -> Option<BigInt> {
@@ -304,10 +316,16 @@ impl ECPoint for Secp256r1Point {
             })
         } else {
             let encoded = EncodedPoint::from_bytes(bytes).map_err(|_| DeserializationError)?;
-            Ok(Secp256r1Point {
-                purpose: "deserialize",
-                ge: AffinePoint::from_encoded_point(&encoded).ok_or(DeserializationError)?,
-            })
+            let affine_point = AffinePoint::from_encoded_point(&encoded);
+
+            if bool::from(affine_point.is_some()) {
+                Ok(Secp256r1Point {
+                    purpose: "deserialize",
+                    ge: affine_point.unwrap(),
+                })
+            } else {
+                Err(DeserializationError)
+            }
         }
     }
 
