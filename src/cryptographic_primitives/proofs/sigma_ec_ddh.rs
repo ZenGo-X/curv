@@ -25,7 +25,7 @@ use super::ProofError;
 /// prover sends pi = {e, A1,A2,z}
 ///
 /// verifier checks that zG1 = A1 + eH1, zG2 = A2 + eH2
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct ECDDHProof<E: Curve, H: Digest + Clone> {
     pub a1: Point<E>,
@@ -35,7 +35,7 @@ pub struct ECDDHProof<E: Curve, H: Digest + Clone> {
     pub hash_choice: HashChoice<H>,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ECDDHStatement<E: Curve> {
     pub g1: Point<E>,
     pub h1: Point<E>,
@@ -43,7 +43,7 @@ pub struct ECDDHStatement<E: Curve> {
     pub h2: Point<E>,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ECDDHWitness<E: Curve> {
     pub x: Scalar<E>,
 }

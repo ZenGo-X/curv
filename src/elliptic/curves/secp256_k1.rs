@@ -77,10 +77,10 @@ const BASE_POINT2_Y: [u8; 32] = [
 ];
 
 /// SK wraps secp256k1::SecretKey and implements Zeroize to it
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct SK(pub SecretKey);
 /// PK wraps secp256k1::PublicKey and implements Zeroize to it
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct PK(pub PublicKey);
 
 impl ops::Deref for SK {
@@ -126,7 +126,7 @@ impl Zeroize for PK {
 }
 
 /// K-256 curve implementation based on [secp256k1] library
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Secp256k1 {}
 
 impl Curve for Secp256k1 {
@@ -138,6 +138,7 @@ impl Curve for Secp256k1 {
 
 #[derive(Clone, Debug)]
 pub struct Secp256k1Scalar {
+    #[allow(dead_code)]
     purpose: &'static str,
     /// Zeroizing<SK> wraps SK and zeroize it on drop
     ///
@@ -146,6 +147,7 @@ pub struct Secp256k1Scalar {
 }
 #[derive(Clone, Debug, Copy)]
 pub struct Secp256k1Point {
+    #[allow(dead_code)]
     purpose: &'static str,
     ge: Option<PK>,
 }
@@ -528,7 +530,7 @@ pub mod hash_to_curve {
         let truncated = if bytes.len() > compressed_point_len - 1 {
             &bytes[0..compressed_point_len - 1]
         } else {
-            &bytes
+            bytes
         };
         let mut buffer = [0u8; secp256k1::constants::PUBLIC_KEY_SIZE];
         buffer[0] = 0x2;

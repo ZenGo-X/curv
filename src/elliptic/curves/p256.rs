@@ -58,7 +58,7 @@ const GROUP_ORDER_BYTES: [u8; 32] = [
 ];
 
 /// P-256 curve implementation based on [p256] library
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Secp256r1 {}
 
 pub type SK = Scalar;
@@ -66,12 +66,14 @@ pub type PK = AffinePoint;
 
 #[derive(Clone, Debug)]
 pub struct Secp256r1Scalar {
+    #[allow(dead_code)]
     purpose: &'static str,
     fe: zeroize::Zeroizing<SK>,
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct Secp256r1Point {
+    #[allow(dead_code)]
     purpose: &'static str,
     ge: PK,
 }

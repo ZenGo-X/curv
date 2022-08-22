@@ -18,7 +18,7 @@ use crate::cryptographic_primitives::secret_sharing::Polynomial;
 use crate::elliptic::curves::{Curve, Point, Scalar};
 use crate::ErrorSS::{self, VerifyShareError};
 
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct ShamirSecretSharing {
     pub threshold: u16,   //t
     pub share_count: u16, //n
@@ -31,7 +31,7 @@ pub struct ShamirSecretSharing {
 /// The index of the party is also the point on the polynomial where we treat this number as u32 but converting it to FE internally.
 ///
 /// The scheme is augmented with a dlog proof for the constant commitment to protect against n-t+1 attack
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct VerifiableSS<E: Curve, H: Digest + Clone> {
     pub parameters: ShamirSecretSharing,
@@ -72,7 +72,7 @@ impl<E: Curve, H: Digest + Clone> VerifiableSS<E, H> {
             .map(|coef| g * coef)
             .collect::<Vec<_>>();
 
-        let proof = DLogProof::<E, H>::prove(&secret);
+        let proof = DLogProof::<E, H>::prove(secret);
         (
             VerifiableSS {
                 parameters: ShamirSecretSharing {
@@ -139,7 +139,7 @@ impl<E: Curve, H: Digest + Clone> VerifiableSS<E, H> {
             .map(|coef| g * coef)
             .collect::<Vec<Point<E>>>();
 
-        let proof = DLogProof::<E, H>::prove(&secret);
+        let proof = DLogProof::<E, H>::prove(secret);
         (
             VerifiableSS {
                 parameters: ShamirSecretSharing {
@@ -236,7 +236,7 @@ impl<E: Curve, H: Digest + Clone> VerifiableSS<E, H> {
     }
 
     pub fn validate_share(&self, secret_share: &Scalar<E>, index: u16) -> Result<(), ErrorSS> {
-        if self.commitments[0] != self.proof.pk || !DLogProof::verify(&self.proof).is_ok() {
+        if self.commitments[0] != self.proof.pk || DLogProof::verify(&self.proof).is_err() {
             return Err(VerifyShareError);
         }
         let g = Point::generator();

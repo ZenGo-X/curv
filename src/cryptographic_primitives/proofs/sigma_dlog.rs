@@ -23,7 +23,7 @@ use super::ProofError;
 /// How to prove yourself: Practical solutions to identification and signature problems.
 /// In Advances in Cryptology - CRYPTO ’86, Santa Barbara, California, USA, 1986, Proceedings,
 /// pages 186–194, 1986.
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct DLogProof<E: Curve, H: Digest + Clone> {
     pub pk: Point<E>,

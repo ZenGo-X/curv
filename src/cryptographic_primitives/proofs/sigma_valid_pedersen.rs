@@ -24,7 +24,7 @@ use super::ProofError;
 /// prover sends pi = {e, A1,A2,c, z1,z2}
 ///
 /// verifier checks that z1*G + z2*H  = A1 + A2 + ec
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct PedersenProof<E: Curve, H: Digest + Clone> {
     e: Scalar<E>,

@@ -97,16 +97,18 @@ impl ops::DerefMut for SK {
 ///   recovering x coordinate of ed25519 point from its y coordinate. Every time you call
 ///   `.x_coord()` or `from_coords()`, it takes y coordinate and runs `xrecover(y)` underhood. Keep
 ///   in mind that `xrecover` is quite expensive operation.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Ed25519 {}
 
 #[derive(Clone)]
 pub struct Ed25519Scalar {
+    #[allow(dead_code)]
     purpose: &'static str,
     fe: Zeroizing<SK>,
 }
 #[derive(Clone, Copy)]
 pub struct Ed25519Point {
+    #[allow(dead_code)]
     purpose: &'static str,
     ge: PK,
 }
@@ -438,8 +440,7 @@ impl ECPoint for Ed25519Point {
     }
 
     fn scalar_mul(&self, fe: &Self::Scalar) -> Ed25519Point {
-        let vec_0: [u8; 32];
-        vec_0 = [
+        let vec_0 = [
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0,
         ];

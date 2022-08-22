@@ -20,7 +20,7 @@ use super::ProofError;
 /// Specifically, the witness is ω = (x, r), the statement is δ = (G, Y, Q, D, E).
 /// The relation R outputs 1 if D = xG+rY , E = rG, Q = xG
 ///
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct HomoELGamalDlogProof<E: Curve, H: Digest + Clone> {
     pub A1: Point<E>,
@@ -32,14 +32,14 @@ pub struct HomoELGamalDlogProof<E: Curve, H: Digest + Clone> {
     pub hash_choice: HashChoice<H>,
 }
 
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct HomoElGamalDlogWitness<E: Curve> {
     pub r: Scalar<E>,
     pub x: Scalar<E>,
 }
 
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct HomoElGamalDlogStatement<E: Curve> {
     pub G: Point<E>,

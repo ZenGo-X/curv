@@ -1,8 +1,8 @@
 use digest::Digest;
+use generic_array::GenericArray;
 use hmac::crypto_mac::MacError;
 use hmac::{Hmac, Mac, NewMac};
 use typenum::Unsigned;
-use generic_array::GenericArray;
 
 use crate::arithmetic::*;
 use crate::elliptic::curves::{Curve, ECScalar, Point, Scalar};

@@ -21,7 +21,7 @@ use super::ProofError;
 /// Specifically, the witness is ω = (x, r), the statement is δ = (G, H, Y, D, E).
 /// The relation R outputs 1 if D = xH+rY , E = rG (for the case of G=H this is ElGamal)
 ///
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct HomoELGamalProof<E: Curve, H: Digest + Clone> {
     pub T: Point<E>,
@@ -32,14 +32,14 @@ pub struct HomoELGamalProof<E: Curve, H: Digest + Clone> {
     pub hash_choice: HashChoice<H>,
 }
 
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct HomoElGamalWitness<E: Curve> {
     pub r: Scalar<E>,
     pub x: Scalar<E>,
 }
 
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct HomoElGamalStatement<E: Curve> {
     pub G: Point<E>,

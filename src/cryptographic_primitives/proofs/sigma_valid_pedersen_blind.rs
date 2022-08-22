@@ -23,7 +23,7 @@ use super::ProofError;
 /// prover calculates z  = s + er,
 /// prover sends pi = {e, m,A,c, z}
 /// verifier checks that emG + zH  = A + ec
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct PedersenBlindingProof<E: Curve, H: Digest + Clone> {
     e: Scalar<E>,

@@ -15,7 +15,7 @@ use crate::elliptic::curves::{Curve, ECPoint, ECScalar, Point, Scalar};
 // --- Point (de)serialization
 // ---
 
-impl<'p, E: Curve> Serialize for Point<E> {
+impl<E: Curve> Serialize for Point<E> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,

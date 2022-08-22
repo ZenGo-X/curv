@@ -17,18 +17,18 @@ use crate::elliptic::curves::{Curve, Point, Scalar};
 /// based on How To Simulate It – A Tutorial on the Simulation
 /// Proof Technique. protocol 7.3: Multiple coin tossing. which provide simulatble constant round
 /// coin toss
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct Party1FirstMessage<E: Curve, H: Digest + Clone> {
     pub proof: PedersenProof<E, H>,
 }
 
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct Party2FirstMessage<E: Curve> {
     pub seed: Scalar<E>,
 }
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct Party1SecondMessage<E: Curve, H: Digest + Clone> {
     pub proof: PedersenBlindingProof<E, H>,

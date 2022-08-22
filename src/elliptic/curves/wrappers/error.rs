@@ -4,7 +4,7 @@ use thiserror::Error;
 
 use crate::elliptic::curves::traits::*;
 
-#[derive(Debug, Error, Clone, PartialEq)]
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
 #[error("invalid point (point order ≠ group order)")]
 pub struct MismatchedPointOrder(());
 
