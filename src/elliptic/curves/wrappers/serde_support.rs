@@ -429,9 +429,15 @@ impl<'de, E: Curve> Deserialize<'de> for ScalarFromBytes<E> {
             }
         }
 
-        deserializer
-            .deserialize_bytes(ScalarBytesVisitor(PhantomData))
-            .map(ScalarFromBytes)
+        if !deserializer.is_human_readable() {
+            deserializer
+                .deserialize_bytes(ScalarBytesVisitor(PhantomData))
+                .map(ScalarFromBytes)
+        } else {
+            deserializer
+                .deserialize_str(ScalarBytesVisitor(PhantomData))
+                .map(ScalarFromBytes)
+        }
     }
 }
 
@@ -639,5 +645,18 @@ mod serde_tests {
                 E::CURVE_NAME
             ),
         )
+    }
+
+    test_for_all_curves!(supports_serde_json);
+    fn supports_serde_json<E: Curve>() {
+        let random_scalar = Scalar::<E>::random();
+        let scalar_json = serde_json::to_string(&random_scalar).unwrap();
+        let deserialized_scalar = serde_json::from_str(&scalar_json).unwrap();
+        assert_eq!(random_scalar, deserialized_scalar);
+
+        let random_point = Point::generator() * random_scalar;
+        let point_json = serde_json::to_string(&random_point).unwrap();
+        let deserialized_point: Point<E> = serde_json::from_str(&point_json).unwrap();
+        assert_eq!(random_point, deserialized_point);
     }
 }
