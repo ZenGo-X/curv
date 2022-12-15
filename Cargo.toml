@@ -1,6 +1,6 @@
 [package]
 name = "curv-kzen"
-version = "0.9.0"
+version = "0.9.1"
 edition = "2018"
 authors = [
     "Omer Shlomovits",
