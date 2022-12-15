@@ -27,7 +27,7 @@ lazy_static::lazy_static! {
         g[0] = 0x04;
         g[1..33].copy_from_slice(&BASE_POINT2_X);
         g[33..].copy_from_slice(&BASE_POINT2_Y);
-        EncodedPoint::from_bytes(&g).unwrap()
+        EncodedPoint::from_bytes(g).unwrap()
     };
 
     static ref BASE_POINT2: Secp256r1Point = Secp256r1Point {
