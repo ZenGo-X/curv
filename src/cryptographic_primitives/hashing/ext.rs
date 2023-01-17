@@ -88,7 +88,7 @@ where
     D: Digest + Clone,
 {
     fn input_bigint(&mut self, n: &BigInt) {
-        self.update(&n.to_bytes())
+        self.update(n.to_bytes())
     }
 
     fn input_point<E: Curve>(&mut self, point: &Point<E>) {
@@ -96,7 +96,7 @@ where
     }
 
     fn input_scalar<E: Curve>(&mut self, scalar: &Scalar<E>) {
-        self.update(&scalar.to_bigint().to_bytes())
+        self.update(scalar.to_bigint().to_bytes())
     }
 
     fn result_bigint(self) -> BigInt {

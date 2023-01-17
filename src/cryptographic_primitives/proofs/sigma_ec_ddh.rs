@@ -131,6 +131,6 @@ mod tests {
         };
         let w = ECDDHWitness { x };
         let proof = ECDDHProof::<E, H>::prove(&w, &delta);
-        assert!(!proof.verify(&delta).is_ok());
+        assert!(proof.verify(&delta).is_err());
     }
 }

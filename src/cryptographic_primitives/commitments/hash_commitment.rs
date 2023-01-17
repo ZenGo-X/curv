@@ -109,9 +109,9 @@ mod tests {
             &BigInt::zero(),
         );
         let message2 = message.to_bytes();
-        digest.update(&message2);
+        digest.update(message2);
         let bytes_blinding_factor = &BigInt::zero().to_bytes();
-        digest.update(&bytes_blinding_factor);
+        digest.update(bytes_blinding_factor);
         let hash_result = BigInt::from_bytes(digest.finalize().as_ref());
         assert_eq!(&commitment, &hash_result);
     }

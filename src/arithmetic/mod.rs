@@ -131,7 +131,7 @@ mod test {
 
         for (i, expect) in expectations.into_iter().enumerate() {
             let i = 7 - i - 1;
-            assert_eq!(n.test_bit(i), expect, "testing {} bit", i)
+            assert_eq!(n.test_bit(i), expect, "testing {i} bit")
         }
     }
 
@@ -285,7 +285,7 @@ mod test {
                     expected = expected.wrapping_mul(n);
                 }
             }
-            assert_eq!(actual, BigInt::from(expected), "{} [{:?}] {}", was, op, n)
+            assert_eq!(actual, BigInt::from(expected), "{was} [{op:?}] {n}")
         }
     }
 
