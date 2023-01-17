@@ -298,7 +298,7 @@ mod tests {
         // Print in uncompressed form
         use pairing_plus::EncodedPoint;
         let point_uncompressed = G1Uncompressed::from_affine(point);
-        println!("Uncompressed base_point2: {:?}", point_uncompressed);
+        println!("Uncompressed base_point2: {point_uncompressed:?}");
 
         // Check that ECPoint::base_point2() returns generated point
         let base_point2: &GE1 = ECPoint::base_point2();

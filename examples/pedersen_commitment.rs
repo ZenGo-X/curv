@@ -24,8 +24,7 @@ pub fn ped_com<E: Curve>(message: &BigInt) {
     );
 
     println!(
-        "\ncreated commitment with user defined randomness \n\n blinding_factor {} \n commitment: {:#?}",
-        blinding_factor, com
+        "\ncreated commitment with user defined randomness \n\n blinding_factor {blinding_factor} \n commitment: {com:#?}",
     );
 }
 
@@ -40,7 +39,7 @@ fn main() {
         Some("bls12_381_1") => ped_com::<Bls12_381_1>(&message_bn),
         Some("bls12_381_2") => ped_com::<Bls12_381_2>(&message_bn),
         Some("p256") => ped_com::<Secp256r1>(&message_bn),
-        Some(unknown_curve) => eprintln!("Unknown curve: {}", unknown_curve),
+        Some(unknown_curve) => eprintln!("Unknown curve: {unknown_curve}"),
         None => eprintln!("Missing curve name"),
     }
 }

@@ -175,6 +175,6 @@ mod tests {
             E,
         };
         let proof = HomoELGamalProof::<E, H>::prove(&witness, &delta);
-        assert!(!proof.verify(&delta).is_ok());
+        assert!(proof.verify(&delta).is_err());
     }
 }

@@ -582,9 +582,9 @@ mod test {
         let base_point2 = GE::base_point2();
 
         let g = GE::generator();
-        let hash = Sha256::digest(&g.serialize_compressed());
-        let hash = Sha256::digest(&hash);
-        let hash = Sha256::digest(&hash);
+        let hash = Sha256::digest(g.serialize_compressed());
+        let hash = Sha256::digest(hash);
+        let hash = Sha256::digest(hash);
 
         assert_eq!(BigInt::from_bytes(&hash), base_point2.x_coord().unwrap());
 

@@ -171,7 +171,7 @@ impl<'de, E: Curve> Deserialize<'de> for PointFromBytes<E> {
             where
                 Err: Error,
             {
-                Point::from_bytes(v).map_err(|e| Err::custom(format!("invalid point: {}", e)))
+                Point::from_bytes(v).map_err(|e| Err::custom(format!("invalid point: {e}")))
             }
 
             // serde_json serializes bytes as a sequence of u8, so we need to support this format too
@@ -200,20 +200,19 @@ impl<'de, E: Curve> Deserialize<'de> for PointFromBytes<E> {
                     if seq.next_element::<IgnoredAny>()?.is_some() {
                         return Err(A::Error::invalid_length(
                             seq_len_hint.unwrap_or(seq_len + 1),
-                            &format!("either {} or {} bytes", compressed_len, uncompressed_len)
+                            &format!("either {compressed_len} or {uncompressed_len} bytes")
                                 .as_str(),
                         ));
                     }
                 } else if seq_len != compressed_len {
                     return Err(A::Error::invalid_length(
                         seq_len_hint.unwrap_or(seq_len),
-                        &format!("either {} or {} bytes", compressed_len, uncompressed_len)
-                            .as_str(),
+                        &format!("either {compressed_len} or {uncompressed_len} bytes").as_str(),
                     ));
                 }
 
                 Point::from_bytes(&buffer.as_slice()[..seq_len])
-                    .map_err(|e| A::Error::custom(format!("invalid point: {}", e)))
+                    .map_err(|e| A::Error::custom(format!("invalid point: {e}")))
             }
 
             fn visit_str<Err>(self, v: &str) -> Result<Self::Value, Err>
@@ -230,12 +229,12 @@ impl<'de, E: Curve> Deserialize<'de> for PointFromBytes<E> {
                     hex::decode_to_slice(v, &mut buffer)
                         .map_err(|_| Err::custom("malformed hex encoding"))?;
                     Point::from_bytes(&buffer)
-                        .map_err(|e| Err::custom(format!("invalid point: {}", e)))?
+                        .map_err(|e| Err::custom(format!("invalid point: {e}")))?
                 } else if compressed_len * 2 == v.len() {
                     hex::decode_to_slice(v, &mut buffer[..compressed_len])
                         .map_err(|_| Err::custom("malformed hex encoding"))?;
                     Point::from_bytes(&buffer[..compressed_len])
-                        .map_err(|e| Err::custom(format!("invalid point: {}", e)))?
+                        .map_err(|e| Err::custom(format!("invalid point: {e}")))?
                 } else {
                     return Err(Err::custom("invalid point"));
                 };
@@ -390,7 +389,7 @@ impl<'de, E: Curve> Deserialize<'de> for ScalarFromBytes<E> {
                         None => {
                             return Err(A::Error::invalid_length(
                                 i,
-                                &format!("{} bytes", expected_len).as_str(),
+                                &format!("{expected_len} bytes").as_str(),
                             ))
                         }
                     };
@@ -400,7 +399,7 @@ impl<'de, E: Curve> Deserialize<'de> for ScalarFromBytes<E> {
                 if seq.next_element::<IgnoredAny>()?.is_some() {
                     return Err(A::Error::invalid_length(
                         seq_len_hint.unwrap_or(expected_len + 1),
-                        &format!("{} bytes", expected_len).as_str(),
+                        &format!("{expected_len} bytes").as_str(),
                     ));
                 }
 
@@ -461,7 +460,7 @@ mod serde_tests {
     fn serializes_deserializes_point<E: Curve>() {
         let random_point = Point::<E>::generator() * Scalar::random();
         for point in [Point::zero(), random_point] {
-            println!("Point: {:?}", point);
+            println!("Point: {point:?}");
             let bytes = point.to_bytes(true).to_vec();
             let tokens = [
                 Struct {
@@ -481,7 +480,7 @@ mod serde_tests {
     test_for_all_curves!(serializes_deserializes_scalar);
     fn serializes_deserializes_scalar<E: Curve>() {
         for scalar in [Scalar::<E>::zero(), Scalar::random()] {
-            println!("Scalar: {:?}", scalar);
+            println!("Scalar: {scalar:?}");
             let bytes = scalar.to_bytes().to_vec();
             let tokens = [
                 Struct {
@@ -502,7 +501,7 @@ mod serde_tests {
     fn deserializes_point_from_seq_of_bytes<E: Curve>() {
         let random_point = Point::<E>::generator() * Scalar::random();
         for point in [Point::zero(), random_point] {
-            println!("Point: {:?}", point);
+            println!("Point: {point:?}");
             let bytes = point.to_bytes(true);
             let mut tokens = vec![
                 Struct {
@@ -525,7 +524,7 @@ mod serde_tests {
     test_for_all_curves!(deserializes_scalar_from_seq_of_bytes);
     fn deserializes_scalar_from_seq_of_bytes<E: Curve>() {
         for scalar in [Scalar::<E>::zero(), Scalar::random()] {
-            println!("Scalar: {:?}", scalar);
+            println!("Scalar: {scalar:?}");
             let bytes = scalar.to_bytes();
             let mut tokens = vec![
                 Struct {

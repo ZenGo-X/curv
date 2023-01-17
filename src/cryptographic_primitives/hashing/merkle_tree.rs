@@ -85,7 +85,7 @@ where
     type Item = Output<D>;
 
     fn merge(left: &Self::Item, right: &Self::Item) -> Self::Item {
-        D::new().chain(left).chain(right).finalize()
+        D::new().chain_update(left).chain_update(right).finalize()
     }
 }
 

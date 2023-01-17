@@ -20,7 +20,7 @@ impl fmt::Display for ParseBigIntError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.reason {
             #[cfg(feature = "rust-gmp-kzen")]
-            ParseErrorReason::Gmp(reason) => write!(f, "{}", reason),
+            ParseErrorReason::Gmp(reason) => write!(f, "{reason}"),
             #[cfg(feature = "num-bigint")]
             ParseErrorReason::NumBigint => {
                 write!(f, "invalid {}-based number representation", self.radix)

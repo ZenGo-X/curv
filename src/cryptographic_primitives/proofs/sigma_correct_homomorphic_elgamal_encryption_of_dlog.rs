@@ -144,6 +144,6 @@ mod tests {
             E,
         };
         let proof = HomoELGamalDlogProof::<E, H>::prove(&witness, &delta);
-        assert!(!proof.verify(&delta).is_ok());
+        assert!(proof.verify(&delta).is_err());
     }
 }

@@ -303,7 +303,7 @@ mod tests {
 
         // Print in uncompressed form
         let point_uncompressed = G2Uncompressed::from_affine(point);
-        println!("Uncompressed base_point2: {:?}", point_uncompressed);
+        println!("Uncompressed base_point2: {point_uncompressed:?}");
 
         // Check that ECPoint::base_point2() returns generated point
         let base_point2: &G2Point = ECPoint::base_point2();
