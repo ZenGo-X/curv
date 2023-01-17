@@ -1,8 +1,9 @@
-use digest::Digest;
+use digest::block_buffer::Eager;
+use digest::core_api::{BlockSizeUser, BufferKindUser, CoreProxy, FixedOutputCore, UpdateCore};
+use digest::{Digest, HashMarker, MacError, OutputSizeUser};
 use generic_array::GenericArray;
-use hmac::crypto_mac::MacError;
-use hmac::{Hmac, Mac, NewMac};
-use typenum::Unsigned;
+use hmac::{Hmac, Mac};
+use typenum::{IsLess, Le, NonZero, Unsigned, U256};
 
 use crate::arithmetic::*;
 use crate::elliptic::curves::{Curve, ECScalar, Point, Scalar};
@@ -106,15 +107,15 @@ where
     fn result_scalar<E: Curve>(self) -> Scalar<E> {
         let scalar_len = <<E::Scalar as ECScalar>::ScalarLength as Unsigned>::to_usize();
         assert!(
-            Self::output_size() >= scalar_len,
+            <Self as OutputSizeUser>::output_size() >= scalar_len,
             "Output size of the hash({}) is smaller than the scalar length({})",
-            Self::output_size(),
+            <Self as OutputSizeUser>::output_size(),
             scalar_len
         );
         // Try and increment.
         for i in 0u32.. {
             let starting_state = self.clone();
-            let hash = starting_state.chain(i.to_be_bytes()).finalize();
+            let hash = starting_state.chain_update(i.to_be_bytes()).finalize();
             if let Ok(scalar) = Scalar::from_bytes(&hash[..scalar_len]) {
                 return scalar;
             }
@@ -123,7 +124,7 @@ where
     }
 
     fn digest_bigint(bytes: &[u8]) -> BigInt {
-        Self::new().chain(bytes).result_bigint()
+        Self::new().chain_update(bytes).result_bigint()
     }
 }
 
@@ -147,7 +148,15 @@ pub trait HmacExt: Sized {
 
 impl<D> HmacExt for Hmac<D>
 where
-    D: digest::Update + digest::BlockInput + digest::FixedOutput + digest::Reset + Default + Clone,
+    D: CoreProxy,
+    D::Core: HashMarker
+        + UpdateCore
+        + FixedOutputCore
+        + BufferKindUser<BufferKind = Eager>
+        + Default
+        + Clone,
+    <D::Core as BlockSizeUser>::BlockSize: IsLess<U256>,
+    Le<<D::Core as BlockSizeUser>::BlockSize, U256>: NonZero,
 {
     fn new_bigint(key: &BigInt) -> Self {
         let bytes = key.to_bytes();
@@ -163,7 +172,7 @@ where
     }
 
     fn verify_bigint(self, code: &BigInt) -> Result<(), MacError> {
-        let mut code_array = GenericArray::<u8, <D as digest::FixedOutput>::OutputSize>::default();
+        let mut code_array = GenericArray::<u8, <D::Core as OutputSizeUser>::OutputSize>::default();
         let code_length = code_array.len();
         let bytes = code.to_bytes();
         if bytes.len() > code_length {
@@ -176,8 +185,6 @@ where
 
 #[cfg(test)]
 mod test {
-    use digest::generic_array::ArrayLength;
-    use digest::{BlockInput, FixedOutput, Reset, Update};
     use hmac::Hmac;
     use sha2::{Sha256, Sha512};
 
@@ -303,9 +310,15 @@ mod test {
     crate::test_for_all_hashes!(create_hmac_test);
     fn create_hmac_test<H>()
     where
-        H: Update + BlockInput + FixedOutput + Reset + Default + Clone,
-        H::BlockSize: ArrayLength<u8>,
-        H::OutputSize: ArrayLength<u8>,
+        H: CoreProxy,
+        H::Core: HashMarker
+            + UpdateCore
+            + FixedOutputCore
+            + BufferKindUser<BufferKind = Eager>
+            + Default
+            + Clone,
+        <H::Core as BlockSizeUser>::BlockSize: IsLess<U256>,
+        Le<<H::Core as BlockSizeUser>::BlockSize, U256>: NonZero,
     {
         let key = BigInt::sample(512);
         let result1 = Hmac::<H>::new_bigint(&key)

@@ -50,7 +50,7 @@ lazy_static::lazy_static! {
 
     static ref BASE_POINT2: Ed25519Point = {
         let bytes = GENERATOR.serialize_compressed();
-        let hashed = sha2::Sha256::digest(bytes.as_ref());
+        let hashed = sha2::Sha256::digest(&bytes);
         let hashed_twice = sha2::Sha256::digest(&hashed);
         let p = Ed25519Point::deserialize(&hashed_twice).unwrap();
         let eight = Ed25519Scalar::from_bigint(&BigInt::from(8));

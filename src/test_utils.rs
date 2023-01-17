@@ -34,8 +34,6 @@ macro_rules! test_for_all_hashes {
             sha512 = sha2::Sha512,
             sha3_256 = sha3::Sha3_256,
             sha3_512 = sha3::Sha3_512,
-            blake2b = blake2::Blake2b,
-            blake2s = blake2::Blake2s,
         }
     };
 }
