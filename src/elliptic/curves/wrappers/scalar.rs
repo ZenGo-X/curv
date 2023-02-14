@@ -33,6 +33,7 @@ use crate::BigInt;
 /// }
 /// ```
 #[repr(transparent)]
+#[derive(Copy)]
 pub struct Scalar<E: Curve> {
     raw_scalar: E::Scalar,
 }
