@@ -25,7 +25,7 @@ use generic_array::GenericArray;
 use secp256k1::constants::{
     self, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
-use secp256k1::{PublicKey, SecretKey, SECP256K1};
+use secp256k1::{scalar::Scalar, PublicKey, SecretKey, SECP256K1};
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, Zeroizing};
 
@@ -161,7 +161,7 @@ impl ECScalar for Secp256k1Scalar {
     type ScalarLength = typenum::U32;
 
     fn random() -> Secp256k1Scalar {
-        let sk = SK(SecretKey::new(&mut rand_legacy::thread_rng()));
+        let sk = SK(SecretKey::new(&mut secp256k1::rand::thread_rng()));
         Secp256k1Scalar {
             purpose: "random",
             fe: Zeroizing::new(Some(sk)),
@@ -233,7 +233,8 @@ impl ECScalar for Secp256k1Scalar {
             (left, None) => left.clone(),
             (Some(left), Some(right)) => {
                 let mut res = left.clone();
-                res.add_assign(&right.0[..]).ok().map(|_| res) // right might be the negation of left.
+                let scalar = Scalar::from_be_bytes(*right.0.as_ref()).unwrap();
+                res.add_assign(&scalar).ok().map(|_| res) // right might be the negation of left.
             }
         };
 
@@ -248,8 +249,9 @@ impl ECScalar for Secp256k1Scalar {
             (None, _) | (_, None) => None,
             (Some(left), Some(right)) => {
                 let mut res = left.clone();
+                let scalar = Scalar::from_be_bytes(*right.0.as_ref()).unwrap();
                 res.0
-                    .mul_assign(&right.0[..])
+                    .mul_assign(&scalar)
                     .expect("Can't fail as it's a valid secret");
                 Some(res)
             }
@@ -483,7 +485,8 @@ impl ECPoint for Secp256k1Point {
                 self.ge = None;
             }
             (Some(ge), Some(fe)) => {
-                ge.0.mul_assign(SECP256K1, &fe.0[..])
+                let scalar = Scalar::from_be_bytes(*fe.0.as_ref()).unwrap();
+                ge.0.mul_assign(SECP256K1, &scalar)
                     .expect("Can't fail as it's a valid secret");
             }
         };
