@@ -58,6 +58,10 @@ pub type SK = <pairing_plus::bls12_381::Bls12 as ScalarEngine>::Fr;
 pub type PK = <pairing_plus::bls12_381::Bls12 as Engine>::G2Affine;
 
 /// Bls12-381-2 (G2) curve implementation based on [pairing_plus] library
+<<<<<<< HEAD
+=======
+#[derive(PartialEq, Eq, Debug, Clone)]
+>>>>>>> master
 pub enum Bls12_381_2 {}
 
 #[derive(Clone, Copy)]

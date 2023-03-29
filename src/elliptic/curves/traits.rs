@@ -17,7 +17,7 @@ use crate::BigInt;
 /// Elliptic curve implementation
 ///
 /// Refers to according implementation of [ECPoint] and [ECScalar].
-pub trait Curve: 'static {
+pub trait Curve: PartialEq + Clone + fmt::Debug + Sync + Send + 'static {
     type Point: ECPoint<Scalar = Self::Scalar>;
     type Scalar: ECScalar;
 
@@ -35,7 +35,7 @@ pub trait Curve: 'static {
 ///
 /// Trait exposes various methods to manipulate scalars. Scalar can be zero. Scalar must zeroize its
 /// value on drop.
-pub trait ECScalar: Clone + PartialEq + fmt::Debug + 'static {
+pub trait ECScalar: Clone + PartialEq + fmt::Debug + Send + Sync + 'static {
     /// Underlying scalar type that can be retrieved in case of missing methods in this trait
     type Underlying;
 
@@ -111,7 +111,7 @@ pub trait ECScalar: Clone + PartialEq + fmt::Debug + 'static {
 /// Trait exposes various methods that make elliptic curve arithmetic. The point can
 /// be [zero](ECPoint::zero). Unlike [ECScalar], ECPoint isn't required to zeroize its value on drop,
 /// but it implements [Zeroize] trait so you can force zeroizing policy on your own.
-pub trait ECPoint: Zeroize + Clone + PartialEq + fmt::Debug + 'static {
+pub trait ECPoint: Zeroize + Clone + PartialEq + fmt::Debug + Sync + Send + 'static {
     /// Scalar value the point can be multiplied at
     type Scalar: ECScalar;
     /// Underlying curve implementation that can be retrieved in case of missing methods in this trait

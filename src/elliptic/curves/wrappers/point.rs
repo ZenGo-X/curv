@@ -270,6 +270,8 @@ impl<E: Curve> PartialEq for Point<E> {
     }
 }
 
+impl<E: Curve> Eq for Point<E> {}
+
 impl<E: Curve> PartialEq<Generator<E>> for Point<E> {
     fn eq(&self, other: &Generator<E>) -> bool {
         self.as_raw().eq(other.as_raw())

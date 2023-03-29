@@ -6,7 +6,7 @@
 
 Curv
 =====================================
-Curv contains an extremly simple interface to onboard new elliptic curves. 
+Curv contains an extremely simple interface to onboard new elliptic curves. 
 Use this library for general purpose elliptic curve cryptography. 
 
 The library has a built in support for some useful operations/primitives such as verifiable secret sharing, commitment 
@@ -18,7 +18,7 @@ serialize/deserialize support to be used in higher level code to implement netwo
 To use `curv` crate, add the following to your Cargo.toml:
 ```toml
 [dependencies]
-curv-kzen = "0.8"
+curv-kzen = "0.9"
 ```
 
 The crate will be available under `curv` name, e.g.:

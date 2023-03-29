@@ -147,6 +147,8 @@ impl<E: Curve> PartialEq for Scalar<E> {
     }
 }
 
+impl<E: Curve> Eq for Scalar<E> {}
+
 impl<E: Curve> From<u16> for Scalar<E> {
     fn from(n: u16) -> Self {
         Self::from(&BigInt::from(n))

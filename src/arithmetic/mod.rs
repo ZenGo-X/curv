@@ -41,38 +41,48 @@ pub use traits::*;
 
 #[cfg(test)]
 mod test {
-    use std::{fmt, iter, ops::*};
+    use std::{fmt, ops::*};
 
     use proptest_derive::Arbitrary;
 
     use super::*;
 
     #[test]
-    fn serde() {
-        use serde_test::{assert_tokens, Token::*};
+    fn serializes_deserializes() {
+        use serde_test::{assert_tokens, Configure, Token::*};
         for bigint in [BigInt::zero(), BigInt::sample(1024)] {
             let bytes = bigint.to_bytes();
-            let tokens = vec![Bytes(bytes.leak())];
-            assert_tokens(&bigint, &tokens)
+            let tokens = [Bytes(bytes.leak())];
+            assert_tokens(&bigint.compact(), &tokens)
         }
     }
 
     #[test]
-    fn deserialize_from_seq() {
-        use serde_test::{
-            assert_de_tokens,
-            Token::{Seq, SeqEnd, U8},
-        };
-        for bigint in [BigInt::zero(), BigInt::sample(1024)] {
-            let bytes = bigint.to_bytes();
-            let tokens = iter::once(Seq {
-                len: Some(bytes.len()),
-            })
-            .chain(bytes.into_iter().map(U8))
-            .chain(iter::once(SeqEnd))
-            .collect::<Vec<_>>();
-            assert_de_tokens(&bigint, &tokens)
-        }
+    fn deserializes_bigint_represented_as_seq() {
+        use serde_test::{assert_de_tokens, Configure, Token::*};
+
+        let number = BigInt::sample(1024);
+        let bytes = number.to_bytes();
+
+        let mut tokens = vec![Seq {
+            len: Option::Some(bytes.len()),
+        }];
+        tokens.extend(bytes.into_iter().map(U8));
+        tokens.push(SeqEnd);
+
+        assert_de_tokens(&number.compact(), &tokens);
+    }
+
+    #[test]
+    fn serializes_deserializes_in_human_readable_format() {
+        use serde_test::{assert_tokens, Configure, Token::*};
+
+        let number = BigInt::sample(1024);
+        let tokens = [Str(Box::leak(
+            hex::encode(number.to_bytes()).into_boxed_str(),
+        ))];
+
+        assert_tokens(&number.readable(), &tokens);
     }
 
     #[test]
