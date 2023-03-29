@@ -6,14 +6,14 @@
 */
 
 use serde::{Deserialize, Serialize};
-use zeroize::Zeroize;
 
-use super::ProofError;
 use crate::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
 use crate::cryptographic_primitives::commitments::traits::Commitment;
-use crate::cryptographic_primitives::hashing::hash_sha256::HSha256;
-use crate::cryptographic_primitives::hashing::traits::Hash;
-use crate::elliptic::curves::traits::*;
+use crate::cryptographic_primitives::hashing::{Digest, DigestExt};
+use crate::elliptic::curves::{Curve, Point, Scalar};
+use crate::marker::HashChoice;
+
+use super::ProofError;
 
 /// protocol for proving that Pedersen commitment c was constructed correctly which is the same as
 /// proof of knowledge of (m,r) such that c = mG + rH.
@@ -24,50 +24,41 @@ use crate::elliptic::curves::traits::*;
 /// prover sends pi = {e, A1,A2,c, z1,z2}
 ///
 /// verifier checks that z1*G + z2*H  = A1 + A2 + ec
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct PedersenProof<P: ECPoint> {
-    e: P::Scalar,
-    a1: P,
-    a2: P,
-    pub com: P,
-    z1: P::Scalar,
-    z2: P::Scalar,
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[serde(bound = "")]
+pub struct PedersenProof<E: Curve, H: Digest + Clone> {
+    e: Scalar<E>,
+    a1: Point<E>,
+    a2: Point<E>,
+    pub com: Point<E>,
+    z1: Scalar<E>,
+    z2: Scalar<E>,
+    #[serde(skip)]
+    hash_choice: HashChoice<H>,
 }
 
-impl<P> PedersenProof<P>
-where
-    P: ECPoint + Clone,
-    P::Scalar: Zeroize,
-{
+impl<E: Curve, H: Digest + Clone> PedersenProof<E, H> {
     #[allow(clippy::many_single_char_names)]
-    pub fn prove(m: &P::Scalar, r: &P::Scalar) -> PedersenProof<P> {
-        let g: P = ECPoint::generator();
-        let h: P = ECPoint::base_point2();
-        let mut s1: P::Scalar = ECScalar::new_random();
-        let mut s2: P::Scalar = ECScalar::new_random();
-        let a1 = g.scalar_mul(&s1.get_element());
-        let a2 = h.scalar_mul(&s2.get_element());
-        let com: P = PedersenCommitment::create_commitment_with_user_defined_randomness(
-            &m.to_big_int(),
-            &r.to_big_int(),
+    pub fn prove(m: &Scalar<E>, r: &Scalar<E>) -> PedersenProof<E, H> {
+        let g = Point::<E>::generator();
+        let h = Point::<E>::base_point2();
+        let s1 = Scalar::random();
+        let s2 = Scalar::random();
+        let a1 = g * &s1;
+        let a2 = h * &s2;
+        let com: Point<E> = PedersenCommitment::create_commitment_with_user_defined_randomness(
+            &m.to_bigint(),
+            &r.to_bigint(),
         );
-        let g: P = ECPoint::generator();
-        let challenge = HSha256::create_hash(&[
-            &g.bytes_compressed_to_big_int(),
-            &h.bytes_compressed_to_big_int(),
-            &com.bytes_compressed_to_big_int(),
-            &a1.bytes_compressed_to_big_int(),
-            &a2.bytes_compressed_to_big_int(),
-        ]);
 
-        let e: P::Scalar = ECScalar::from(&challenge);
+        let e = H::new()
+            .chain_points([&g.to_point(), h, &com, &a1, &a2])
+            .result_scalar();
 
-        let em = e.mul(&m.get_element());
-        let z1 = s1.add(&em.get_element());
-        let er = e.mul(&r.get_element());
-        let z2 = s2.add(&er.get_element());
-        s1.zeroize();
-        s2.zeroize();
+        let em = &e * m;
+        let z1 = &s1 + em;
+        let er = &e * r;
+        let z2 = &s2 + er;
 
         PedersenProof {
             e,
@@ -76,28 +67,24 @@ where
             com,
             z1,
             z2,
+            hash_choice: HashChoice::new(),
         }
     }
 
-    pub fn verify(proof: &PedersenProof<P>) -> Result<(), ProofError> {
-        let g: P = ECPoint::generator();
-        let h: P = ECPoint::base_point2();
-        let challenge = HSha256::create_hash(&[
-            &g.bytes_compressed_to_big_int(),
-            &h.bytes_compressed_to_big_int(),
-            &proof.com.bytes_compressed_to_big_int(),
-            &proof.a1.bytes_compressed_to_big_int(),
-            &proof.a2.bytes_compressed_to_big_int(),
-        ]);
-        let e: P::Scalar = ECScalar::from(&challenge);
+    pub fn verify(proof: &PedersenProof<E, H>) -> Result<(), ProofError> {
+        let g = Point::<E>::generator();
+        let h = Point::<E>::base_point2();
 
-        let z1g = g.scalar_mul(&proof.z1.get_element());
-        let z2h = h.scalar_mul(&proof.z2.get_element());
-        let lhs = z1g.add_point(&z2h.get_element());
-        let rhs = proof.a1.add_point(&proof.a2.get_element());
-        let com_clone = proof.com.clone();
-        let ecom = com_clone.scalar_mul(&e.get_element());
-        let rhs = rhs.add_point(&ecom.get_element());
+        let e = H::new()
+            .chain_points([&g.to_point(), h, &proof.com, &proof.a1, &proof.a2])
+            .result_scalar();
+
+        let z1g = g * &proof.z1;
+        let z2h = h * &proof.z2;
+        let lhs = &z1g + &z2h;
+        let rhs = &proof.a1 + &proof.a2;
+        let ecom = &proof.com * &e;
+        let rhs = rhs + &ecom;
 
         if lhs == rhs {
             Ok(())
@@ -111,15 +98,11 @@ where
 mod tests {
     use super::*;
 
-    crate::test_for_all_curves!(test_pedersen_proof);
-    fn test_pedersen_proof<P>()
-    where
-        P: ECPoint + Clone,
-        P::Scalar: Zeroize,
-    {
-        let m: P::Scalar = ECScalar::new_random();
-        let r: P::Scalar = ECScalar::new_random();
-        let pedersen_proof = PedersenProof::<P>::prove(&m, &r);
+    crate::test_for_all_curves_and_hashes!(test_pedersen_proof);
+    fn test_pedersen_proof<E: Curve, H: Digest + Clone>() {
+        let m = Scalar::random();
+        let r = Scalar::random();
+        let pedersen_proof = PedersenProof::<E, H>::prove(&m, &r);
         PedersenProof::verify(&pedersen_proof).expect("error pedersen");
     }
 }

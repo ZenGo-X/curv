@@ -5,101 +5,122 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
-// enabled via feature since it uses rust-crypto.
-
 use std::marker::PhantomData;
 
-use crypto::sha3::Sha3;
-use merkle::{MerkleTree, Proof};
+use digest::{Digest, Output};
+use merkle_cbt::merkle_tree::{Merge, MerkleProof, MerkleTree, CBMT};
+use serde::{Deserialize, Serialize};
 
-use crate::elliptic::curves::traits::ECPoint;
-/*
-pub struct MT256<'a> {
-    tree: MerkleTree<GE>,
-    root: & 'a Vec<u8>,
-}
-*/
-pub struct MT256<P> {
-    tree: MerkleTree<[u8; 32]>,
-    _ph: PhantomData<P>,
+use crate::cryptographic_primitives::hashing::DigestExt;
+use crate::cryptographic_primitives::proofs::ProofError;
+use crate::elliptic::curves::{Curve, Point};
+
+pub struct MT256<E: Curve, H: Digest> {
+    tree: MerkleTree<Output<H>, MergeDigest<H>>,
+    leaves: Vec<Point<E>>,
 }
 
-//impl <'a> MT256<'a>{
-impl<P: ECPoint> MT256<P> {
-    pub fn create_tree(vec: &[P]) -> MT256<P> {
-        let digest = Sha3::keccak256();
-        let mut array = [0u8; 32];
-        let vec_bytes = (0..vec.len())
-            .map(|i| {
-                let bytes = vec[i].pk_to_key_slice();
-                array.copy_from_slice(&bytes[0..32]);
-                array
-            })
-            .collect::<Vec<[u8; 32]>>();
-        let tree = MerkleTree::from_vec::<[u8; 32]>(digest, vec_bytes);
+impl<E: Curve, H: Digest + Clone> MT256<E, H> {
+    pub fn create_tree(leaves: Vec<Point<E>>) -> Self {
+        let hashes = leaves
+            .iter()
+            .map(|leaf| H::new().chain_point(leaf).finalize())
+            .collect::<Vec<_>>();
 
         MT256 {
-            tree,
-            _ph: PhantomData,
+            tree: CBMT::<Output<H>, MergeDigest<H>>::build_merkle_tree(&hashes),
+            leaves,
         }
     }
 
-    pub fn gen_proof_for_ge(&self, value: &P) -> Proof<[u8; 32]> {
-        let mut array = [0u8; 32];
-        let pk_slice = value.pk_to_key_slice();
-        array.copy_from_slice(&pk_slice[0..32]);
-        MerkleTree::gen_proof::<[u8; 32]>(&self.tree, array).expect("not found in tree")
+    pub fn build_proof(&self, point: Point<E>) -> Option<Proof<E, H>> {
+        let index = (0u32..)
+            .zip(&self.leaves)
+            .find(|(_, leaf)| **leaf == point)
+            .map(|(i, _)| i)?;
+        let proof = self.tree.build_proof(&[index])?;
+        Some(Proof {
+            index: proof.indices()[0],
+            lemmas: proof.lemmas().to_vec(),
+            point,
+        })
     }
 
-    pub fn get_root(&self) -> &Vec<u8> {
-        MerkleTree::root_hash(&self.tree)
+    pub fn get_root(&self) -> Output<H> {
+        self.tree.root()
     }
+}
 
-    #[allow(clippy::result_unit_err)]
-    pub fn validate_proof(proof: &Proof<[u8; 32]>, root: &[u8]) -> Result<(), ()> {
-        if Proof::validate::<[u8; 32]>(proof, root) {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(bound(
+    serialize = "Output<H>: Serialize",
+    deserialize = "Output<H>: Deserialize<'de>"
+))]
+pub struct Proof<E: Curve, H: Digest> {
+    pub index: u32,
+    pub lemmas: Vec<Output<H>>,
+    pub point: Point<E>,
+}
+
+impl<E: Curve, H: Digest + Clone> Proof<E, H> {
+    pub fn verify(&self, root: &Output<H>) -> Result<(), ProofError> {
+        let leaf = H::new().chain_point(&self.point).finalize();
+        let valid =
+            MerkleProof::<Output<H>, MergeDigest<H>>::new(vec![self.index], self.lemmas.clone())
+                .verify(root, &[leaf]);
+        if valid {
             Ok(())
         } else {
-            Err(())
+            Err(ProofError)
         }
+    }
+}
+
+struct MergeDigest<D>(PhantomData<D>);
+
+impl<D> Merge for MergeDigest<D>
+where
+    D: Digest,
+{
+    type Item = Output<D>;
+
+    fn merge(left: &Self::Item, right: &Self::Item) -> Self::Item {
+        D::new().chain(left).chain(right).finalize()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::MT256;
-    use crate::elliptic::curves::traits::ECPoint;
+    use crate::elliptic::curves::{Curve, Point};
 
     use crate::test_for_all_curves;
 
     test_for_all_curves!(test_mt_functionality_four_leaves);
 
-    fn test_mt_functionality_four_leaves<P: ECPoint>() {
-        let ge1: P = ECPoint::generator();
-        let ge2: P = ECPoint::generator();
-        let ge3: P = ge1.add_point(&ge2.get_element());
-        let ge4: P = ge1.add_point(&ge3.get_element());
-        let ge_vec = vec![ge1, ge2, ge3, ge4];
-        let mt256 = MT256::create_tree(&ge_vec);
-        let ge1: P = ECPoint::generator();
-        let proof1 = mt256.gen_proof_for_ge(&ge1);
+    fn test_mt_functionality_four_leaves<E: Curve>() {
+        let ge1: Point<E> = Point::generator().to_point();
+        let ge2: Point<E> = ge1.clone();
+        let ge3: Point<E> = &ge1 + &ge2;
+        let ge4: Point<E> = &ge1 + &ge3;
+        let ge_vec = vec![ge1.clone(), ge2, ge3, ge4];
+        let mt256 = MT256::<_, sha3::Keccak256>::create_tree(ge_vec);
+        let proof1 = mt256.build_proof(ge1).unwrap();
         let root = mt256.get_root();
-        let valid_proof = MT256::<P>::validate_proof(&proof1, root).is_ok();
-        assert!(valid_proof);
+        proof1.verify(&root).expect("proof is invalid");
     }
 
     test_for_all_curves!(test_mt_functionality_three_leaves);
 
-    fn test_mt_functionality_three_leaves<P: ECPoint>() {
-        let ge1: P = ECPoint::generator();
-        let ge2: P = ECPoint::generator();
-        let ge3: P = ge1.add_point(&ge2.get_element());
+    fn test_mt_functionality_three_leaves<E: Curve>() {
+        let ge1: Point<E> = Point::generator().to_point();
+        let ge2: Point<E> = ge1.clone();
+        let ge3: Point<E> = &ge1 + &ge2;
 
-        let ge_vec = vec![ge1, ge2, ge3];
-        let mt256 = MT256::create_tree(&ge_vec);
-        let ge1: P = ECPoint::generator();
-        let proof1 = mt256.gen_proof_for_ge(&ge1);
+        let ge_vec = vec![ge1.clone(), ge2, ge3];
+        let mt256 = MT256::<_, sha3::Keccak256>::create_tree(ge_vec);
+        let proof1 = mt256.build_proof(ge1).unwrap();
         let root = mt256.get_root();
-        assert!(MT256::<P>::validate_proof(&proof1, root).is_ok());
+        proof1.verify(&root).expect("proof is invalid");
     }
 }

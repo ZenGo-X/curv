@@ -17,6 +17,7 @@
 mod errors;
 mod macros;
 mod samplable;
+mod serde_support;
 pub mod traits;
 
 #[cfg(not(any(feature = "rust-gmp-kzen", feature = "num-bigint")))]
@@ -31,6 +32,7 @@ pub use big_gmp::BigInt;
 
 #[cfg(feature = "num-bigint")]
 mod big_native;
+
 #[cfg(feature = "num-bigint")]
 pub use big_native::BigInt;
 
@@ -44,6 +46,44 @@ mod test {
     use proptest_derive::Arbitrary;
 
     use super::*;
+
+    #[test]
+    fn serializes_deserializes() {
+        use serde_test::{assert_tokens, Configure, Token::*};
+        for bigint in [BigInt::zero(), BigInt::sample(1024)] {
+            let bytes = bigint.to_bytes();
+            let tokens = [Bytes(bytes.leak())];
+            assert_tokens(&bigint.compact(), &tokens)
+        }
+    }
+
+    #[test]
+    fn deserializes_bigint_represented_as_seq() {
+        use serde_test::{assert_de_tokens, Configure, Token::*};
+
+        let number = BigInt::sample(1024);
+        let bytes = number.to_bytes();
+
+        let mut tokens = vec![Seq {
+            len: Option::Some(bytes.len()),
+        }];
+        tokens.extend(bytes.into_iter().map(U8));
+        tokens.push(SeqEnd);
+
+        assert_de_tokens(&number.compact(), &tokens);
+    }
+
+    #[test]
+    fn serializes_deserializes_in_human_readable_format() {
+        use serde_test::{assert_tokens, Configure, Token::*};
+
+        let number = BigInt::sample(1024);
+        let tokens = [Str(Box::leak(
+            hex::encode(number.to_bytes()).into_boxed_str(),
+        ))];
+
+        assert_tokens(&number.readable(), &tokens);
+    }
 
     #[test]
     fn serializing_to_hex() {
@@ -350,13 +390,12 @@ mod test {
         T: ZeroizeBN,
         u64: ConvertFrom<BigInt>,
         // Foreign traits implementations
-        T: zeroize::Zeroize + ring_algorithm::RingNormalize + num_traits::One + num_traits::Zero,
+        T: zeroize::Zeroize + num_traits::One + num_traits::Zero,
         T: num_traits::Num + num_integer::Integer + num_integer::Roots,
-        for<'a> &'a T: ring_algorithm::EuclideanRingOperation<T>,
         // Conversion traits
         for<'a> u64: std::convert::TryFrom<&'a BigInt>,
         for<'a> i64: std::convert::TryFrom<&'a BigInt>,
-        BigInt: From<u32> + From<i32> + From<u64>,
+        BigInt: From<u16> + From<u32> + From<i32> + From<u64>,
         // STD Operators
         BigInt: Add<Output = BigInt>
             + Sub<Output = BigInt>

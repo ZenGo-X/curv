@@ -21,7 +21,6 @@ use std::{fmt, ops, ptr};
 use gmp::mpz::Mpz;
 use gmp::sign::Sign;
 use num_traits::{One, Zero};
-use serde::{Deserialize, Serialize};
 use zeroize::Zeroize;
 
 use super::errors::*;
@@ -35,8 +34,7 @@ type BN = Mpz;
 /// very limited API that allows easily switching between implementations.
 ///
 /// Set of traits implemented on BigInt remains the same regardless of underlying implementation.
-#[derive(PartialOrd, PartialEq, Ord, Eq, Clone, Serialize, Deserialize)]
-#[serde(transparent)]
+#[derive(PartialOrd, PartialEq, Ord, Eq, Clone)]
 pub struct BigInt {
     gmp: Mpz,
 }
@@ -374,20 +372,13 @@ impl One for BigInt {
     }
 }
 
-impl ring_algorithm::RingNormalize for BigInt {
-    fn leading_unit(&self) -> Self {
-        match self.gmp.sign() {
-            Sign::Negative => -BigInt::one(),
-            _ => BigInt::one(),
-        }
-    }
+crate::__bigint_impl_from! { u32, i32, u64 }
 
-    fn normalize_mut(&mut self) {
-        self.gmp = self.gmp.abs();
+impl From<u16> for BigInt {
+    fn from(n: u16) -> Self {
+        BigInt::from(u64::from(n))
     }
 }
-
-crate::__bigint_impl_from! { u32, i32, u64 }
 
 /// Internal helper trait. Creates short-hand for wrapping Mpz into BigInt.
 trait Wrap {
@@ -396,37 +387,5 @@ trait Wrap {
 impl Wrap for Mpz {
     fn wrap(self) -> BigInt {
         BigInt { gmp: self }
-    }
-}
-
-/// Tests that ring_algorithm work as expected
-#[cfg(test)]
-mod ring_algorithm_test {
-    const PRIME: u32 = u32::MAX - 4;
-
-    use super::*;
-
-    proptest::proptest! {
-        #[test]
-        fn fuzz_inverse(n in 1..PRIME) {
-            test_inverse(BigInt::from(n))
-        }
-        #[test]
-        fn fuzz_xgcd(a in 1u32.., b in 1u32..) {
-            test_xgcd(BigInt::from(a), BigInt::from(b))
-        }
-    }
-
-    fn test_inverse(n: BigInt) {
-        let prime = BigInt::from(PRIME);
-        let n_inv_expected = BigInt::mod_inv(&n, &prime).unwrap();
-        let n_inv_actual = ring_algorithm::modulo_inverse(n, prime.clone()).unwrap();
-        assert_eq!(n_inv_expected, n_inv_actual.modulus(&prime));
-    }
-
-    fn test_xgcd(a: BigInt, b: BigInt) {
-        let (s1, p1, q1) = BigInt::egcd(&a, &b);
-        let (s2, p2, q2) = ring_algorithm::normalized_extended_euclidian_algorithm(a, b);
-        assert_eq!((s1, p1, q1), (s2, p2, q2));
     }
 }

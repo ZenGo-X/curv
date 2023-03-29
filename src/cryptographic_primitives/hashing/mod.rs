@@ -4,9 +4,8 @@
     (https://github.com/KZen-networks/curv)
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
-pub mod blake2b512;
-pub mod hash_sha256;
-pub mod hash_sha512;
-pub mod hmac_sha512;
+mod ext;
 pub mod merkle_tree;
-pub mod traits;
+
+pub use digest::Digest;
+pub use ext::*;

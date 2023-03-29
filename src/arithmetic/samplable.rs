@@ -35,11 +35,11 @@ impl Samplable for BigInt {
         if bit_size == 0 {
             return BigInt::zero();
         }
-        let mut rng = OsRng::new().unwrap();
+        let mut rng = OsRng;
         let bytes = (bit_size - 1) / 8 + 1;
         let mut buf: Vec<u8> = vec![0; bytes];
         rng.fill_bytes(&mut buf);
-        BigInt::from_bytes(&*buf) >> (bytes * 8 - bit_size)
+        BigInt::from_bytes(&buf) >> (bytes * 8 - bit_size)
     }
 
     fn strict_sample(bit_size: usize) -> Self {

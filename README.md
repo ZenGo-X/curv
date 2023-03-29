@@ -1,14 +1,30 @@
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://travis-ci.com/ZenGo-X/curv.svg?branch=master)](https://travis-ci.com/zengo-x/curv)
+[![Build Status](https://app.travis-ci.com/ZenGo-X/curv.svg?branch=master)](https://app.travis-ci.com/ZenGo-X/curv)
+[![Latest version](https://img.shields.io/crates/v/curv-kzen.svg)](https://crates.io/crates/curv-kzen)
+[![Docs](https://docs.rs/curv-kzen/badge.svg)](https://docs.rs/curv-kzen)
+[![License](https://img.shields.io/crates/l/curv-kzen)](LICENSE)
+[![dependency status](https://deps.rs/repo/github/ZenGo-X/curv/status.svg)](https://deps.rs/repo/github/ZenGo-X/curv)
 
 Curv
 =====================================
-Curv contains an extremly simple interface to onboard new elliptic curves. 
+Curv contains an extremely simple interface to onboard new elliptic curves. 
 Use this library for general purpose elliptic curve cryptography. 
 
 The library has a built in support for some useful operations/primitives such as verifiable secret sharing, commitment 
 schemes, zero knowledge proofs, and simple two party protocols such as ECDH and coin flip. The library comes with 
 serialize/deserialize support to be used in higher level code to implement networking. 
+
+### Usage
+
+To use `curv` crate, add the following to your Cargo.toml:
+```toml
+[dependencies]
+curv-kzen = "0.9"
+```
+
+The crate will be available under `curv` name, e.g.:
+```rust
+use curv::elliptic::curves::*;
+```
 
 ### Currently Supported Elliptic Curves  
 
@@ -43,9 +59,8 @@ You can choose any one which you prefer by specifying a feature:
 * **rust-gmp-kzen**, uses GMP bindings, requires GMP to be installed on a machine. Used by default.
 * **num-bigint**, Rust's pure implementation of big integer. In order to use it, put in Cargo.toml:
   ```toml
-  [dependencies.curv]
-  git = "https://github.com/ZenGo-X/curv"
-  tag = "v0.6.0"
+  [dependencies.curv-kzen]
+  version = "0.8"
   default-features = false
   features = ["num-bigint"]
   ```
@@ -59,7 +74,11 @@ The library includes some basic examples to get you going. To run them:
 for example: `cargo run --example proof_of_knowledge_of_dlog -- secp256k1`
 
 ### Docs 
-To build docs, use `cargo doc --no-deps`.
+To build docs, use:
+```bash
+cargo doc
+RUSTDOCFLAGS="--html-in-header katex-header.html" cargo doc --no-deps --open
+```
 
 ### License
 Curv is released under the terms of the MIT license. See [LICENSE](LICENSE) for more information.

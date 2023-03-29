@@ -4,9 +4,6 @@
     (https://github.com/KZen-networks/curv)
     License MIT: <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
-
-#![allow(clippy::upper_case_acronyms)]
-
 pub mod elliptic;
 
 pub mod arithmetic;
@@ -14,6 +11,11 @@ pub use crate::arithmetic::BigInt;
 use std::{error, fmt};
 
 pub mod cryptographic_primitives;
+
+mod marker;
+pub use marker::HashChoice;
+
+mod test_utils;
 
 #[derive(Copy, PartialEq, Eq, Clone, Debug)]
 pub enum ErrorKey {

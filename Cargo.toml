@@ -1,57 +1,65 @@
 [package]
-name = "curv"
-version = "0.7.0"
+name = "curv-kzen"
+version = "0.10.0"
 edition = "2018"
-authors = ["Omer Shlomovits"]
+authors = [
+    "Omer Shlomovits",
+    "Denis Varlakov",
+]
 license = "MIT"
-description = "Curv contains an extremly simple interface to onboard new elliptic curves. Use this library for general purpose elliptic curve cryptography"
+description = "Curv contains an extremely simple interface to onboard new elliptic curves. Use this library for general purpose elliptic curve cryptography"
 repository = "https://github.com/ZenGo-X/curv"
 
 [lib]
+name = "curv"
 crate-type = ["lib"]
 
 [dependencies]
-blake2b_simd = "0.5.7"
 cryptoxide = "0.1.2"
-curve25519-dalek = "1.2.3"
-derivative = "2.2"
-digest = "0.8.1"
-ff-zeroize = "0.6.3"
-funty = "=1.1.0"
+curve25519-dalek = "3"
+digest = "0.9"
 generic-array = "0.14"
-hex = "0.4"
-hmac = "0.7.1"
-merkle-sha3 = "^0.1"
-lazy_static = "1.4.0"
+typenum = "1.13"
+ff-zeroize = "0.6.3"
+hex = { version = "0.4", features = ["serde"] }
+hmac = "0.11"
+thiserror = "1"
+lazy_static = "1.4"
 num-traits = "0.2"
 num-integer = "0.1"
 pairing-plus = "0.19"
-rand = "0.6"
-ring-algorithm = "0.2.3"
-rust-crypto = "^0.2"
+rand = "0.7"
+rand_legacy = { package = "rand", version = "0.6" }
 serde = { version = "1.0", features = ["derive"] }
+serde_bytes = "0.11"
 serde_derive = "1.0"
-sha2 = "0.8.0"
-sha3 = "0.8.2"
+sha2 = "0.9"
+sha3 = "0.9"
+old_sha2 = { package = "sha2", version = "0.8" }
 zeroize = "1"
+merkle-cbt = "0.3"
 
 rust-gmp-kzen = { version = "0.5", features = ["serde_support"], optional = true }
 num-bigint = { version = "0.4", features = ["serde"], optional = true }
 
 [dependencies.secp256k1]
 version = "0.20"
-features = ["serde", "rand-std"]
+features = ["serde", "rand-std", "global-context"]
 
 [dependencies.p256]
-version = "0.5"
-features = ["ecdsa"]
+version = "0.11.1"
+features = ["ecdsa", "ecdsa-core"]
 
 [dev-dependencies]
-bincode = "1.1"
-serde_json = "1.0"
+serde_test = "1.0"
+serde_json = "1"
 paste = "1.0.2"
 proptest = "0.10"
 proptest-derive = "0.2"
+blake2 = "0.9"
 
 [features]
 default = ["rust-gmp-kzen"]
+
+[package.metadata.docs.rs]
+rustdoc-args = [ "--html-in-header", "katex-header.html", "--cfg", "docsrs" ]
