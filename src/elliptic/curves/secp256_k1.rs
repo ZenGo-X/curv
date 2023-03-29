@@ -26,8 +26,8 @@ use secp256k1::constants::{
     self, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
 use secp256k1::{PublicKey, SecretKey, SECP256K1};
-use zeroize::{Zeroize, Zeroizing};
 use serde::{Deserialize, Serialize};
+use zeroize::{Zeroize, Zeroizing};
 
 use crate::arithmetic::*;
 

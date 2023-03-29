@@ -264,7 +264,6 @@ impl ECPoint for Ed25519Point {
         &BASE_POINT2
     }
 
-
     fn from_coords(x: &BigInt, y: &BigInt) -> Result<Self, NotOnCurve> {
         let is_odd = x.is_odd();
         let expected_x = xrecover(y, is_odd);
