@@ -309,7 +309,7 @@ impl ECPoint for RistrettoPoint {
 
     fn neg_point(&self) -> RistrettoPoint {
         RistrettoPoint {
-            purpose: "sub_point",
+            purpose: "neg_point",
             ge: -self.ge,
         }
     }

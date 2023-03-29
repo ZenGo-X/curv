@@ -6,87 +6,60 @@
 */
 
 // paper: https://ed25519.cr.yp.to/ed25519-20110926.pdf
-// based on https://docs.rs/cryptoxide/0.1.0/cryptoxide/curve25519/index.html
+// based on https://docs.rs/curve25519-dalek/3.2.0/curve25519_dalek/index.html
 // https://cr.yp.to/ecdh/curve25519-20060209.pdf
 
-use std::sync::atomic;
-use std::{fmt, ops, ptr, str};
-
-use cryptoxide::curve25519::*;
+use super::{
+    traits::{ECPoint, ECScalar},
+    Curve, DeserializationError, NotOnCurve, PointCoords,
+};
+use crate::{arithmetic::traits::*, cryptographic_primitives::hashing::Digest, BigInt};
+use curve25519_dalek::{
+    constants,
+    edwards::{CompressedEdwardsY, EdwardsPoint},
+    scalar::Scalar,
+    traits::Identity,
+};
 use generic_array::GenericArray;
+use std::{convert::TryInto, ptr, str, sync::atomic};
 use zeroize::{Zeroize, Zeroizing};
-
-use crate::arithmetic::traits::*;
-use crate::cryptographic_primitives::hashing::Digest;
-use crate::BigInt;
-
-use super::traits::{ECPoint, ECScalar};
-use crate::elliptic::curves::{Curve, DeserializationError, NotOnCurve, PointCoords};
 
 lazy_static::lazy_static! {
     static ref GROUP_ORDER: BigInt = Ed25519Scalar {
         purpose: "intermediate group_order",
-        fe: SK(Fe::from_bytes(&[
-            237, 211, 245, 92, 26, 99, 18, 88, 214, 156, 247, 162, 222, 249, 222, 20, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16,
-        ])).into()
+        fe: constants::BASEPOINT_ORDER.into()
     }.to_bigint();
 
     static ref ZERO: Ed25519Point = Ed25519Point {
         purpose: "zero",
-        ge: ge_scalarmult_base(&[
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0,
-        ]),
+        ge: EdwardsPoint::identity(),
     };
 
-    static ref GENERATOR: Ed25519Point = Ed25519Point {
-        purpose: "generator",
-        ge: ge_scalarmult_base(&[
-            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0,
-        ]),
-    };
+    static ref FE_ZERO: SK = Scalar::zero();
 
     static ref BASE_POINT2: Ed25519Point = {
         let bytes = GENERATOR.serialize_compressed();
         let hashed = sha2::Sha256::digest(bytes.as_ref());
         let hashed_twice = sha2::Sha256::digest(&hashed);
-        let p = Ed25519Point::deserialize(&hashed_twice).unwrap();
-        let eight = Ed25519Scalar::from_bigint(&BigInt::from(8));
+        let p = CompressedEdwardsY::from_slice(&hashed_twice).decompress().unwrap();
+        let eight = Scalar::from(8u8);
         Ed25519Point {
             purpose: "base_point2",
-            ge: p.scalar_mul(&eight).ge,
+            ge: p * eight,
         }
     };
 }
 
-const FE_ZERO: Fe = Fe([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+const GENERATOR: Ed25519Point = Ed25519Point {
+    purpose: "generator",
+    ge: constants::ED25519_BASEPOINT_POINT,
+};
+
 const TWO_TIMES_SECRET_KEY_SIZE: usize = 64;
 
-/// Alias to [Edwards point](GeP3)
-pub type PK = GeP3;
-/// Wraps [Fe] and implements Zeroize to it
-#[derive(Clone)]
-pub struct SK(pub Fe);
-
-impl Zeroize for SK {
-    fn zeroize(&mut self) {
-        self.0 .0.zeroize()
-    }
-}
-impl ops::Deref for SK {
-    type Target = Fe;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl ops::DerefMut for SK {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
+/// Alias to [Edwards point](EdwardsPoint)
+pub type PK = EdwardsPoint;
+pub type SK = Scalar;
 
 /// Ed25519 curve implementation based on [cryptoxide] library
 ///
@@ -100,18 +73,20 @@ impl ops::DerefMut for SK {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Ed25519 {}
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Ed25519Scalar {
     #[allow(dead_code)]
     purpose: &'static str,
     fe: Zeroizing<SK>,
 }
-#[derive(Clone, Copy)]
+
+#[derive(Clone, Debug, Copy)]
 pub struct Ed25519Point {
     #[allow(dead_code)]
     purpose: &'static str,
     ge: PK,
 }
+
 pub type GE = Ed25519Point;
 pub type FE = Ed25519Scalar;
 
@@ -130,44 +105,40 @@ impl ECScalar for Ed25519Scalar {
     // we chose to multiply by 8 (co-factor) all group elements to work in the prime order sub group.
     // each random fe is having its 3 first bits zeroed
     fn random() -> Ed25519Scalar {
-        let rnd_bn = BigInt::sample_below(Self::group_order());
-        let rnd_bn_mul_8 = BigInt::mod_mul(&rnd_bn, &BigInt::from(8), Self::group_order());
+        let scalar = Scalar::random(&mut rand::thread_rng());
         Ed25519Scalar {
             purpose: "random",
-            fe: Self::from_bigint(&rnd_bn_mul_8).fe,
+            fe: Zeroizing::new(scalar),
         }
     }
 
     fn zero() -> Ed25519Scalar {
         Ed25519Scalar {
             purpose: "zero",
-            fe: SK(FE_ZERO).into(),
+            fe: (*FE_ZERO).into(),
         }
     }
 
     fn is_zero(&self) -> bool {
-        self.fe.0 == FE_ZERO
+        *self.fe == *FE_ZERO
     }
 
     fn from_bigint(n: &BigInt) -> Ed25519Scalar {
         let mut v = BigInt::to_bytes(n);
-        if v.len() > TWO_TIMES_SECRET_KEY_SIZE {
-            v = v[0..TWO_TIMES_SECRET_KEY_SIZE].to_vec();
-        }
+        v.truncate(TWO_TIMES_SECRET_KEY_SIZE);
 
-        let mut template = vec![0; TWO_TIMES_SECRET_KEY_SIZE - v.len()];
-        template.extend_from_slice(&v);
-        v = template;
-        v.reverse();
-        sc_reduce(&mut v[..]);
+        let mut template = [0u8; TWO_TIMES_SECRET_KEY_SIZE];
+        template[TWO_TIMES_SECRET_KEY_SIZE - v.len()..].copy_from_slice(&v);
+        template.reverse();
+        let scalar = Scalar::from_bytes_mod_order_wide(&template);
         Ed25519Scalar {
             purpose: "from_bigint",
-            fe: SK(Fe::from_bytes(&v[..])).into(),
+            fe: scalar.into(),
         }
     }
 
     fn to_bigint(&self) -> BigInt {
-        let mut t = self.fe.to_bytes().to_vec();
+        let mut t = self.fe.to_bytes();
         t.reverse();
         BigInt::from_bytes(&t)
     }
@@ -177,60 +148,38 @@ impl ECScalar for Ed25519Scalar {
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError> {
-        if bytes.len() != 32 {
-            return Err(DeserializationError);
-        }
+        let arr: [u8; 32] = bytes.try_into().map_err(|_| DeserializationError)?;
         Ok(Ed25519Scalar {
             purpose: "deserialize",
-            fe: SK(Fe::from_bytes(bytes)).into(),
+            fe: SK::from_bits(arr).into(),
         })
     }
 
     fn add(&self, other: &Self) -> Ed25519Scalar {
         Ed25519Scalar {
             purpose: "add",
-            fe: Self::from_bigint(&BigInt::mod_add(
-                &self.to_bigint(),
-                &other.to_bigint(),
-                Self::group_order(),
-            ))
-            .fe,
+            fe: (*self.fe + *other.fe).into(),
         }
     }
 
     fn mul(&self, other: &Self) -> Ed25519Scalar {
         Ed25519Scalar {
             purpose: "mul",
-            fe: Self::from_bigint(&BigInt::mod_mul(
-                &self.to_bigint(),
-                &other.to_bigint(),
-                Self::group_order(),
-            ))
-            .fe,
+            fe: (*self.fe * *other.fe).into(),
         }
     }
 
     fn sub(&self, other: &Self) -> Ed25519Scalar {
         Ed25519Scalar {
             purpose: "sub",
-            fe: Self::from_bigint(&BigInt::mod_sub(
-                &self.to_bigint(),
-                &other.to_bigint(),
-                Self::group_order(),
-            ))
-            .fe,
+            fe: (*self.fe - *other.fe).into(),
         }
     }
 
     fn neg(&self) -> Self {
         Ed25519Scalar {
             purpose: "neg",
-            fe: Self::from_bigint(&BigInt::mod_sub(
-                &Self::zero().to_bigint(),
-                &self.to_bigint(),
-                Self::group_order(),
-            ))
-            .fe,
+            fe: (-&*self.fe).into(),
         }
     }
 
@@ -240,9 +189,19 @@ impl ECScalar for Ed25519Scalar {
         } else {
             Some(Ed25519Scalar {
                 purpose: "invert",
-                fe: Self::from_bigint(&BigInt::mod_inv(&self.to_bigint(), Self::group_order())?).fe,
+                fe: self.fe.invert().into(),
             })
         }
+    }
+
+    fn add_assign(&mut self, other: &Self) {
+        *self.fe += &*other.fe;
+    }
+    fn mul_assign(&mut self, other: &Self) {
+        *self.fe *= &*other.fe;
+    }
+    fn sub_assign(&mut self, other: &Self) {
+        *self.fe -= &*other.fe;
     }
 
     fn group_order() -> &'static BigInt {
@@ -263,37 +222,15 @@ impl ECScalar for Ed25519Scalar {
     }
 }
 
-impl fmt::Debug for Ed25519Scalar {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Point {{ purpose: {:?}, bytes: {:?} }}",
-            self.purpose,
-            self.fe.to_bytes()
-        )
-    }
-}
-
 impl PartialEq for Ed25519Scalar {
     fn eq(&self, other: &Ed25519Scalar) -> bool {
-        self.fe.0 == other.fe.0
-    }
-}
-
-impl fmt::Debug for Ed25519Point {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Point {{ purpose: {:?}, bytes: {:?} }}",
-            self.purpose,
-            self.ge.to_bytes()
-        )
+        self.fe == other.fe
     }
 }
 
 impl PartialEq for Ed25519Point {
     fn eq(&self, other: &Ed25519Point) -> bool {
-        self.ge.to_bytes() == other.ge.to_bytes()
+        self.ge == other.ge
     }
 }
 
@@ -311,7 +248,7 @@ impl ECPoint for Ed25519Point {
     type CompressedPointLength = typenum::U32;
     type UncompressedPointLength = typenum::U32;
 
-    fn zero() -> Ed25519Point {
+    fn zero() -> Self {
         *ZERO
     }
 
@@ -319,15 +256,15 @@ impl ECPoint for Ed25519Point {
         self == &*ZERO
     }
 
-    fn generator() -> &'static Ed25519Point {
+    fn generator() -> &'static Self {
         &GENERATOR
     }
 
-    fn base_point2() -> &'static Ed25519Point {
+    fn base_point2() -> &'static Self {
         &BASE_POINT2
     }
 
-    fn from_coords(x: &BigInt, y: &BigInt) -> Result<Ed25519Point, NotOnCurve> {
+    fn from_coords(x: &BigInt, y: &BigInt) -> Result<Self, NotOnCurve> {
         let is_odd = x.is_odd();
         let expected_x = xrecover(y, is_odd);
         if &expected_x != x {
@@ -357,7 +294,7 @@ impl ECPoint for Ed25519Point {
     }
 
     fn y_coord(&self) -> Option<BigInt> {
-        let mut bytes = self.ge.to_bytes();
+        let mut bytes = self.ge.compress().to_bytes();
         // According to https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.2
         // the most significant bit in a point encoding says if x is even or odd
         // so we clear that bit as it's not part of the field element.
@@ -369,7 +306,7 @@ impl ECPoint for Ed25519Point {
     }
 
     fn coords(&self) -> Option<PointCoords> {
-        let mut bytes = self.ge.to_bytes();
+        let mut bytes = self.ge.compress().to_bytes();
         // According to https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.2
         // the most significant bit in a point encoding says if x is odd or even
         let is_odd = (bytes[31] >> 7) == 1;
@@ -383,103 +320,61 @@ impl ECPoint for Ed25519Point {
     }
 
     fn serialize_compressed(&self) -> GenericArray<u8, Self::CompressedPointLength> {
-        GenericArray::from(self.ge.to_bytes())
+        GenericArray::from(self.ge.compress().0)
     }
 
     fn serialize_uncompressed(&self) -> GenericArray<u8, Self::UncompressedPointLength> {
-        GenericArray::from(self.ge.to_bytes())
+        self.serialize_compressed()
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Ed25519Point, DeserializationError> {
-        let bytes_vec = bytes.to_vec();
-        let mut bytes_array_32 = [0u8; 32];
-        let byte_len = bytes_vec.len();
-        match byte_len {
-            0..=32 => {
-                let mut template = vec![0; 32 - byte_len];
-                template.extend_from_slice(bytes);
-                let bytes_vec = template;
-                let bytes_slice = &bytes_vec[0..32];
-                bytes_array_32.copy_from_slice(bytes_slice);
-                let ge_from_bytes = PK::from_bytes_negate_vartime(&bytes_array_32);
-                match ge_from_bytes {
-                    Some(_x) => {
-                        let ge_bytes = ge_from_bytes.unwrap().to_bytes();
-                        let ge_from_bytes = PK::from_bytes_negate_vartime(&ge_bytes[..]);
-                        match ge_from_bytes {
-                            Some(y) => Ok(Ed25519Point {
-                                purpose: "deserialize",
-                                ge: y,
-                            }),
-                            None => Err(DeserializationError),
-                        }
-                    }
-                    None => Err(DeserializationError),
-                }
-            }
-            _ => {
-                let bytes_slice = &bytes_vec[0..32];
-                bytes_array_32.copy_from_slice(bytes_slice);
-                let ge_from_bytes = PK::from_bytes_negate_vartime(bytes);
-                match ge_from_bytes {
-                    Some(_x) => {
-                        let ge_bytes = ge_from_bytes.unwrap().to_bytes();
-                        let ge_from_bytes = PK::from_bytes_negate_vartime(&ge_bytes[..]);
-                        match ge_from_bytes {
-                            Some(y) => Ok(Ed25519Point {
-                                purpose: "random",
-                                ge: y,
-                            }),
-                            None => Err(DeserializationError),
-                        }
-                    }
-                    None => Err(DeserializationError),
-                }
-            }
+        let bytes_len = bytes.len();
+        let mut edwards_y = CompressedEdwardsY([0; 32]);
+        if bytes_len >= 32 {
+            edwards_y.0.copy_from_slice(&bytes[..32]);
+        } else {
+            edwards_y.0[32 - bytes_len..].copy_from_slice(bytes);
         }
+        let ge = edwards_y.decompress().ok_or(DeserializationError)?;
+        Ok(Ed25519Point {
+            purpose: "deserialize",
+            ge,
+        })
     }
 
     fn scalar_mul(&self, fe: &Self::Scalar) -> Ed25519Point {
-        let vec_0 = [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0,
-        ];
-        let p2_point = GeP2::double_scalarmult_vartime(&fe.fe.to_bytes()[..], self.ge, &vec_0[..]);
-        let mut p2_bytes = p2_point.to_bytes();
-
-        p2_bytes[31] ^= 1 << 7;
-
-        let ge = GeP3::from_bytes_negate_vartime(&p2_bytes[..]).unwrap();
-
         Ed25519Point {
             purpose: "scalar_mul",
-            ge,
+            ge: self.ge * *fe.fe,
+        }
+    }
+
+    fn generator_mul(scalar: &Self::Scalar) -> Self {
+        Self {
+            purpose: "generator_mul",
+            ge: constants::ED25519_BASEPOINT_TABLE.basepoint_mul(&scalar.fe), // Much faster than multiplying manually by the generator point.
         }
     }
 
     fn add_point(&self, other: &Self) -> Ed25519Point {
-        let pkpk = self.ge + other.ge.to_cached();
-        let mut pk_p2_bytes = pkpk.to_p2().to_bytes();
-        pk_p2_bytes[31] ^= 1 << 7;
         Ed25519Point {
             purpose: "add",
-            ge: PK::from_bytes_negate_vartime(&pk_p2_bytes).unwrap(),
+            ge: self.ge + other.ge,
         }
     }
 
     fn sub_point(&self, other: &Self) -> Ed25519Point {
-        let pkpk = self.ge - other.ge.to_cached();
-        let mut pk_p2_bytes = pkpk.to_p2().to_bytes();
-        pk_p2_bytes[31] ^= 1 << 7;
-
         Ed25519Point {
             purpose: "sub",
-            ge: PK::from_bytes_negate_vartime(&pk_p2_bytes).unwrap(),
+            ge: self.ge - other.ge,
         }
     }
 
     fn neg_point(&self) -> Self {
-        ZERO.sub_point(self)
+        Ed25519Point {
+            purpose: "neg_point",
+            ge: -self.ge,
+        }
     }
 
     fn underlying_ref(&self) -> &Self::Underlying {
@@ -561,7 +456,7 @@ mod tests {
         //         p = p.double();
         //     }
         #[rustfmt::skip]
-        let dalek = [
+            let dalek = [
             ([26, 213, 37, 143, 96, 45, 86, 201, 178, 167, 37, 149, 96, 199, 44, 105, 92, 220, 214, 253, 49, 226, 164, 192, 254, 83, 110, 205, 211, 54, 105, 33], [88, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102]),
             ([14, 206, 67, 40, 78, 161, 197, 131, 95, 164, 215, 21, 69, 142, 13, 8, 172, 231, 51, 24, 125, 59, 4, 61, 108, 4, 90, 159, 76, 56, 171, 54], [201, 163, 248, 106, 174, 70, 95, 14, 86, 81, 56, 100, 81, 15, 57, 151, 86, 31, 162, 201, 232, 94, 162, 29, 194, 41, 35, 9, 243, 205, 96, 34]),
             ([112, 248, 201, 196, 87, 166, 58, 73, 71, 21, 206, 147, 193, 158, 115, 26, 249, 32, 53, 122, 184, 212, 37, 131, 70, 241, 207, 86, 219, 168, 61, 32], [47, 17, 50, 202, 97, 171, 56, 223, 240, 15, 47, 234, 50, 40, 242, 76, 108, 113, 213, 128, 133, 184, 14, 71, 225, 149, 21, 203, 39, 232, 208, 71]),
