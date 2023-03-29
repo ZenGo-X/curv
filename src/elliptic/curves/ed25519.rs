@@ -41,7 +41,7 @@ lazy_static::lazy_static! {
         let bytes = GENERATOR.serialize_compressed();
         let hashed = sha2::Sha256::digest(bytes.as_ref());
         let hashed_twice = sha2::Sha256::digest(&hashed);
-        let p = CompressedEdwardsY::from_slice(&*hashed_twice).decompress().unwrap();
+        let p = CompressedEdwardsY::from_slice(&hashed_twice).decompress().unwrap();
         let eight = Scalar::from(8u8);
         Ed25519Point {
             purpose: "base_point2",
@@ -353,7 +353,7 @@ impl ECPoint for Ed25519Point {
     fn generator_mul(scalar: &Self::Scalar) -> Self {
         Self {
             purpose: "generator_mul",
-            ge: constants::ED25519_BASEPOINT_TABLE.basepoint_mul(&*scalar.fe), // Much faster than multiplying manually by the generator point.
+            ge: constants::ED25519_BASEPOINT_TABLE.basepoint_mul(&scalar.fe), // Much faster than multiplying manually by the generator point.
         }
     }
 
