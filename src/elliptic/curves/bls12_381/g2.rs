@@ -246,7 +246,7 @@ impl ECPoint for G2Point {
 }
 
 impl G2Point {
-    /// Converts message to G1 point.
+    /// Converts message to G2 point.
     ///
     /// Uses [expand_message_xmd][xmd] based on sha256.
     ///

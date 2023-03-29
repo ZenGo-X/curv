@@ -182,7 +182,7 @@ pub trait ECPoint: Zeroize + Clone + PartialEq + fmt::Debug + Sync + Send + 'sta
     /// For curves with co-factor ≠ 1, following check must be carried out:
     ///
     /// ```text
-    /// P ≠ 0 ∧ qP ≠ 0
+    /// P ≠ 0 ∧ qP = 0
     /// ```
     ///
     /// For curves with co-factor = 1, the check above can be reduced to: `P ≠ 0`.
