@@ -79,12 +79,14 @@ pub struct Ed25519Scalar {
     purpose: &'static str,
     fe: Zeroizing<SK>,
 }
+
 #[derive(Clone, Debug, Copy)]
 pub struct Ed25519Point {
     #[allow(dead_code)]
     purpose: &'static str,
     ge: PK,
 }
+
 pub type GE = Ed25519Point;
 pub type FE = Ed25519Scalar;
 
@@ -262,17 +264,8 @@ impl ECPoint for Ed25519Point {
         &BASE_POINT2
     }
 
-<<<<<<< HEAD
+
     fn from_coords(x: &BigInt, y: &BigInt) -> Result<Self, NotOnCurve> {
-        let expected_x = xrecover(y);
-        if &expected_x != x {
-            return Err(NotOnCurve);
-        }
-        let mut y_bytes = y.to_bytes_array::<32>().ok_or(NotOnCurve)?;
-        y_bytes.reverse();
-        Self::deserialize(&y_bytes).map_err(|_| NotOnCurve)
-=======
-    fn from_coords(x: &BigInt, y: &BigInt) -> Result<Ed25519Point, NotOnCurve> {
         let is_odd = x.is_odd();
         let expected_x = xrecover(y, is_odd);
         if &expected_x != x {
@@ -295,7 +288,6 @@ impl ECPoint for Ed25519Point {
         padded[31] |= (is_odd as u8) << 7;
 
         Self::deserialize(&padded).map_err(|_e| NotOnCurve)
->>>>>>> master
     }
 
     fn x_coord(&self) -> Option<BigInt> {
@@ -303,23 +295,19 @@ impl ECPoint for Ed25519Point {
     }
 
     fn y_coord(&self) -> Option<BigInt> {
-<<<<<<< HEAD
         let mut bytes = self.ge.compress().to_bytes();
-=======
-        let mut bytes = self.ge.to_bytes();
         // According to https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.2
         // the most significant bit in a point encoding says if x is even or odd
         // so we clear that bit as it's not part of the field element.
         bytes[31] &= 0b01111111;
 
         // reverse because BigInt is Big-Endian while the field element is Little-Endian
->>>>>>> master
         bytes.reverse();
         Some(BigInt::from_bytes(&bytes))
     }
 
     fn coords(&self) -> Option<PointCoords> {
-        let mut bytes = self.ge.to_bytes();
+        let mut bytes = self.ge.compress().to_bytes();
         // According to https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.2
         // the most significant bit in a point encoding says if x is odd or even
         let is_odd = (bytes[31] >> 7) == 1;
@@ -356,20 +344,6 @@ impl ECPoint for Ed25519Point {
     }
 
     fn scalar_mul(&self, fe: &Self::Scalar) -> Ed25519Point {
-<<<<<<< HEAD
-=======
-        let vec_0 = [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0,
-        ];
-        let p2_point = GeP2::double_scalarmult_vartime(&fe.fe.to_bytes()[..], self.ge, &vec_0[..]);
-        let mut p2_bytes = p2_point.to_bytes();
-
-        p2_bytes[31] ^= 1 << 7;
-
-        let ge = GeP3::from_bytes_negate_vartime(&p2_bytes[..]).unwrap();
-
->>>>>>> master
         Ed25519Point {
             purpose: "scalar_mul",
             ge: self.ge * *fe.fe,
@@ -483,7 +457,7 @@ mod tests {
         //         p = p.double();
         //     }
         #[rustfmt::skip]
-        let dalek = [
+            let dalek = [
             ([26, 213, 37, 143, 96, 45, 86, 201, 178, 167, 37, 149, 96, 199, 44, 105, 92, 220, 214, 253, 49, 226, 164, 192, 254, 83, 110, 205, 211, 54, 105, 33], [88, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102]),
             ([14, 206, 67, 40, 78, 161, 197, 131, 95, 164, 215, 21, 69, 142, 13, 8, 172, 231, 51, 24, 125, 59, 4, 61, 108, 4, 90, 159, 76, 56, 171, 54], [201, 163, 248, 106, 174, 70, 95, 14, 86, 81, 56, 100, 81, 15, 57, 151, 86, 31, 162, 201, 232, 94, 162, 29, 194, 41, 35, 9, 243, 205, 96, 34]),
             ([112, 248, 201, 196, 87, 166, 58, 73, 71, 21, 206, 147, 193, 158, 115, 26, 249, 32, 53, 122, 184, 212, 37, 131, 70, 241, 207, 86, 219, 168, 61, 32], [47, 17, 50, 202, 97, 171, 56, 223, 240, 15, 47, 234, 50, 40, 242, 76, 108, 113, 213, 128, 133, 184, 14, 71, 225, 149, 21, 203, 39, 232, 208, 71]),
