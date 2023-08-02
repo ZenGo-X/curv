@@ -22,11 +22,11 @@ use std::ptr;
 use std::sync::atomic;
 
 use generic_array::GenericArray;
-use secp256k1::{PublicKey, Scalar, SECP256K1, SecretKey};
 use secp256k1::constants::{
     self, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
 use secp256k1::ffi::CPtr;
+use secp256k1::{PublicKey, Scalar, SecretKey, SECP256K1};
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, Zeroizing};
 
@@ -238,7 +238,9 @@ impl ECScalar for Secp256k1Scalar {
             (left, None) => left.clone(),
             (Some(left), Some(right)) => {
                 let mut res = left.clone();
-                if let Ok(add) = res.add_tweak(&Scalar::from_be_bytes(right.secret_bytes()).unwrap()) {
+                if let Ok(add) =
+                    res.add_tweak(&Scalar::from_be_bytes(right.secret_bytes()).unwrap())
+                {
                     res.0 = add;
                     Some(res)
                 } else {
@@ -258,7 +260,8 @@ impl ECScalar for Secp256k1Scalar {
             (None, _) | (_, None) => None,
             (Some(left), Some(right)) => {
                 let mut res = left.clone();
-                res.0 = res.mul_tweak(&Scalar::from_be_bytes(right.secret_bytes()).unwrap())
+                res.0 = res
+                    .mul_tweak(&Scalar::from_be_bytes(right.secret_bytes()).unwrap())
                     .expect("Can't fail as it's a valid secret");
                 Some(res)
             }
@@ -492,7 +495,11 @@ impl ECPoint for Secp256k1Point {
                 self.ge = None;
             }
             (Some(ge), Some(fe)) => {
-                ge.0 = ge.mul_tweak(SECP256K1, &Scalar::from_be_bytes(fe.secret_bytes()).unwrap())
+                ge.0 = ge
+                    .mul_tweak(
+                        SECP256K1,
+                        &Scalar::from_be_bytes(fe.secret_bytes()).unwrap(),
+                    )
                     .expect("Can't fail as it's a valid secret");
             }
         };
@@ -526,8 +533,8 @@ impl Zeroize for Secp256k1Point {
 }
 
 pub mod hash_to_curve {
-    use crate::{arithmetic::traits::*, BigInt};
     use crate::elliptic::curves::wrappers::{Point, Scalar};
+    use crate::{arithmetic::traits::*, BigInt};
 
     use super::Secp256k1;
 
@@ -603,7 +610,7 @@ mod test {
                 &base_point2.x_coord().unwrap(),
                 &base_point2.y_coord().unwrap(),
             )
-                .unwrap(),
+            .unwrap(),
             base_point2
         );
     }
