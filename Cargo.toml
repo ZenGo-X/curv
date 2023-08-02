@@ -45,7 +45,7 @@ version = "0.27.0"
 features = ["serde", "rand-std", "global-context"]
 
 [dependencies.p256]
-version = "0.11.1"
+version = "0.13.2"
 features = ["ecdsa", "ecdsa-core"]
 
 [dev-dependencies]
