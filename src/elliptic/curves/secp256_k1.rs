@@ -25,7 +25,8 @@ use generic_array::GenericArray;
 use secp256k1::constants::{
     self, GENERATOR_X, GENERATOR_Y, SECRET_KEY_SIZE, UNCOMPRESSED_PUBLIC_KEY_SIZE,
 };
-use secp256k1::{PublicKey, SecretKey, SECP256K1};
+use secp256k1::ffi::CPtr;
+use secp256k1::{PublicKey, Scalar, SecretKey, SECP256K1};
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, Zeroizing};
 
@@ -79,6 +80,7 @@ const BASE_POINT2_Y: [u8; 32] = [
 /// SK wraps secp256k1::SecretKey and implements Zeroize to it
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct SK(pub SecretKey);
+
 /// PK wraps secp256k1::PublicKey and implements Zeroize to it
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct PK(pub PublicKey);
@@ -90,6 +92,7 @@ impl ops::Deref for SK {
         &self.0
     }
 }
+
 impl ops::DerefMut for SK {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
@@ -103,6 +106,7 @@ impl ops::Deref for PK {
         &self.0
     }
 }
+
 impl ops::DerefMut for PK {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
@@ -111,7 +115,7 @@ impl ops::DerefMut for PK {
 
 impl Zeroize for SK {
     fn zeroize(&mut self) {
-        let sk = self.0.as_mut_ptr();
+        let sk = self.0.as_mut_c_ptr();
         let sk_bytes = unsafe { std::slice::from_raw_parts_mut(sk, 32) };
         sk_bytes.zeroize()
     }
@@ -120,7 +124,7 @@ impl Zeroize for SK {
 impl Zeroize for PK {
     fn zeroize(&mut self) {
         let zeroed = unsafe { secp256k1::ffi::PublicKey::new() };
-        unsafe { ptr::write_volatile(self.0.as_mut_ptr(), zeroed) };
+        unsafe { ptr::write_volatile(self.0.as_mut_c_ptr(), zeroed) };
         atomic::compiler_fence(atomic::Ordering::SeqCst);
     }
 }
@@ -145,6 +149,7 @@ pub struct Secp256k1Scalar {
     /// `fe` might be None — special case for scalar being zero
     fe: zeroize::Zeroizing<Option<SK>>,
 }
+
 #[derive(Clone, Debug, Copy)]
 pub struct Secp256k1Point {
     #[allow(dead_code)]
@@ -161,7 +166,7 @@ impl ECScalar for Secp256k1Scalar {
     type ScalarLength = typenum::U32;
 
     fn random() -> Secp256k1Scalar {
-        let sk = SK(SecretKey::new(&mut rand_legacy::thread_rng()));
+        let sk = SK(SecretKey::new(&mut secp256k1::rand::thread_rng()));
         Secp256k1Scalar {
             purpose: "random",
             fe: Zeroizing::new(Some(sk)),
@@ -233,7 +238,14 @@ impl ECScalar for Secp256k1Scalar {
             (left, None) => left.clone(),
             (Some(left), Some(right)) => {
                 let mut res = left.clone();
-                res.add_assign(&right.0[..]).ok().map(|_| res) // right might be the negation of left.
+                if let Ok(add) =
+                    res.add_tweak(&Scalar::from_be_bytes(right.secret_bytes()).unwrap())
+                {
+                    res.0 = add;
+                    Some(res)
+                } else {
+                    None // right might be the negation of left.
+                }
             }
         };
 
@@ -248,8 +260,8 @@ impl ECScalar for Secp256k1Scalar {
             (None, _) | (_, None) => None,
             (Some(left), Some(right)) => {
                 let mut res = left.clone();
-                res.0
-                    .mul_assign(&right.0[..])
+                res.0 = res
+                    .mul_tweak(&Scalar::from_be_bytes(right.secret_bytes()).unwrap())
                     .expect("Can't fail as it's a valid secret");
                 Some(res)
             }
@@ -272,7 +284,7 @@ impl ECScalar for Secp256k1Scalar {
 
     fn neg(&self) -> Self {
         let fe = self.fe.deref().clone().map(|mut fe| {
-            fe.negate_assign();
+            fe.0 = fe.negate();
             fe
         });
         Secp256k1Scalar {
@@ -471,7 +483,7 @@ impl ECPoint for Secp256k1Point {
 
     fn neg_point(&self) -> Secp256k1Point {
         let ge = self.ge.map(|mut ge| {
-            ge.0.negate_assign(SECP256K1);
+            ge.0 = ge.negate(SECP256K1);
             ge
         });
         Secp256k1Point { purpose: "neg", ge }
@@ -483,7 +495,11 @@ impl ECPoint for Secp256k1Point {
                 self.ge = None;
             }
             (Some(ge), Some(fe)) => {
-                ge.0.mul_assign(SECP256K1, &fe.0[..])
+                ge.0 = ge
+                    .mul_tweak(
+                        SECP256K1,
+                        &Scalar::from_be_bytes(fe.secret_bytes()).unwrap(),
+                    )
                     .expect("Can't fail as it's a valid secret");
             }
         };
@@ -592,7 +608,7 @@ mod test {
         assert_eq!(
             &GE::from_coords(
                 &base_point2.x_coord().unwrap(),
-                &base_point2.y_coord().unwrap()
+                &base_point2.y_coord().unwrap(),
             )
             .unwrap(),
             base_point2

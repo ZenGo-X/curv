@@ -2,22 +2,21 @@
 
 use std::convert::TryFrom;
 
+use generic_array::GenericArray;
 use p256::elliptic_curve::group::ff::PrimeField;
 use p256::elliptic_curve::group::prime::PrimeCurveAffine;
-use p256::elliptic_curve::ops::Reduce;
 use p256::elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint};
 use p256::elliptic_curve::Field;
 use p256::{AffinePoint, EncodedPoint, FieldBytes, ProjectivePoint, Scalar};
-
-use generic_array::GenericArray;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use zeroize::Zeroize;
 
-use super::traits::{ECPoint, ECScalar};
 use crate::arithmetic::traits::*;
 use crate::elliptic::curves::{Curve, DeserializationError, NotOnCurve, PointCoords};
 use crate::BigInt;
+
+use super::traits::{ECPoint, ECScalar};
 
 lazy_static::lazy_static! {
     static ref GROUP_ORDER: BigInt = BigInt::from_bytes(&GROUP_ORDER_BYTES);
@@ -129,7 +128,9 @@ impl ECScalar for Secp256r1Scalar {
 
         Secp256r1Scalar {
             purpose: "from_bigint",
-            fe: Scalar::from_be_bytes_reduced(GenericArray::from(n_reduced)).into(),
+            fe: Scalar::from_repr(GenericArray::from(n_reduced))
+                .unwrap()
+                .into(),
         }
     }
 
@@ -419,7 +420,7 @@ mod tests {
         assert_eq!(
             &GE::from_coords(
                 &base_point2.x_coord().unwrap(),
-                &base_point2.y_coord().unwrap()
+                &base_point2.y_coord().unwrap(),
             )
             .unwrap(),
             base_point2
