@@ -166,7 +166,7 @@ impl ECScalar for Secp256k1Scalar {
     type ScalarLength = typenum::U32;
 
     fn random() -> Secp256k1Scalar {
-        let sk = SK(SecretKey::new(&mut rand_legacy::thread_rng()));
+        let sk = SK(SecretKey::new(&mut secp256k1::rand::thread_rng()));
         Secp256k1Scalar {
             purpose: "random",
             fe: Zeroizing::new(Some(sk)),
