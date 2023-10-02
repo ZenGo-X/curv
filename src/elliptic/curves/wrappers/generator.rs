@@ -70,7 +70,7 @@ impl<E: Curve> Generator<E> {
 
 impl<E: Curve> Clone for Generator<E> {
     fn clone(&self) -> Self {
-        Self { _ph: PhantomData }
+        *self
     }
 }
 

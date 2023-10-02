@@ -425,6 +425,6 @@ impl<E: Curve> ops::Sub for &Polynomial<E> {
             self.coefficients()[len2..].to_vec()
         };
 
-        Polynomial::from_coefficients(overlapped.chain(tail.into_iter()).collect())
+        Polynomial::from_coefficients(overlapped.chain(tail).collect())
     }
 }
