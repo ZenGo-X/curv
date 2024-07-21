@@ -152,8 +152,8 @@ pub struct Secp256k1Point {
     ge: Option<PK>,
 }
 
-type GE = Secp256k1Point;
-type FE = Secp256k1Scalar;
+pub type GE = Secp256k1Point;
+pub type FE = Secp256k1Scalar;
 
 impl ECScalar for Secp256k1Scalar {
     type Underlying = Option<SK>;
